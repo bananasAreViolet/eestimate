@@ -1,0 +1,1114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=720">
+  <title>RKM - Riigikogu Monitor | bananasAreViolet</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+  @font-face{
+  font-family:"VCR OSD Mono";
+  src:url("VCR_OSD_MONO.woff2") format("woff2");
+}
+:root{--bg:linear-gradient(180deg,#7c1f3f 0%,#a92d3e 9%,#d14a34 20%,#e97a2e 30%,#f2a13f 39%,#f6c665 47%,#f8e39e 53%,#eb96a0 58%,#dd6a9c 64%,#c94e9a 71%,#ab3f92 79%,#833a80 88%,#583468 100%);--panel:#d4d0c8;--text:#000;--muted:#404040;--light:#fff;--dark:#808080;--title:#000080;--surface:#fff;--projection-bg:#e8e8e8;--coalition-bar-bg:#f2f2f2;--threshold-line:#000;--majority-bg:#d4d0c8;--select-bg:#d4d0c8;--inset-border:#d4d0c8}
+body.dark{--bg: linear-gradient(
+    180deg,
+    #0d0414 0%,
+    #1b072b 22%,
+    #3b0e4e 45%,
+    #7a1d77 62%,
+    #b248a3 74%,
+    #c483be 83%,
+    #5c7b93 90%,
+    #344b5c 100%
+  );--panel:#333438;--text:#f4f4f4;--muted:#c9c9c9;--light:#5e5f63;--dark:#111214;--title:#b21233;--surface:#313d4e;--projection-bg:#313d4e;--coalition-bar-bg:#313d4e;--threshold-line:#fff;--majority-bg:#313d4e;--select-bg:#3e4045;--inset-border:#111214}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:Tahoma,sans-serif;font-size:13px;background:var(--bg);color:var(--text)}
+button,input{font:inherit}.page{width:min(1320px,calc(100% - 24px));margin:12px auto 28px}
+.window{border:2px solid var(--dark);border-right-color:var(--light);border-bottom-color:var(--light);background:var(--panel);padding:3px;margin-top:10px}
+.titlebar{background:var(--title);color:#fff;padding:3px 6px;font-weight:bold;display:flex;justify-content:space-between;font-family:"VCR OSD Mono",monospace}
+.window-body{padding:10px}h1{font-size:18px;margin:0 0 4px;font-family:"VCR OSD Mono",monospace}.header-note{margin:0;color:var(--muted);font-size:12px}
+.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.action{background:#d4d0c8;color:#000;border:2px solid var(--light);border-right-color:var(--dark);border-bottom-color:var(--dark);padding:3px 10px;cursor:pointer;border-radius:0}
+.action:active{border:2px solid var(--dark);border-right-color:var(--light);border-bottom-color:var(--light)}
+body.dark .action{background:#c8c8c8}.status{color:var(--muted);font-size:12px}
+.chart-surface{background:var(--surface);padding:6px;border:2px inset var(--inset-border)}.chart-wrap{height:440px}
+.latest-scroll{overflow-x:auto;padding:8px;background:var(--surface);border:2px inset var(--inset-border)}
+.latest-chart{min-width:920px;width:max-content;margin:0 auto;height:410px;display:flex;align-items:flex-end;gap:10px;padding:12px 8px 0;}
+.latest-col{width:72px;flex:0 0 72px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.latest-bar-area{width:100%;height:275px;display:flex;align-items:flex-end;justify-content:center}
+.latest-bar{width:52px;min-height:2px;border-radius:0;position:relative}
+.latest-bar-label{position:absolute;z-index: 2;left:50%;top:-20px;transform:translateX(-50%);font-size:14px;font-weight:700;white-space:nowrap;color:var(--text)}
+.latest-bar-gain{position:absolute;top:0;left:0;width:100%;background:rgba(0,0,0,.25);border-bottom:1px dashed rgba(0,0,0,.5);border-radius:0}
+body.dark .latest-bar-gain{background:rgba(255,255,255,.45);border-bottom:1px dashed rgba(0,0,0,.4)}
+.latest-bar-lost{position:absolute;bottom:100%;left:0;width:100%;opacity:.75;border-top:1px dashed rgba(0,0,0,.4);border-radius:0}
+.party-box{margin-top:5px;width:66px;min-height:34px;border-radius:2px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:14px;padding:5px 3px;font-family:"Archivo Black",sans-serif;}
+.chartjs-tooltip{position:absolute;pointer-events:none;z-index:50;background:var(--panel);border:2px solid var(--light);border-right-color:var(--dark);border-bottom-color:var(--dark);padding:6px 8px;font-family:"Roboto",sans-serif;font-size:12px;color:var(--text);transform:translate(-50%,-115%);transition:opacity .08s linear;box-shadow:2px 2px 0 rgba(0,0,0,.3);white-space:nowrap}
+.chartjs-tooltip-date{font-weight:700;margin:0 0 4px;padding-bottom:3px;border-bottom:1px solid var(--dark);text-transform:uppercase;font-size:11px;letter-spacing:.3px}
+.chartjs-tooltip-row{display:flex;align-items:center;gap:8px;margin-top:4px}
+.chartjs-tooltip-row .party-box{width:auto;min-width:40px;min-height:20px;font-size:11px;padding:2px 6px;border-radius:0;margin:0}
+.chartjs-tooltip-value{font-weight:700;margin-left:auto;padding-left:6px}
+.projection-wrap{background:var(--projection-bg);border:2px inset var(--inset-border);padding:14px 10px 16px;overflow:auto}
+.parliament{width:max-content;margin:auto;display:flex;flex-direction:row;gap:7px}.seat-col{display:flex;flex-direction:column;align-items:center;gap:5px}.seat-col .seat:nth-child(2n){margin-bottom:9px}
+.seat{width:22px;height:22px;border:1px solid #000;box-shadow:inset 0 1px rgba(255,255,255,.35);border-radius:0}
+.projection-key{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 12px;margin-top:12px}.key-item{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--text)}.key-swatch{width:12px;height:12px;border:1px solid #000;border-radius:0}
+.coalition-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}.coalition-score{font-size:18px;font-weight:bold}.majority{padding:3px 7px;background:var(--majority-bg);border:2px inset var(--inset-border);font-weight:bold;color:var(--text);border-radius:0}
+body.dark .majority.reached{background:#6ab647;color:#fff}
+.coalition-bar{position:relative;height:30px;background:var(--coalition-bar-bg);border:2px inset var(--inset-border);margin:35px 0 18px;border-radius:0}.coalition-fill{height:100%;display:flex;overflow:hidden}.coalition-fill-seg{height:100%;border-right:1px solid rgba(255,255,255,.5)}.coalition-fill-seg:last-child{border-right:none}
+.threshold{position:absolute;top:-5px;width:1px;height:40px;background:var(--threshold-line);transform:translateX(-50%)}.threshold.major{width:2px}.threshold-label{position:absolute;top:43px;transform:translateX(-50%);font-size:10px;white-space:nowrap;color:var(--text);text-align:center}.threshold-label strong{display:block}
+.threshold-label.upper-label{top:-38px}
+.party-selector{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:12px}.party-select{border:2px solid var(--light);border-right-color:var(--dark);border-bottom-color:var(--dark);padding:0;background:var(--select-bg);cursor:pointer;border-radius:0}.party-select .party-box{margin:0;width:auto;min-width:72px;padding:6px 9px}.party-select:not(.selected) .party-box{opacity:.42;filter:grayscale(.55)}.party-select.selected .party-box{opacity:1;box-shadow:0 0 0 2px #222 inset}
+body.dark .party-select.selected .party-box{box-shadow:0 0 0 2px #fff inset}
+.coalition-summary{margin-top:22px;padding-top:9px;border-top:1px solid var(--dark);font-size:12px;line-height:1.45}.error{background:#f6dddd}.error .window-body{color:#000}
+
+/* projection and support window layout */
+.projection-row{display:flex;flex-wrap:wrap;gap:16px;width:100%}
+.projection-window{flex:1 1 320px}
+.support-window{flex:1 1 320px;display:flex;flex-direction:column;}
+.support-body{flex:1;display:flex;align-items:center;justify-content:center;}
+
+.support-window .internal-window {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+  
+#supportChangeContainer, .support-change-container{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px; 
+  width: 100%;
+}
+
+#gainersCol, #losersCol, .support-col{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 0 1 auto; 
+  justify-content: center;
+}
+
+.divider{width:3px;align-self:stretch;background:currentColor;opacity:.8;border-radius:2px}
+
+.internal-window {
+  background: var(--surface);
+  border: 2px inset var(--inset-border);
+  padding: 10px;
+}
+
+/* coalition stuffs */
+.comparison-container{display:flex;gap:16px;justify-content:center;margin-top:15px;align-items:flex-start}
+.comparison-column{flex:1;max-width:480px;background:var(--surface);border:2px inset var(--inset-border);padding:10px}
+.column-title{font-weight:bold;text-align:center;margin-bottom:8px;font-size:13px;text-transform:uppercase;letter-spacing:0.5px}
+.mode-toggle-bar{display:flex;justify-content:center;gap:10px;margin-bottom:12px}
+.mode-btn{font-weight:bold}
+.mode-btn.active{background:var(--title);color:#fff;border-color:var(--dark) var(--light) var(--light) var(--dark)}
+body.dark .mode-btn{background:#313d4e;color:#fff}
+body.dark .mode-btn.active{background:#b11333;color:#fff}
+
+@media(max-width:720px){
+ .page{width:calc(100% - 10px);margin-top:5px}.window-body{padding:7px}.chart-wrap{height:360px}
+ .comparison-container{flex-direction:column;align-items:stretch}
+ .comparison-column{max-width:100%}
+}
+</style>
+</head>
+
+<body>
+<div class="page">
+<section class="window">
+  <div class="titlebar"><span></span></div>
+  <div class="window-body" style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
+  <div>
+    <h1>Riigikogu Monitor [RKM]</h1>
+    <p class="header-note">RKM by bananasAreViolet. Personal calculations based on polling. Updates will be sporadic but for now, here they are. We shall all pray that I do not suffer from burnout 🙃</p>
+    <div class="toolbar">
+      <button class="action" id="reloadBtn">Refresh page</button>
+      <button class="action" id="themeBtn">Dark mode</button>
+      <span class="status" id="status">Data needs a moment to load in, thanks for the patience…</span>
+    </div>
+  </div>
+  
+  <div style="flex-shrink:0; margin-left:auto;">
+    <canvas id="topArchCanvas" width="220" height="120" style="display:block;"></canvas>
+  </div>
+</div>
+</section>
+
+<section class="window"><div class="titlebar"><span>POLLING AVERAGE</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="lineChart"></canvas></div></div><p class="header-note"></p></div></section>
+
+<section class="window"><div class="titlebar"><span>LATEST NUMBERS</span></div><div class="window-body"><p class="header-note" id="latestNote">If this text lasts for a readable length and several seconds beyond that, there may possibly be a data error involved</p><div class="latest-scroll"><div class="latest-chart" id="latestChart"></div></div></div></section>
+
+
+<div class="projection-row">
+
+
+  <section class="window projection-window">
+    <div class="titlebar"><span>SEAT PROJECTION</span></div>
+    <div class="window-body">
+      <div class="internal-window">
+        <div id="parliament" class="parliament"></div>
+        <div id="projectionKey" class="projection-key"></div>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="window support-window">
+    <div class="titlebar"><span>SUPPORT VS LAST ELECTION</span></div>
+    <div class="window-body support-body">
+      <div class="internal-window" style="width: 100%; height: 100%;">
+        <div id="supportChangeContainer">
+          <div id="gainersCol"></div>
+          <div class="divider"></div>
+          <div id="losersCol"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="projection-row">
+
+  <section class="window projection-window">
+    <div class="titlebar"><span>SUPPORT VS LAST MONTH</span></div>
+    <div class="window-body support-body">
+      <div class="internal-window" style="width: 100%; height: 100%;">
+        <div class="support-change-container" id="monthChangeContainer">
+          <div id="gainersColMonth" class="support-col"></div>
+          <div class="divider"></div>
+          <div id="losersColMonth" class="support-col"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="window support-window">
+    <div class="titlebar"><span>SUPPORT VS LAST YEAR</span></div>
+    <div class="window-body support-body">
+      <div class="internal-window" style="width: 100%; height: 100%;">
+        <div class="support-change-container" id="yearChangeContainer">
+          <div id="gainersColYear" class="support-col"></div>
+          <div class="divider"></div>
+          <div id="losersColYear" class="support-col"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<section class="window"><div class="titlebar"><span>COALITION BUILDER</span></div><div class="window-body">
+<div class="coalition-top"><div><div class="coalition-score" id="coalitionSeats">0 / 101</div><div class="status">Combined seats of selected parties</div></div><div class="majority" id="majorityBadge">Short of a majority</div></div>
+<div class="coalition-bar"><div class="coalition-fill" id="coalitionFill"></div>
+<span class="threshold" style="left:20.792%"></span><span class="threshold-label" style="left:20.792%"><strong>21</strong>Presidential candidate nomination line</span>
+<span class="threshold" style="left:33.663%"></span><span class="threshold-label" style="left:33.663%"><strong>34</strong>Supermajority blocking line</span>
+<span class="threshold major" style="left:50.495%"></span><span class="threshold-label" style="left:50.495%"><strong>51</strong>Majority line</span>
+<span class="threshold" style="left:54.455%"></span><span class="threshold-label upper-label" style="left:54.455%"><strong>55</strong>Safe majority line</span>
+<span class="threshold" style="left:67.327%"></span><span class="threshold-label" style="left:67.327%"><strong>68</strong>Supermajority line</span>
+<span class="threshold" style="left:80.198%"></span><span class="threshold-label" style="left:80.198%"><strong>81</strong>Constitution amending line</span>
+</div>
+<div class="party-selector" id="partySelector" style="margin-top:44px"></div><div class="coalition-summary" id="coalitionSummary">Select parties using the boxes.</div>
+</div></section>
+
+<section class="window"><div class="titlebar"><span>GOVERNMENT VS OPPOSITION POLLING AVERAGE</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="govtLineChart"></canvas></div></div><p class="header-note"></p></div></section>
+
+<section class="window"><div class="titlebar"><span>CUSTOM COALITION COMPARISON</span></div><div class="window-body">
+<div class="mode-toggle-bar">
+ <button class="action mode-btn active" id="modeSeparateBtn">Separate Lines Mode</button>
+ <button class="action mode-btn" id="modeNetBtn">Net Support Mode (Side 1 - Side 2)</button>
+</div>
+<div class="chart-surface"><div class="chart-wrap"><canvas id="customCoalitionChart"></canvas></div></div>
+<div class="comparison-container">
+ <div class="comparison-column">
+  <div class="column-title" style="color:#2563eb">Side 1</div>
+  <div class="party-selector" id="side1Selector"></div>
+ </div>
+ <div class="comparison-column">
+  <div class="column-title" style="color:#dc2626">Side 2</div>
+  <div class="party-selector" id="side2Selector"></div>
+ </div>
+</div>
+</div></section>
+</div>
+
+
+<script>
+const GOOGLE_SHEET_URL="https://docs.google.com/spreadsheets/d/1gGBmEUW5bwp23602WfQF4eciRrZT4M-VrAz1r5M2JHU/edit?usp=sharing";
+const SHEET_NAME="EEavg",SHEET_RANGE="A:M";
+const PARTY_COLOURS={
+Reform:"#f4dd52",
+EKRE:"#8e7b6d",
+Centre:"#58a367",
+E200:"#6c5db7",
+SDE:"#d34564",
+Isamaa:"#6396e8",
+VL:"#b064a5",
+Koos:"#55c0c9",
+PP:"#e88743",
+Greens:"#98C62B",
+ERK:"#d7c262",
+Free:"#b6d3dd"};
+const PREFERRED_ORDER=["VL","SDE","Greens","E200","Reform","PP","Free","Isamaa","Centre","ERK","EKRE","Koos"];
+const DISTRICTS=[10,13,8,16,6,5,6,7,7,8,8,7],RIIGIKOGU_SEATS=101,NATIONAL_THRESHOLD=5,MODIFIED_DHONDT_EXPONENT=.9;
+const EVENT_MARKERS=[
+ {date:Date.UTC(2023,3,17),label:"Kallas' third cabinet"},
+ {date:Date.UTC(2024,6,23),label:"Michal's cabinet"},
+ {date:Date.UTC(2025,2,10),label:"SDE expelled from cabinet"}
+];
+
+const eventMarkerPlugin={
+ id:"eventMarkers",
+ afterDraw(chart,args,opts){
+  const markers=opts&&opts.markers;if(!markers||!markers.length)return;
+  const lineColour=(opts&&opts.lineColour)||"rgba(0,0,0,.55)",textColour=(opts&&opts.textColour)||"rgba(0,0,0,.8)";
+  const{ctx,chartArea:{top,bottom},scales:{x}}=chart;
+  ctx.save();
+  markers.forEach((m,i)=>{
+   const px=x.getPixelForValue(m.idx);if(px==null||Number.isNaN(px))return;
+   ctx.beginPath();ctx.setLineDash([4,3]);ctx.strokeStyle=lineColour;ctx.lineWidth=1;
+   ctx.moveTo(px,top);ctx.lineTo(px,bottom);ctx.stroke();ctx.setLineDash([]);
+   ctx.font="10px Tahoma,Arial,sans-serif";ctx.fillStyle=textColour;ctx.textBaseline="top";ctx.textAlign="left";
+   ctx.fillText(m.label,px+4,top+3+(i%2)*13)
+  });
+  ctx.restore()
+ }
+};
+
+const endLineLabelsPlugin = {
+ id: "endLineLabels",
+ afterDatasetsDraw(chart, args, opts) {
+  const allowedParties = opts && opts.allowedParties ? opts.allowedParties : null;
+  const { ctx } = chart;
+  ctx.save();
+  chart.data.datasets.forEach((dataset, i) => {
+   if (allowedParties && !allowedParties.includes(dataset.label)) return;
+
+   const meta = chart.getDatasetMeta(i);
+   if (!meta.hidden && meta.data && meta.data.length > 0) {
+    let lastIdx = dataset.data.length - 1;
+    while (lastIdx >= 0 && (dataset.data[lastIdx] === null || dataset.data[lastIdx] === undefined)) {
+     lastIdx--;
+    }
+    if (lastIdx >= 0) {
+     const point = meta.data[lastIdx];
+     const val = dataset.data[lastIdx];
+     if (point && !isNaN(point.x) && !isNaN(point.y)) {
+      ctx.font = "bold 11px Tahoma, Arial, sans-serif";
+      ctx.fillStyle = dataset.borderColor;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      const sign = (val > 0 && opts.showPlusSign) ? "+" : "";
+      ctx.fillText(` ${dataset.label} ${sign}${val.toFixed(1)}%`, point.x + 6, point.y);
+     }
+    }
+   }
+  });
+  ctx.restore();
+ }
+};
+
+Chart.register(eventMarkerPlugin, endLineLabelsPlugin);
+
+const chartTheme=()=>document.body.classList.contains("dark")
+ ?{grid:"rgba(255,255,255,.14)",text:"#e8e8e8",markerLine:"rgba(255,255,255,.5)",markerText:"rgba(255,255,255,.85)"}
+ :{grid:"#ededed",text:"#000",markerLine:"rgba(0,0,0,.55)",markerText:"rgba(0,0,0,.8)"};
+const shade=(hex,amt)=>{const c=hex.replace("#","");const num=parseInt(c,16);let r=(num>>16)+amt,g=((num>>8)&255)+amt,b=(num&255)+amt;r=Math.min(255,Math.max(0,r));g=Math.min(255,Math.max(0,g));b=Math.min(255,Math.max(0,b));return`#${((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1)}`};
+let lineChart=null,latestRows=[],latestPoll=[],projection=[],selectedCoalition=new Set();
+
+const GOVT_SHEET_NAME="GOVTavg",GOVT_SHEET_RANGE="A:D";
+const GOVT_COLOURS={
+"Government parties":"#2e7d32",
+"Parliamentary opposition":"#d32f2f",
+"Extraparliamentary opposition":"#f59e0b"
+};
+let govtLineChart=null,govtRows=[],govtLatestPoll=[];
+
+// coalition stuffs
+let side1Coalition=new Set(["Reform", "E200"]);
+let side2Coalition=new Set();
+let comparisonMode="separate"; // "separate" or "net"
+let customCoalitionChart=null;
+
+const $=id=>document.getElementById(id);
+const esc=v=>String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+const idOf=url=>((String(url||"").match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)||[])[1]||"");
+const n=v=>{if(v===null||v===undefined||v==="")return null;const x=Number(String(v).replace(",","."));return Number.isFinite(x)?x:null};
+const pct=v=>{const x=n(v);return x===null?null:Math.abs(x)<=1.5?x*100:x};
+const dt=v=>{if(v===null||v===undefined||v==="")return null;if(typeof v==="number")return new Date(Date.UTC(1899,11,30)+v*86400000);const s=String(v).trim(),m=s.match(/^Date\((\d{4}),(\d{1,2}),(\d{1,2})/);if(m)return new Date(Date.UTC(+m[1],+m[2],+m[3]));const d=new Date(s);return Number.isNaN(d.getTime())?null:d};
+const dtext=d=>d?new Intl.DateTimeFormat("en-GB",{year:"numeric",month:"short",day:"numeric"}).format(d):"—";
+function parseGviz(t){const a=t.indexOf("{"),b=t.lastIndexOf("}");if(a<0||b<=a)throw Error("No response from database, hm.");return JSON.parse(t.slice(a,b+1))}
+
+function retroTooltip(context){
+ const {chart,tooltip}=context;
+ let el=document.getElementById("chartjs-tooltip");
+ if(!el){el=document.createElement("div");el.id="chartjs-tooltip";el.className="chartjs-tooltip";document.body.appendChild(el)}
+
+ if(tooltip.opacity===0){el.style.opacity=0;return}
+
+ if(tooltip.body){
+  const dataPoints=tooltip.dataPoints||[];
+  let html="";
+  if(tooltip.title&&tooltip.title.length) html+=`<div class="chartjs-tooltip-date">${esc(tooltip.title[0])}</div>`;
+  dataPoints.forEach(dp=>{
+   const colour=dp.dataset.borderColor||"#888";
+   const name=dp.dataset.label||"";
+   const val=dp.parsed.y===null?"—":`${Number(dp.parsed.y).toFixed(1)}%`;
+   html+=`<div class="chartjs-tooltip-row"><span class="party-box" style="background:${esc(colour)}">${esc(name)}</span><span class="chartjs-tooltip-value">${val}</span></div>`;
+  });
+  el.innerHTML=html;
+ }
+
+ const rect=chart.canvas.getBoundingClientRect();
+ el.style.opacity=1;
+ el.style.left=(rect.left+window.scrollX+tooltip.caretX)+"px";
+ el.style.top=(rect.top+window.scrollY+tooltip.caretY)+"px";
+}
+
+async function loadGoogleSheet(){
+ const id=idOf(GOOGLE_SHEET_URL);
+ if(!id){$("setupPanel").style.display="block";$("setupText").textContent="Setup failure.";return}
+ $("status").textContent="Loading the data, just a moment of patience…";document.body.classList.add("loading");
+ try{
+  const u=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&headers=1&range=${encodeURIComponent(`${SHEET_NAME}!${SHEET_RANGE}`)}`;
+  const r=await fetch(u,{cache:"no-store"});if(!r.ok)throw Error(`Google Sheets returned HTTP ${r.status}.`);
+  const g=parseGviz(await r.text()),cols=g.table?.cols||[],rows=g.table?.rows||[],headers=cols.map((c,i)=>String(c.label||c.id||"").trim()||`Column ${i+1}`),di=headers.findIndex(h=>h.toLowerCase()==="date");
+  if(di<0)throw Error("Error with database missing a defined date column, it seems.");
+  latestRows=[];
+  for(const row of rows){const c=row.c||[],dc=c[di]||{},d=dt(dc.v!==undefined?dc.v:dc.f);if(!d)continue;const rec={date:d};headers.forEach((h,i)=>{if(i!==di){const x=c[i]||{};rec[h]=pct(x.v!==undefined?x.v:x.f)}});latestRows.push(rec)}
+  latestRows.sort((a,b)=>a.date-b.date);if(!latestRows.length)throw Error("Error with database missing dates, it seems.");
+  const last=latestRows.at(-1);
+  latestPoll=headers.filter(h=>h!==headers[di]).map(name=>({key:name,name,colour:PARTY_COLOURS[name]||"#777",support:last[name]})).filter(p=>p.support!==null);
+  renderLineChart();renderLatestPolling();renderProjection();renderCoalitionBuilder();
+  renderCustomCoalitionTool();
+  loadGovtSheet();
+  $("status").textContent=`Latest update: ${dtext(last.date)}, ${latestRows.length.toLocaleString()} days from the previous election`;$("setupPanel").style.display="none";
+ }catch(e){$("status").textContent="";$("setupPanel").style.display="block";$("setupText").innerHTML=`<strong>Connection error:</strong> ${esc(e.message)}`}
+ finally{document.body.classList.remove("loading")}
+}
+
+function renderLineChart(){
+ const ctx=$("lineChart").getContext("2d");if(lineChart)lineChart.destroy();
+ const labels=latestRows.map(r=>dtext(r.date));
+ const datasets=latestPoll.map(p=>{const has=latestRows.some(r=>r[p.key]!==null&&r[p.key]!==undefined);if(!has)return null;return{label:p.name,data:latestRows.map(r=>r[p.key]),borderColor:p.colour,backgroundColor:p.colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:.2,spanGaps:true}}).filter(Boolean);
+ const markers=latestRows.length?EVENT_MARKERS.map(m=>{let idx=0,diff=Infinity;latestRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-m.date);if(d<diff){diff=d;idx=i}});return{idx,label:m.label}}):[];
+ const th=chartTheme();
+ lineChart=new Chart(ctx,{
+  type:"line",
+  data:{labels,datasets},
+  options:{
+   responsive:true,
+   maintainAspectRatio:false,
+   layout:{padding:{right:110}},
+   interaction:{mode:"nearest",axis:"xy",intersect:false},
+   plugins:{
+    legend:{position:"bottom",labels:{usePointStyle:true,pointStyle:"line",boxWidth:26,padding:14,color:th.text,font:{family:'"VCR OSD Mono", monospace', size:12}}},
+    tooltip:{enabled:false,external:retroTooltip},
+    eventMarkers:{markers,lineColour:th.markerLine,textColour:th.markerText},
+    endLineLabels:{allowedParties:["Isamaa","Centre","SDE","EKRE","Reform","PP","E200"]}
+   },
+   scales:{
+    x:{
+     ticks:{
+      color:th.text,
+      font:{family:'"VCR OSD Mono", monospace', size:14},
+      autoSkip: false,
+      maxRotation: 0,
+      minRotation: 0,
+      callback: function(val, index) {
+       const row = latestRows[index];
+       if (!row) return "";
+       
+       const prevRow = latestRows[index - 1];
+       if (prevRow && row.date.getUTCMonth() === prevRow.date.getUTCMonth() && row.date.getUTCFullYear() === prevRow.date.getUTCFullYear()) {
+        return "";
+       }
+       
+       const month = row.date.getUTCMonth();
+       if (month === 0) return ["Jan", row.date.getUTCFullYear()];
+       if (month === 3) return "Apr";
+       if (month === 6) return "Jul";
+       if (month === 9) return "Oct";
+       
+       return "";
+      }
+     },
+     grid:{display:false}
+    },
+    y:{beginAtZero:true,suggestedMax:35,ticks:{callback:v=>`${v}%`,color:th.text},grid:{color:th.grid}}
+   }
+  }
+ });
+}
+
+function renderLatestPolling(){
+ const c=$("latestChart"),note=$("latestNote");c.innerHTML="";if(!latestPoll.length){note.textContent="No current party observations.";return}
+ const sorted=[...latestPoll].sort((a,b)=>b.support-a.support);
+ const marRow=latestRows.find(r=>r.date.getUTCFullYear()===2023&&r.date.getUTCMonth()===2&&r.date.getUTCDate()===5);
+ const oldOf=p=>{if(!marRow)return null;const v=marRow[p.key];return v===null||v===undefined?null:v};
+ const max=Math.max(...sorted.map(p=>p.support),...sorted.map(oldOf).filter(v=>v!==null),1);
+ note.textContent=`Latest update: ${dtext(latestRows.at(-1).date)}. Support differences shaded vs 5 Mar 2023: stripy bars indicate lost support while lighter (light mode)/darker (dark mode) bars indicate gains.`;
+ const isDark=document.body.classList.contains("dark");
+ for(const p of sorted){
+  const old=oldOf(p);
+  const barPx=Math.max(2,p.support/max*245),oldPx=old===null?null:Math.max(0,old/max*245);
+  const col=document.createElement("div");col.className="latest-col";
+  const a=document.createElement("div");a.className="latest-bar-area";
+  const bar=document.createElement("div");bar.className="latest-bar";bar.style.height=`${barPx}px`;bar.style.background=p.colour;
+  const label=document.createElement("div");label.className="latest-bar-label";label.textContent=`${p.support.toFixed(1)}%`;bar.appendChild(label);
+  if(oldPx!==null){
+   if(oldPx<=barPx){
+    const gain=document.createElement("div");gain.className="latest-bar-gain";gain.style.height=`${barPx-oldPx}px`;gain.title=`Up from ${old.toFixed(1)}% on 5 Mar 2023`;bar.appendChild(gain)
+   }else{
+    const lost=document.createElement("div");lost.className="latest-bar-lost";lost.style.height=`${oldPx-barPx}px`;
+    const diagonalColor=isDark?shade(p.colour,-55):shade(p.colour,55);
+    lost.style.background=`repeating-linear-gradient(45deg, ${diagonalColor} 0 6px, ${p.colour} 6px 12px)`;lost.title=`Down from ${old.toFixed(1)}% on 5 Mar 2023`;bar.appendChild(lost)
+   }
+  }
+  a.appendChild(bar);
+  const box=document.createElement("div");box.className="party-box";box.style.background=p.colour;box.textContent=p.name;col.append(a,box);c.appendChild(col)
+ }
+  renderSupportChanges();
+  renderRecentSupportChanges();
+}
+
+function projectSeats(poll){
+ const q=poll.filter(p=>p.support>=NATIONAL_THRESHOLD),d=Object.fromEntries(q.map(p=>[p.key,0]));
+ for(const seats of DISTRICTS)for(const p of q)d[p.key]+=Math.floor(p.support/100*seats+1e-9);
+ let left=Math.max(0,101-Object.values(d).reduce((a,b)=>a+b,0)),comp=Object.fromEntries(q.map(p=>[p.key,0]));
+ const div=n=>(n<=1?1:Math.pow(n,MODIFIED_DHONDT_EXPONENT));
+ while(left>0&&q.length){let w=null,best=-Infinity;for(const p of q){const z=p.support/div(d[p.key]+comp[p.key]+1);if(z>best+1e-12||(Math.abs(z-best)<1e-12&&w&&p.support>w.support)){w=p;best=z}}if(!w)break;comp[w.key]++;left--}
+ return q.map(p=>({...p,total:d[p.key]+comp[p.key]})).sort((a,b)=>{
+  const idxA=PREFERRED_ORDER.indexOf(a.key);
+  const idxB=PREFERRED_ORDER.indexOf(b.key);
+  return (idxA!==-1?idxA:999)-(idxB!==-1?idxB:999);
+ });
+}
+
+function renderProjection(){
+ projection = projectSeats(latestPoll);
+ $("parliament").innerHTML = "";
+ $("projectionKey").innerHTML = "";
+ 
+ const seats = [];
+ projection.forEach(p => {
+  for(let i = 0; i < p.total; i++) seats.push(p);
+ });
+
+
+ const fillOrder = [];
+ const numPairs = 5; 
+
+ for (let pPair = 0; pPair < numPairs; pPair++) {
+  const colA = pPair * 2;
+  const colB = pPair * 2 + 1;
+  const goingDown = (pPair % 2 === 0); 
+
+  if (goingDown) {
+   for (let r = 0; r < 10; r++) {
+    fillOrder.push({ c: colA, r: r });
+    fillOrder.push({ c: colB, r: r });
+   }
+  } else {
+   for (let r = 9; r >= 0; r--) {
+    fillOrder.push({ c: colA, r: r });
+    fillOrder.push({ c: colB, r: r });
+   }
+  }
+ }
+ 
+ 
+ fillOrder.push({ c: 9, r: 10 });
+
+
+ const seatMap = {};
+ fillOrder.forEach((slot, index) => {
+  const p = seats[index];
+  if (p) seatMap[`${slot.c},${slot.r}`] = p;
+ });
+
+ for(let c = 0; c < 10; c++){
+  const col = document.createElement("div");
+  col.className = "seat-col";
+  const numRows = (c === 9 ? 11 : 10);
+  for(let i = 0; i < numRows; i++){
+   const p = seatMap[`${c},${i}`];
+   if(!p) continue;
+   const s = document.createElement("span");
+   s.className = "seat";
+   s.style.background = p.colour;
+   s.title = `${p.name}: ${p.total}`;
+   col.appendChild(s);
+  }
+  $("parliament").appendChild(col);
+ }
+
+ for(const p of projection){
+  const i = document.createElement("span");
+  i.className = "key-item";
+  const s = document.createElement("span");
+  s.className = "key-swatch";
+  s.style.background = p.colour;
+  i.append(s, document.createTextNode(`${p.name} ${p.total}`));
+  $("projectionKey").appendChild(i);
+ }
+ 
+ renderTopArchChart();
+}
+
+function renderSupportChanges() {
+  const gainersCol = $("gainersCol");
+  const losersCol = $("losersCol");
+  if (!gainersCol || !losersCol || !latestPoll) return;
+
+  gainersCol.innerHTML = "";
+  losersCol.innerHTML = "";
+
+  const container = $("supportChangeContainer");
+  if (container) {
+    container.style.width = "100%";
+    container.style.justifyContent = "center";
+  }
+
+  const baselineRow = latestRows.find(r => 
+    r.date.getUTCFullYear() === 2023 && 
+    r.date.getUTCMonth() === 2 && 
+    r.date.getUTCDate() === 5
+  );
+
+  const FALLBACK_2023 = { Reform: 31.24, EKRE: 16.05, Centre: 15.28, E200: 13.33, SDE: 9.27, Isamaa: 8.21, PP: 2.3, Greens: 0.96 };
+  const allowedParties = ["Reform", "EKRE", "Centre", "Isamaa", "E200", "PP", "SDE", "Greens"];
+
+  let gainers = [];
+  let losers = [];
+
+  allowedParties.forEach(partyKey => {
+    const partyData = latestPoll.find(p => p.name === partyKey || p.key === partyKey);
+    if (!partyData) return;
+
+    let baselineVal = baselineRow && baselineRow[partyKey] !== undefined ? baselineRow[partyKey] : FALLBACK_2023[partyKey];
+
+    if (baselineVal !== undefined && baselineVal !== null) {
+      const currentPct = Number(partyData.support || 0);
+      const diff = currentPct - Number(baselineVal);
+      const partyObj = { ...partyData, diff, absDiff: Math.abs(diff) };
+
+      if (diff >= 0) {
+        gainers.push(partyObj);
+      } else {
+        losers.push(partyObj);
+      }
+    }
+  });
+
+  gainers.sort((a, b) => b.absDiff - a.absDiff);
+  losers.sort((a, b) => b.absDiff - a.absDiff);
+
+  gainers.forEach(party => {
+    const row = document.createElement("div");
+    row.style.cssText = "display: flex; align-items: center; gap: 12px; font-weight: bold; font-size: 15px; width: 100%; justify-content: flex-end;";
+
+    const box = document.createElement("div");
+    box.className = "party-box";
+    box.style.background = party.colour || '#888';
+    box.style.cssText += "width: 80px; min-height: 38px; margin: 0; font-size: 15px;";
+    box.textContent = party.name;
+
+    const val = document.createElement("span");
+    val.style.cssText = "color: #00873e; width: 50px; text-align: left;";
+    val.textContent = "+" + party.diff.toFixed(1);
+
+    row.appendChild(box);
+    row.appendChild(val);
+    gainersCol.appendChild(row);
+  });
+
+  losers.forEach(party => {
+    const row = document.createElement("div");
+    row.style.cssText = "display: flex; align-items: center; gap: 12px; font-weight: bold; font-size: 15px; width: 100%; justify-content: flex-start;";
+
+    const box = document.createElement("div");
+    box.className = "party-box";
+    box.style.background = party.colour || '#888';
+    box.style.cssText += "width: 80px; min-height: 38px; margin: 0; font-size: 15px;";
+    box.textContent = party.name;
+
+    const val = document.createElement("span");
+    val.style.cssText = "color: #e50000; width: 50px; text-align: right;";
+    val.textContent = party.diff.toFixed(1);
+
+    row.appendChild(val);
+    row.appendChild(box);
+    losersCol.appendChild(row);
+  });
+}
+  
+function findBaselineRow(daysAgo) {
+  if (!latestRows.length) return null;
+  const last = latestRows.at(-1);
+  const targetTime = last.date.getTime() - daysAgo * 86400000;
+  let best = null, bestDiff = Infinity;
+  for (const r of latestRows) {
+    const diff = Math.abs(r.date.getTime() - targetTime);
+    if (diff < bestDiff) { bestDiff = diff; best = r; }
+  }
+  return best;
+}
+
+function renderSupportChangeGeneric(gainersId, losersId, baselineRow) {
+  const gainersCol = $(gainersId);
+  const losersCol = $(losersId);
+  if (!gainersCol || !losersCol || !latestPoll || !baselineRow) return;
+
+  gainersCol.innerHTML = "";
+  losersCol.innerHTML = "";
+
+  const allowedParties = ["Reform", "EKRE", "Centre", "Isamaa", "E200", "PP", "SDE", "Greens"];
+
+  let gainers = [];
+  let losers = [];
+
+  allowedParties.forEach(partyKey => {
+    const partyData = latestPoll.find(p => p.name === partyKey || p.key === partyKey);
+    if (!partyData) return;
+
+    const baselineVal = baselineRow[partyKey];
+
+    if (baselineVal !== undefined && baselineVal !== null) {
+      const currentPct = Number(partyData.support || 0);
+      const diff = currentPct - Number(baselineVal);
+      const partyObj = { ...partyData, diff, absDiff: Math.abs(diff) };
+
+      if (diff >= 0) {
+        gainers.push(partyObj);
+      } else {
+        losers.push(partyObj);
+      }
+    }
+  });
+
+  gainers.sort((a, b) => b.absDiff - a.absDiff);
+  losers.sort((a, b) => b.absDiff - a.absDiff);
+
+  gainers.forEach(party => {
+    const row = document.createElement("div");
+    row.style.cssText = "display: flex; align-items: center; gap: 12px; font-weight: bold; font-size: 15px; width: 100%; justify-content: flex-end;";
+
+    const box = document.createElement("div");
+    box.className = "party-box";
+    box.style.background = party.colour || '#888';
+    box.style.cssText += "width: 80px; min-height: 38px; margin: 0; font-size: 15px;";
+    box.textContent = party.name;
+
+    const val = document.createElement("span");
+    val.style.cssText = "color: #00873e; width: 50px; text-align: left;";
+    val.textContent = "+" + party.diff.toFixed(1);
+
+    row.appendChild(box);
+    row.appendChild(val);
+    gainersCol.appendChild(row);
+  });
+
+  losers.forEach(party => {
+    const row = document.createElement("div");
+    row.style.cssText = "display: flex; align-items: center; gap: 12px; font-weight: bold; font-size: 15px; width: 100%; justify-content: flex-start;";
+
+    const box = document.createElement("div");
+    box.className = "party-box";
+    box.style.background = party.colour || '#888';
+    box.style.cssText += "width: 80px; min-height: 38px; margin: 0; font-size: 15px;";
+    box.textContent = party.name;
+
+    const val = document.createElement("span");
+    val.style.cssText = "color: #e50000; width: 50px; text-align: right;";
+    val.textContent = party.diff.toFixed(1);
+
+    row.appendChild(val);
+    row.appendChild(box);
+    losersCol.appendChild(row);
+  });
+}
+
+function renderRecentSupportChanges() {
+  renderSupportChangeGeneric("gainersColMonth", "losersColMonth", findBaselineRow(30));
+  renderSupportChangeGeneric("gainersColYear", "losersColYear", findBaselineRow(365));
+}
+
+function renderTopArchChart() {
+  const canvas = $("topArchCanvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (!projection || !projection.length) return;
+
+  const seatColors = [];
+  projection.forEach(p => {
+    for (let i = 0; i < p.total; i++) {
+      seatColors.push(p.colour);
+    }
+  });
+
+  const rows = [
+    { radius: 28, count: 10 },
+    { radius: 39, count: 13 },
+    { radius: 50, count: 16 },
+    { radius: 61, count: 18 },
+    { radius: 72, count: 21 },
+    { radius: 83, count: 23 }
+  ];
+
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height - 12;
+  const dotRadius = 3.2;
+
+  const points = [];
+  rows.forEach(row => {
+    const startAngle = Math.PI;
+    const endAngle = 0;
+    for (let i = 0; i < row.count; i++) {
+      const angle = startAngle - (i / (row.count - 1)) * (startAngle - endAngle);
+      const x = centerX + row.radius * Math.cos(angle);
+      const y = centerY - row.radius * Math.sin(angle);
+      points.push({ x, y, angle, radius: row.radius });
+    }
+  });
+
+  points.sort((a, b) => {
+    if (Math.abs(b.angle - a.angle) > 1e-4) {
+      return b.angle - a.angle;
+    }
+    return b.radius - a.radius;
+  });
+
+  points.forEach((pt, idx) => {
+    if (idx >= seatColors.length) return;
+
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, dotRadius, 0, 2 * Math.PI);
+    ctx.fillStyle = seatColors[idx];
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.2)";
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  });
+
+  ctx.fillStyle = document.body.classList.contains("dark") ? "#fff" : "#000";
+  ctx.font = "bold 15px Tahoma, Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  ctx.fillText("101", centerX, centerY - 1);
+}
+
+function renderCoalitionBuilder(){
+ const c=$("partySelector");c.innerHTML="";
+ for(const p of projection){const b=document.createElement("button");b.type="button";b.className="party-select";const box=document.createElement("span");box.className="party-box";box.style.background=p.colour;box.textContent=p.name;b.appendChild(box);if(selectedCoalition.has(p.key))b.classList.add("selected");b.onclick=()=>{selectedCoalition.has(p.key)?selectedCoalition.delete(p.key):selectedCoalition.add(p.key);renderCoalitionBuilder()};c.appendChild(b)}
+ renderCoalitionSummary()
+}
+function renderCoalitionSummary(){
+ let seats=0,names=[];const fill=$("coalitionFill");fill.innerHTML="";
+ projection.forEach(p=>{if(selectedCoalition.has(p.key)){seats+=p.total;names.push(`${p.name} (${p.total})`);
+  const seg=document.createElement("div");seg.className="coalition-fill-seg";seg.style.width=`${p.total/101*100}%`;seg.style.background=p.colour;seg.title=`${p.name}: ${p.total}`;fill.appendChild(seg)
+ }});
+ $("coalitionSeats").textContent=`${seats} / 101`;
+ const maj=seats>=51;
+ const badge=$("majorityBadge");
+ badge.textContent=maj?"Majority reached":"Short of a majority";
+ if(maj){badge.classList.add("reached")}else{badge.classList.remove("reached")}
+ if(!document.body.classList.contains("dark")){
+  badge.style.background=maj?"#9ac59a":"#d4d0c8";
+ }else{
+  badge.style.background="";
+ }
+ $("coalitionSummary").innerHTML=names.length?`<strong>${maj?"Chosen parties:":"Chosen parties:"}</strong> ${esc(names.join(", "))}`:"Select parties using the boxes."
+}
+$("reloadBtn").onclick=loadGoogleSheet;
+$("themeBtn").onclick=()=>{
+ document.body.classList.toggle("dark");
+ $("themeBtn").textContent=document.body.classList.contains("dark")?"Light mode":"Dark mode";
+ if(latestRows.length){
+   renderLineChart();
+   renderLatestPolling();
+   renderCoalitionSummary();
+   renderCustomCoalitionChart();
+ }
+ if(govtRows.length){renderGovtLineChart();}
+};
+
+async function loadGovtSheet(){
+ const id=idOf(GOOGLE_SHEET_URL);
+ if(!id) return;
+ try{
+  const u=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&headers=1&range=${encodeURIComponent(`${GOVT_SHEET_NAME}!${GOVT_SHEET_RANGE}`)}`;
+  const r=await fetch(u,{cache:"no-store"});if(!r.ok)return;
+  const g=parseGviz(await r.text()),cols=g.table?.cols||[],rows=g.table?.rows||[],headers=cols.map((c,i)=>String(c.label||c.id||"").trim()||`Column ${i+1}`),di=headers.findIndex(h=>h.toLowerCase()==="date");
+  if(di<0)return;
+  govtRows=[];
+  for(const row of rows){const c=row.c||[],dc=c[di]||{},d=dt(dc.v!==undefined?dc.v:dc.f);if(!d)continue;const rec={date:d};headers.forEach((h,i)=>{if(i!==di){const x=c[i]||{};rec[h]=pct(x.v!==undefined?x.v:x.f)}});govtRows.push(rec)}
+  govtRows.sort((a,b)=>a.date-b.date);if(!govtRows.length)return;
+  const last=govtRows.at(-1);
+  govtLatestPoll=headers.filter(h=>h!==headers[di]).map(name=>({key:name,name,colour:GOVT_COLOURS[name]||"#777",support:last[name]})).filter(p=>p.support!==null);
+  renderGovtLineChart();
+ }catch(e){console.error(e)}
+}
+
+function renderGovtLineChart(){
+ const canvas=$("govtLineChart");
+ if(!canvas) return;
+ const ctx=canvas.getContext("2d");if(govtLineChart)govtLineChart.destroy();
+ const labels=govtRows.map(r=>dtext(r.date));
+ const datasets=govtLatestPoll.map(p=>{const has=govtRows.some(r=>r[p.key]!==null&&r[p.key]!==undefined);if(!has)return null;return{label:p.name,data:govtRows.map(r=>r[p.key]),borderColor:p.colour,backgroundColor:p.colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:.2,spanGaps:true}}).filter(Boolean);
+ const markers=govtRows.length?EVENT_MARKERS.map(m=>{let idx=0,diff=Infinity;govtRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-m.date);if(d<diff){diff=d;idx=i}});return{idx,label:m.label}}):[];
+ const th=chartTheme();
+ govtLineChart=new Chart(ctx,{
+  type:"line",
+  data:{labels,datasets},
+  options:{
+   responsive:true,
+   maintainAspectRatio:false,
+   layout:{padding:{right:220}},
+   interaction:{mode:"nearest",axis:"xy",intersect:false},
+   plugins:{
+    legend:{display:false},
+    tooltip:{enabled:false,external:retroTooltip},
+    eventMarkers:{markers,lineColour:th.markerLine,textColour:th.markerText},
+    endLineLabels:{}
+   },
+   scales:{
+    x:{
+     ticks:{
+      color:th.text,
+      font:{family:'"VCR OSD Mono", monospace', size:14},
+      autoSkip: false,
+      maxRotation: 0,
+      minRotation: 0,
+      callback: function(val, index) {
+       const row = govtRows[index];
+       if (!row) return "";
+       
+       const prevRow = govtRows[index - 1];
+       if (prevRow && row.date.getUTCMonth() === prevRow.date.getUTCMonth() && row.date.getUTCFullYear() === prevRow.date.getUTCFullYear()) {
+        return "";
+       }
+       
+       const month = row.date.getUTCMonth();
+       if (month === 0) return ["Jan", row.date.getUTCFullYear()];
+       if (month === 3) return "Apr";
+       if (month === 6) return "Jul";
+       if (month === 9) return "Oct";
+       
+       return "";
+      }
+     },
+     grid:{display:false}
+    },
+    y:{beginAtZero:true,suggestedMax:60,ticks:{callback:v=>`${v}%`,color:th.text},grid:{color:th.grid}}
+   }
+  }
+ });
+}
+
+function renderCustomCoalitionTool(){
+ const availableParties=PREFERRED_ORDER.filter(pKey=>latestPoll.some(p=>p.key===pKey));
+ 
+ const renderSelector=(containerId, targetSet)=>{
+  const container=$(containerId);
+  if(!container) return;
+  container.innerHTML="";
+  
+  availableParties.forEach(pKey=>{
+   const partyInfo=latestPoll.find(p=>p.key===pKey);
+   const colour=partyInfo?partyInfo.colour:(PARTY_COLOURS[pKey]||"#777");
+   
+   const b=document.createElement("button");
+   b.type="button";
+   b.className="party-select";
+   
+   const box=document.createElement("span");
+   box.className="party-box";
+   box.style.background=colour;
+   box.textContent=pKey;
+   b.appendChild(box);
+   
+   if(targetSet.has(pKey)) b.classList.add("selected");
+   
+   b.onclick=()=>{
+    if(targetSet.has(pKey)){
+     targetSet.delete(pKey);
+    }else{
+     targetSet.add(pKey);
+    }
+    renderCustomCoalitionTool();
+   };
+   container.appendChild(b);
+  });
+ };
+
+ renderSelector("side1Selector", side1Coalition);
+ renderSelector("side2Selector", side2Coalition);
+
+ $("modeSeparateBtn").onclick=()=>{
+  comparisonMode="separate";
+  $("modeSeparateBtn").classList.add("active");
+  $("modeNetBtn").classList.remove("active");
+  renderCustomCoalitionChart();
+ };
+ $("modeNetBtn").onclick=()=>{
+  comparisonMode="net";
+  $("modeNetBtn").classList.add("active");
+  $("modeSeparateBtn").classList.remove("active");
+  renderCustomCoalitionChart();
+ };
+
+ renderCustomCoalitionChart();
+}
+
+function renderCustomCoalitionChart(){
+ const canvas=$("customCoalitionChart");
+ if(!canvas) return;
+ const ctx=canvas.getContext("2d");
+ if(customCoalitionChart) customCoalitionChart.destroy();
+
+ const labels=latestRows.map(r=>dtext(r.date));
+ const side1Array=Array.from(side1Coalition);
+ const side2Array=Array.from(side2Coalition);
+ 
+ const side1Name=side1Array.length>0 ? side1Array.join("+") : "Side 1 (None)";
+ const side2Name=side2Array.length>0 ? side2Array.join("+") : "Side 2 (None)";
+
+ const getCoalitionData=(set)=>{
+  return latestRows.map(row=>{
+   let sum=0;
+   let hasValue=false;
+   set.forEach(pKey=>{
+    if(row[pKey]!==null && row[pKey]!==undefined){
+     sum+=row[pKey];
+     hasValue=true;
+    }
+   });
+   return hasValue ? sum : null;
+  });
+ };
+
+ const side1Data=getCoalitionData(side1Coalition);
+ const side2Data=getCoalitionData(side2Coalition);
+
+ let datasets=[];
+
+ if(comparisonMode==="separate"){
+  const color1="#2563eb";
+  const color2="#dc2626";
+
+  datasets.push({
+   label: side1Name,
+   data: side1Data,
+   borderColor: color1,
+   backgroundColor: color1,
+   borderWidth: 2,
+   pointRadius: 0,
+   pointHoverRadius: 4,
+   tension: 0.2,
+   spanGaps: true
+  });
+
+  datasets.push({
+   label: side2Name,
+   data: side2Data,
+   borderColor: color2,
+   backgroundColor: color2,
+   borderWidth: 2,
+   pointRadius: 0,
+   pointHoverRadius: 4,
+   tension: 0.2,
+   spanGaps: true
+  });
+ } else {
+  const netLabel=`Net: (${side1Name}) - (${side2Name})`;
+  const netData=latestRows.map((_, i)=>{
+   const v1=side1Data[i]||0;
+   const v2=side2Data[i]||0;
+   return v1 - v2;
+  });
+
+  const netColor="#7c3aed";
+  datasets.push({
+   label: netLabel,
+   data: netData,
+   borderColor: netColor,
+   backgroundColor: netColor,
+   borderWidth: 2,
+   pointRadius: 0,
+   pointHoverRadius: 4,
+   tension: 0.2,
+   spanGaps: true
+  });
+ }
+
+ const markers=latestRows.length?EVENT_MARKERS.map(m=>{let idx=0,diff=Infinity;latestRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-m.date);if(d<diff){diff=d;idx=i}});return{idx,label:m.label}}):[];
+ const th=chartTheme();
+
+ customCoalitionChart=new Chart(ctx,{
+  type:"line",
+  data:{labels,datasets},
+  options:{
+   responsive:true,
+   maintainAspectRatio:false,
+   layout:{padding:{right:20}},
+   interaction:{mode:"nearest",axis:"xy",intersect:false},
+   plugins:{
+    legend:{display:false},
+    tooltip:{enabled:false,external:retroTooltip},
+    eventMarkers:{markers,lineColour:th.markerLine,textColour:th.markerText},
+    endLineLabels:{allowedParties:[]}
+   },
+   scales:{
+    x:{
+     ticks:{
+      color:th.text,
+      font:{family:'"VCR OSD Mono", monospace', size:14},
+      autoSkip: false,
+      maxRotation: 0,
+      minRotation: 0,
+      callback: function(val, index) {
+       const row = latestRows[index];
+       if (!row) return "";
+       
+       const prevRow = latestRows[index - 1];
+       if (prevRow && row.date.getUTCMonth() === prevRow.date.getUTCMonth() && row.date.getUTCFullYear() === prevRow.date.getUTCFullYear()) {
+        return "";
+       }
+       
+       const month = row.date.getUTCMonth();
+       if (month === 0) return ["Jan", row.date.getUTCFullYear()];
+       if (month === 3) return "Apr";
+       if (month === 6) return "Jul";
+       if (month === 9) return "Oct";
+       
+       return "";
+      }
+     },
+     grid:{display:false}
+    },
+    y:{
+     beginAtZero: comparisonMode==="separate",
+     suggestedMax: comparisonMode==="separate" ? 60 : undefined,
+     ticks:{callback:v=>`${v}%`,color:th.text},
+     grid:{color:th.grid}
+    }
+   }
+  }
+ });
+}
+
+loadGoogleSheet();
+</script>
+</body>
+</html>
