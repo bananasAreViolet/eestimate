@@ -239,7 +239,7 @@ body.dark .mode-btn.active{background:#b11333;color:#fff}
 </div>
 </div></section>
 
-<section class="window"><div class="titlebar"><span>POLLING AVERAGE — SINCE 1999</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="longLineChart"></canvas></div></div><p class="header-note" id="longNote">Loading the long-run polling history…</p></div></section>
+<section class="window"><div class="titlebar"><span>POLLING AVERAGE — SINCE 1999</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="longLineChart"></canvas></div></div><p class="header-note" id="longNote">Loading the long-run polling history…</p><p class="header-note">Res Publica ended up merging into Isamaaliit to form IRL, later renamed Isamaa.<br>ERL became EKRE in 2012.</p></div></section>
 </div>
 
 
@@ -271,6 +271,16 @@ const EVENT_MARKERS=[
  {date:Date.UTC(2023,3,17),label:"Kallas' third cabinet"},
  {date:Date.UTC(2024,6,23),label:"Michal's cabinet"},
  {date:Date.UTC(2025,2,10),label:"SDE expelled from cabinet"}
+];
+
+const ELECTION_MARKERS=[
+ {date:Date.UTC(1999,2,7),label:"1999 election"},
+ {date:Date.UTC(2003,2,2),label:"2003 election"},
+ {date:Date.UTC(2007,2,4),label:"2007 election"},
+ {date:Date.UTC(2011,2,6),label:"2011 election"},
+ {date:Date.UTC(2015,2,1),label:"2015 election"},
+ {date:Date.UTC(2019,2,3),label:"2019 election"},
+ {date:Date.UTC(2023,2,5),label:"2023 election"}
 ];
 
 const eventMarkerPlugin={
@@ -1009,7 +1019,7 @@ function renderLongLineChart(){
   const colour=PARTY_COLOURS[key]||"#777";
   return{label:key,data:longRows.map(r=>r[key]),borderColor:colour,backgroundColor:colour,borderWidth:1.5,pointRadius:0,pointHoverRadius:4,tension:.15,spanGaps:true};
  }).filter(Boolean);
- const markers=longRows.length?EVENT_MARKERS.map(m=>{let idx=0,diff=Infinity;longRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-m.date);if(d<diff){diff=d;idx=i}});return{idx,label:m.label}}):[];
+ const markers=longRows.length?ELECTION_MARKERS.map(m=>{let idx=0,diff=Infinity;longRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-m.date);if(d<diff){diff=d;idx=i}});return{idx,label:m.label}}):[];
  const th=chartTheme();
  longLineChart=new Chart(ctx,{
   type:"line",
@@ -1024,7 +1034,7 @@ function renderLongLineChart(){
     legend:{position:"bottom",labels:{usePointStyle:true,pointStyle:"line",boxWidth:26,padding:14,color:th.text,font:{family:'"VCR OSD Mono", monospace', size:12}}},
     tooltip:{enabled:false,external:retroTooltip},
     eventMarkers:{markers,lineColour:th.markerLine,textColour:th.markerText},
-    endLineLabels:{}
+    endLineLabels:{allowedParties:["Isamaa","Centre","SDE","EKRE","Reform","PP","E200"]}
    },
    scales:{
     x:{
