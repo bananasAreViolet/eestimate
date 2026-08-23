@@ -238,12 +238,17 @@ body.dark .mode-btn.active{background:#b11333;color:#fff}
  </div>
 </div>
 </div></section>
+
+<section class="window"><div class="titlebar"><span>POLLING AVERAGE — SINCE 1999</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="longLineChart"></canvas></div></div><p class="header-note" id="longNote">Loading the long-run polling history…</p></div></section>
 </div>
 
 
 <script>
 const GOOGLE_SHEET_URL="https://docs.google.com/spreadsheets/d/1gGBmEUW5bwp23602WfQF4eciRrZT4M-VrAz1r5M2JHU/edit?usp=sharing";
 const SHEET_NAME="EEavg",SHEET_RANGE="A:M";
+
+  
+const HISTORICAL_CSV_URL="Eesti1999.csv";
 const PARTY_COLOURS={
 Reform:"#f4dd52",
 EKRE:"#8e7b6d",
@@ -256,7 +261,10 @@ Koos:"#55c0c9",
 PP:"#e88743",
 Greens:"#98C62B",
 ERK:"#d7c262",
-Free:"#b6d3dd"};
+Free:"#b6d3dd",
+"EÜRP":"#b5651d",
+Coalition:"#2f4b7c",
+"Res Publica":"#a4133c"};
 const PREFERRED_ORDER=["VL","SDE","Greens","E200","Reform","PP","Free","Isamaa","Centre","ERK","EKRE","Koos"];
 const DISTRICTS=[10,13,8,16,6,5,6,7,7,8,8,7],RIIGIKOGU_SEATS=101,NATIONAL_THRESHOLD=5,MODIFIED_DHONDT_EXPONENT=.9;
 const EVENT_MARKERS=[
@@ -341,9 +349,10 @@ let customCoalitionChart=null;
 const $=id=>document.getElementById(id);
 const esc=v=>String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
 const idOf=url=>((String(url||"").match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)||[])[1]||"");
-const n=v=>{if(v===null||v===undefined||v==="")return null;const x=Number(String(v).replace(",","."));return Number.isFinite(x)?x:null};
-const pct=v=>{const x=n(v);return x===null?null:Math.abs(x)<=1.5?x*100:x};
-const dt=v=>{if(v===null||v===undefined||v==="")return null;if(typeof v==="number")return new Date(Date.UTC(1899,11,30)+v*86400000);const s=String(v).trim(),m=s.match(/^Date\((\d{4}),(\d{1,2}),(\d{1,2})/);if(m)return new Date(Date.UTC(+m[1],+m[2],+m[3]));const d=new Date(s);return Number.isNaN(d.getTime())?null:d};
+const MONTH_ABBR={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+const n=v=>{if(v===null||v===undefined||v==="")return null;const x=Number(String(v).trim().replace(",",".").replace(/%\s*$/,""));return Number.isFinite(x)?x:null};
+const pct=v=>{if(v===null||v===undefined||v==="")return null;const hasPercentSign=/%\s*$/.test(String(v).trim());const x=n(v);return x===null?null:(!hasPercentSign&&Math.abs(x)<=1.5)?x*100:x};
+const dt=v=>{if(v===null||v===undefined||v==="")return null;if(typeof v==="number")return new Date(Date.UTC(1899,11,30)+v*86400000);const s=String(v).trim();const gviz=s.match(/^Date\((\d{4}),(\d{1,2}),(\d{1,2})/);if(gviz)return new Date(Date.UTC(+gviz[1],+gviz[2],+gviz[3]));const dmy=s.match(/^(\d{1,2})[-\/ ]([A-Za-z]{3,})[-\/ ](\d{2,4})$/);if(dmy){const day=+dmy[1],mon=MONTH_ABBR[dmy[2].slice(0,3).toLowerCase()];let year=+dmy[3];if(dmy[3].length<=2)year=year<30?2000+year:1900+year;if(mon!==undefined)return new Date(Date.UTC(year,mon,day))}const d=new Date(s);return Number.isNaN(d.getTime())?null:d};
 const dtext=d=>d?new Intl.DateTimeFormat("en-GB",{year:"numeric",month:"short",day:"numeric"}).format(d):"—";
 function parseGviz(t){const a=t.indexOf("{"),b=t.lastIndexOf("}");if(a<0||b<=a)throw Error("No response from database, hm.");return JSON.parse(t.slice(a,b+1))}
 
@@ -830,7 +839,7 @@ function renderCoalitionSummary(){
  }
  $("coalitionSummary").innerHTML=names.length?`<strong>${maj?"Chosen parties:":"Chosen parties:"}</strong> ${esc(names.join(", "))}`:"Select parties using the boxes."
 }
-$("reloadBtn").onclick=loadGoogleSheet;
+$("reloadBtn").onclick=()=>{loadGoogleSheet();loadLongTermData();};
 $("themeBtn").onclick=()=>{
  document.body.classList.toggle("dark");
  $("themeBtn").textContent=document.body.classList.contains("dark")?"Light mode":"Dark mode";
@@ -841,6 +850,7 @@ $("themeBtn").onclick=()=>{
    renderCustomCoalitionChart();
  }
  if(govtRows.length){renderGovtLineChart();}
+ if(longRows.length){renderLongLineChart();}
 };
 
 async function loadGovtSheet(){
@@ -911,6 +921,129 @@ function renderGovtLineChart(){
      grid:{display:false}
     },
     y:{beginAtZero:true,suggestedMax:60,ticks:{callback:v=>`${v}%`,color:th.text},grid:{color:th.grid}}
+   }
+  }
+ });
+}
+
+let longLineChart=null,longRows=[];
+
+function parseCSV(text){
+ const rows=[];let row=[],field="",inQuotes=false;
+ for(let i=0;i<text.length;i++){
+  const c=text[i];
+  if(inQuotes){
+   if(c==='"'){if(text[i+1]==='"'){field+='"';i++}else{inQuotes=false}}
+   else field+=c;
+  }else{
+   if(c==='"')inQuotes=true;
+   else if(c===','){row.push(field);field=""}
+   else if(c==='\r'){/*skip, \n handles the break*/}
+   else if(c==='\n'){row.push(field);rows.push(row);row=[];field=""}
+   else field+=c;
+  }
+ }
+ if(field.length||row.length){row.push(field);rows.push(row)}
+ return rows.filter(r=>r.length>1||(r[0]!==undefined&&r[0]!==""));
+}
+
+const CSV_MONTH_ABBR={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+function dtCSV(v){
+ if(v===null||v===undefined)return null;
+ const s=String(v).trim();
+ if(s==="")return null;
+ const m=s.match(/^(\d{1,2})[\-\/ ]([A-Za-z]{3})[\-\/ ](\d{2,4})$/);
+ if(m){
+  const day=+m[1],mon=CSV_MONTH_ABBR[m[2].toLowerCase()];
+  if(mon===undefined)return null;
+  let year=+m[3];
+  if(m[3].length===2)year+=(year>=50?1900:2000);
+  return new Date(Date.UTC(year,mon,day));
+ }
+ return dt(v);
+}
+function pctCSV(v){
+ if(v===null||v===undefined)return null;
+ const s=String(v).trim().replace("%","").replace(",",".");
+ if(s==="")return null;
+ const x=Number(s);
+ return Number.isFinite(x)?x:null;
+}
+
+async function loadLongTermData(){
+ const note=$("longNote");
+ if(note)note.textContent="Loading the long-run polling history, this can take a moment given the row count…";
+ try{
+  const r=await fetch(HISTORICAL_CSV_URL,{cache:"force-cache"});
+  if(!r.ok)throw Error(`Could not load ${HISTORICAL_CSV_URL} (HTTP ${r.status}).`);
+  const table=parseCSV(await r.text());
+  if(!table.length)throw Error("Historical polling file is empty.");
+  const headers=table[0].map(h=>String(h||"").trim()),di=headers.findIndex(h=>h.toLowerCase()==="date");
+  if(di<0)throw Error("Historical polling file is missing a Date column.");
+  longRows=[];
+  for(let i=1;i<table.length;i++){
+   const c=table[i];if(!c||!c.length)continue;
+   const d=dtCSV(c[di]);if(!d)continue;
+   const rec={date:d};headers.forEach((h,idx)=>{if(idx!==di)rec[h]=pctCSV(c[idx])});
+   longRows.push(rec);
+  }
+  longRows.sort((a,b)=>a.date-b.date);
+  if(!longRows.length)throw Error("No dated rows found in the historical polling file.");
+  renderLongLineChart();
+  const first=longRows[0],last=longRows.at(-1);
+  if(note)note.textContent=`Covers ${dtext(first.date)} to ${dtext(last.date)}, ${longRows.length.toLocaleString()} days of data.`;
+ }catch(e){
+  if(note)note.textContent=`Historical polling data error: ${e.message}`;
+  console.error(e);
+ }
+}
+
+
+function renderLongLineChart(){
+ const canvas=$("longLineChart");if(!canvas)return;
+ const ctx=canvas.getContext("2d");if(longLineChart)longLineChart.destroy();
+ const labels=longRows.map(r=>dtext(r.date));
+ const partyKeys=longRows.length?Object.keys(longRows[0]).filter(k=>k!=="date"):[];
+ const datasets=partyKeys.map(key=>{
+  const has=longRows.some(r=>r[key]!==null&&r[key]!==undefined);if(!has)return null;
+  const colour=PARTY_COLOURS[key]||"#777";
+  return{label:key,data:longRows.map(r=>r[key]),borderColor:colour,backgroundColor:colour,borderWidth:1.5,pointRadius:0,pointHoverRadius:4,tension:.15,spanGaps:true};
+ }).filter(Boolean);
+ const markers=longRows.length?EVENT_MARKERS.map(m=>{let idx=0,diff=Infinity;longRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-m.date);if(d<diff){diff=d;idx=i}});return{idx,label:m.label}}):[];
+ const th=chartTheme();
+ longLineChart=new Chart(ctx,{
+  type:"line",
+  data:{labels,datasets},
+  options:{
+   responsive:true,
+   maintainAspectRatio:false,
+   animation:false,
+   layout:{padding:{right:110}},
+   interaction:{mode:"nearest",axis:"xy",intersect:false},
+   plugins:{
+    legend:{position:"bottom",labels:{usePointStyle:true,pointStyle:"line",boxWidth:26,padding:14,color:th.text,font:{family:'"VCR OSD Mono", monospace', size:12}}},
+    tooltip:{enabled:false,external:retroTooltip},
+    eventMarkers:{markers,lineColour:th.markerLine,textColour:th.markerText},
+    endLineLabels:{}
+   },
+   scales:{
+    x:{
+     ticks:{
+      color:th.text,
+      font:{family:'"VCR OSD Mono", monospace', size:14},
+      autoSkip:false,
+      maxRotation:0,
+      minRotation:0,
+      callback:function(val,index){
+       const row=longRows[index];if(!row)return "";
+       const prevRow=longRows[index-1];
+       if(prevRow&&row.date.getUTCFullYear()===prevRow.date.getUTCFullYear())return "";
+       return String(row.date.getUTCFullYear());
+      }
+     },
+     grid:{display:false}
+    },
+    y:{beginAtZero:true,suggestedMax:35,ticks:{callback:v=>`${v}%`,color:th.text},grid:{color:th.grid}}
    }
   }
  });
@@ -1109,6 +1242,7 @@ function renderCustomCoalitionChart(){
 }
 
 loadGoogleSheet();
+loadLongTermData();
 </script>
 </body>
 </html>
