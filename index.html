@@ -32,6 +32,7 @@ button,input{font:inherit}.page{width:min(1320px,calc(100% - 24px));margin:12px 
 .window{border:2px solid var(--dark);border-right-color:var(--light);border-bottom-color:var(--light);background:var(--panel);padding:3px;margin-top:10px}
 .titlebar{background:var(--title);color:#fff;padding:3px 6px;font-weight:bold;display:flex;justify-content:space-between;font-family:"VCR OSD Mono",monospace}
 .window-body{padding:10px}h1{font-size:18px;margin:0 0 4px;font-family:"VCR OSD Mono",monospace}.header-note{margin:0;color:var(--muted);font-size:12px}
+.lead-summary{margin:0 0 6px;color:var(--text);font-size:14px}
 .toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:8px}
 .action{background:#d4d0c8;color:#000;border:2px solid var(--light);border-right-color:var(--dark);border-bottom-color:var(--dark);padding:3px 10px;cursor:pointer;border-radius:0}
 .action:active{border:2px solid var(--dark);border-right-color:var(--light);border-bottom-color:var(--light)}
@@ -65,7 +66,7 @@ body.dark .majority.reached{background:#6ab647;color:#fff}
 body.dark .party-select.selected .party-box{box-shadow:0 0 0 2px #fff inset}
 .coalition-summary{margin-top:22px;padding-top:9px;border-top:1px solid var(--dark);font-size:12px;line-height:1.45}.error{background:#f6dddd}.error .window-body{color:#000}
 
-/* projection and support window layout */
+
 .projection-row{display:flex;flex-wrap:wrap;gap:16px;width:100%}
 .projection-window{flex:1 1 320px}
 .support-window{flex:1 1 320px;display:flex;flex-direction:column;}
@@ -139,8 +140,9 @@ body.dark a {
   <div class="window-body" style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
   <div>
     <h1>Riigikogu Monitor [RKM]</h1>
+    <p class="lead-summary" id="leadSummary">Loading current standings…</p>
     <p class="header-note">RKM is an Estonian party preference polling tracker by bananasAreViolet.
-<br>Charts based on weighted (by pollster and date) 30-day average, complemented by a 15-day unweighted averaging for smoothing purposes.<br><br>
+<br>Charts based on weighted (by pollster and date) 30-day average, with LOESS smoothing applied to the displayed trend lines.<br><br>
 <b><a href="https://reitingud.ee/" target="_blank" rel="noopener">Norstat/ÜI</a></b> polls are given a weight of 0.2 due to their frequency of appearing per week, adding up to a total weight of 0.8 per month.<br>
 <b><a href="https://www.err.ee/reitingud" target="_blank" rel="noopener">Emor/ERR</a></b> polls are given a weight of 1.<br>
 <b><a href="https://turu-uuringute.eu/uudised/" target="_blank" rel="noopener">Turu-uuringute AS</a></b> polls are given a weight of 0.7.<br>
@@ -233,7 +235,7 @@ body.dark a {
 <span class="threshold" style="left:67.327%"></span><span class="threshold-label" style="left:67.327%"><strong>68</strong>Supermajority line</span>
 <span class="threshold" style="left:80.198%"></span><span class="threshold-label" style="left:80.198%"><strong>81</strong>Constitution amending line</span>
 </div>
-<div class="party-selector" id="partySelector" style="margin-top:44px"></div><div class="coalition-summary" id="coalitionSummary">Select parties using the boxes.</div>
+<div class="party-selector" id="partySelector" style="margin-top:44px"></div><div class="coalition-summary" id="coalitionSummary">Select parties using the boxes.<br>Reform currently rules out Centre and EKRE. SDE rules out EKRE.</div>
 </div></section>
 
 <section class="window"><div class="titlebar"><span>GOVERNMENT VS OPPOSITION POLLING AVERAGE</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="govtLineChart"></canvas></div></div><p class="header-note"></p></div></section>
@@ -256,7 +258,7 @@ body.dark a {
 </div>
 </div></section>
 
-<section class="window"><div class="titlebar"><span>1999 TO PRESENT DAY POLLING AVERAGE</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="longLineChart"></canvas></div></div><p class="header-note" id="longNote">Loading the long polling history…</p><p class="header-note">Res Publica ended up merging into Isamaaliit to form IRL, later renamed Isamaa.<br>ERL became EKRE in 2012.</p></div></section>
+<section class="window"><div class="titlebar"><span>1999 TO PRESENT DAY POLLING AVERAGE</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="longLineChart"></canvas></div></div><p class="header-note" id="longNote">Loading the long polling history…</p><p class="header-note">Res Publica ended up merging into Isamaaliit to form IRL, later renamed Isamaa.<br>ERL became EKRE in 2012.<br>Trend lines are LOESS-smoothed separately within each election cycle and tied to the actual result on each election date.</p></div></section>
 </div>
 
 
@@ -322,10 +324,13 @@ const endLineLabelsPlugin = {
  id: "endLineLabels",
  afterDatasetsDraw(chart, args, opts) {
   const allowedParties = opts && opts.allowedParties ? opts.allowedParties : null;
-  const { ctx } = chart;
+  const { ctx, chartArea } = chart;
   ctx.save();
+
+
+  const labelsToDraw = [];
   chart.data.datasets.forEach((dataset, i) => {
-   if (allowedParties && !allowedParties.includes(dataset.label)) return;
+   if (allowedParties && allowedParties.length && !allowedParties.includes(dataset.label)) return;
 
    const meta = chart.getDatasetMeta(i);
    if (!meta.hidden && meta.data && meta.data.length > 0) {
@@ -337,16 +342,57 @@ const endLineLabelsPlugin = {
      const point = meta.data[lastIdx];
      const val = dataset.data[lastIdx];
      if (point && !isNaN(point.x) && !isNaN(point.y)) {
-      ctx.font = "bold 11px Tahoma, Arial, sans-serif";
-      ctx.fillStyle = dataset.borderColor;
-      ctx.textAlign = "left";
-      ctx.textBaseline = "middle";
       const sign = (val > 0 && opts.showPlusSign) ? "+" : "";
-      ctx.fillText(` ${dataset.label} ${sign}${val.toFixed(1)}%`, point.x + 6, point.y);
+      labelsToDraw.push({
+       text: ` ${dataset.label} ${sign}${val.toFixed(1)}%`,
+       color: dataset.borderColor,
+       x: point.x + 6,
+       y: point.y
+      });
      }
     }
    }
   });
+
+  if (labelsToDraw.length === 0) {
+   ctx.restore();
+   return;
+  }
+
+
+  labelsToDraw.sort((a, b) => a.y - b.y);
+
+  const minSpacing = 14; // pixels between labels
+
+  for (let i = 1; i < labelsToDraw.length; i++) {
+   if (labelsToDraw[i].y - labelsToDraw[i - 1].y < minSpacing) {
+    labelsToDraw[i].y = labelsToDraw[i - 1].y + minSpacing;
+   }
+  }
+
+
+  if (chartArea && labelsToDraw.length > 0) {
+   const maxY = chartArea.bottom - 4;
+   if (labelsToDraw[labelsToDraw.length - 1].y > maxY) {
+    labelsToDraw[labelsToDraw.length - 1].y = maxY;
+    for (let i = labelsToDraw.length - 2; i >= 0; i--) {
+     if (labelsToDraw[i + 1].y - labelsToDraw[i].y < minSpacing) {
+      labelsToDraw[i].y = labelsToDraw[i + 1].y - minSpacing;
+     }
+    }
+   }
+  }
+
+
+  ctx.font = "bold 11px Tahoma, Arial, sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+
+  labelsToDraw.forEach(lbl => {
+   ctx.fillStyle = lbl.color;
+   ctx.fillText(lbl.text, lbl.x, lbl.y);
+  });
+
   ctx.restore();
  }
 };
@@ -359,11 +405,20 @@ const chartTheme=()=>document.body.classList.contains("dark")
 const shade=(hex,amt)=>{const c=hex.replace("#","");const num=parseInt(c,16);let r=(num>>16)+amt,g=((num>>8)&255)+amt,b=(num&255)+amt;r=Math.min(255,Math.max(0,r));g=Math.min(255,Math.max(0,g));b=Math.min(255,Math.max(0,b));return`#${((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1)}`};
 let lineChart=null,latestRows=[],latestPoll=[],projection=[],selectedCoalition=new Set();
 
-const GOVT_SHEET_NAME="GOVTavg",GOVT_SHEET_RANGE="A:D";
+const GOVT_SHEET_NAME="GOVTavg2",GOVT_SHEET_RANGE="A:M";
 const GOVT_COLOURS={
-"Government parties":"#2e7d32",
-"Parliamentary opposition":"#d32f2f",
-"Extraparliamentary opposition":"#f59e0b"
+"Government parties (Michal I)":"#2e7d32",
+"Parliamentary opposition (Michal I)":"#d32f2f",
+"Extraparliamentary opposition (Michal I)":"#f59e0b",
+"Government parties (Michal I w/ SDE)":"#2e7d32",
+"Parliamentary opposition (Michal I w/ SDE)":"#d32f2f",
+"Extraparliamentary opposition (Michal I w/ SDE)":"#f59e0b",
+"Government parties (Kallas III)":"#2e7d32",
+"Parliamentary opposition (Kallas III)":"#d32f2f",
+"Extraparliamentary opposition (Kallas III)":"#f59e0b",
+"Government parties (Kallas II)":"#2e7d32",
+"Parliamentary opposition (Kallas II)":"#d32f2f",
+"Extraparliamentary opposition (Kallas II)":"#f59e0b"
 };
 let govtLineChart=null,govtRows=[],govtLatestPoll=[];
 
@@ -397,7 +452,8 @@ function retroTooltip(context){
   dataPoints.forEach(dp=>{
    const colour=dp.dataset.borderColor||"#888";
    const name=dp.dataset.label||"";
-   const val=dp.parsed.y===null?"—":`${Number(dp.parsed.y).toFixed(1)}%`;
+   const displayValue=dp.parsed.y;
+   const val=displayValue===null?"—":`${Number(displayValue).toFixed(1)}%`;
    html+=`<div class="chartjs-tooltip-row"><span class="party-box" style="background:${esc(colour)}">${esc(name)}</span><span class="chartjs-tooltip-value">${val}</span></div>`;
   });
   el.innerHTML=html;
@@ -421,9 +477,11 @@ async function loadGoogleSheet(){
   latestRows=[];
   for(const row of rows){const c=row.c||[],dc=c[di]||{},d=dt(dc.v!==undefined?dc.v:dc.f);if(!d)continue;const rec={date:d};headers.forEach((h,i)=>{if(i!==di){const x=c[i]||{};rec[h]=pct(x.v!==undefined?x.v:x.f)}});latestRows.push(rec)}
   latestRows.sort((a,b)=>a.date-b.date);if(!latestRows.length)throw Error("Error with database missing dates, it seems.");
+  buildSmoothedRows(headers.filter(h=>h!==headers[di]));
   const last=latestRows.at(-1);
-  latestPoll=headers.filter(h=>h!==headers[di]).map(name=>({key:name,name,colour:PARTY_COLOURS[name]||"#777",support:last[name]})).filter(p=>p.support!==null);
-  renderLineChart();renderLatestPolling();renderProjection();renderCoalitionBuilder();
+  const lastSmoothed=smoothedRows.at(-1);
+  latestPoll=headers.filter(h=>h!==headers[di]).map(name=>({key:name,name,colour:PARTY_COLOURS[name]||"#777",support:lastSmoothed[name]})).filter(p=>p.support!==null);
+  renderLineChart();renderLatestPolling();renderLeadSummary();renderProjection();renderCoalitionBuilder();
   renderCustomCoalitionTool();
   loadGovtSheet();
   $("status").textContent=`Latest update: ${dtext(last.date)}, ${latestRows.length.toLocaleString()} days from the previous election`;$("setupPanel").style.display="none";
@@ -431,10 +489,116 @@ async function loadGoogleSheet(){
  finally{document.body.classList.remove("loading")}
 }
 
+
+const LOESS_SPAN=0.03;
+
+const LONG_LOESS_SPAN=0.08;
+let smoothedRows=[];
+function buildSmoothedRows(keys){
+ smoothedRows=latestRows.map(r=>({date:r.date}));
+ for(const key of keys){
+  const smooth=loessSmooth(latestRows.map(r=>r[key]));
+  smooth.forEach((value,i)=>{smoothedRows[i][key]=value});
+ }
+}
+function smoothedValueAt(index,key){
+ if(index<0||index>=smoothedRows.length)return null;
+ const v=smoothedRows[index]?.[key];
+ return Number.isFinite(v)?v:null;
+}
+function rawValueAt(index,key){
+ if(index<0||index>=latestRows.length)return null;
+ const v=latestRows[index]?.[key];
+ return Number.isFinite(v)?v:null;
+}
+function nearestRowIndex(daysAgo){
+ if(!smoothedRows.length)return -1;
+ const last=smoothedRows.at(-1);
+ const target=last.date.getTime()-daysAgo*86400000;
+ let best=-1,bestDiff=Infinity;
+ smoothedRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-target);if(d<bestDiff){bestDiff=d;best=i}});
+ return best;
+}
+function findDateIndex(year,month,day){
+ const target=Date.UTC(year,month,day);
+ const exact=smoothedRows.findIndex(r=>r.date.getTime()===target);
+ if(exact!==-1)return exact;
+ let best=-1,bestDiff=Infinity;
+ smoothedRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-target);if(d<bestDiff){bestDiff=d;best=i}});
+ return best;
+}
+function loessSmooth(values, span=LOESS_SPAN){
+ const points=[];
+ values.forEach((value,index)=>{
+  if(Number.isFinite(value)) points.push({x:index,y:value});
+ });
+ if(points.length<4) return values.slice();
+ const k=Math.max(4,Math.min(points.length,Math.ceil(points.length*span)));
+ const out=values.slice();
+ for(let i=0;i<values.length;i++){
+  if(!Number.isFinite(values[i])){out[i]=null;continue;}
+  let nearest=points.map(p=>({p,dist:Math.abs(p.x-i)})).sort((a,b)=>a.dist-b.dist).slice(0,k);
+  const maxDist=nearest.at(-1).dist||1;
+  let Sw=0,Sx=0,Sy=0,Sxx=0,Sxy=0;
+  for(const {p,dist} of nearest){
+   const u=Math.min(1,dist/maxDist);
+   const w=Math.pow(1-Math.pow(u,3),3);
+   Sw+=w;Sx+=w*p.x;Sy+=w*p.y;Sxx+=w*p.x*p.x;Sxy+=w*p.x*p.y;
+  }
+  const denom=Sw*Sxx-Sx*Sx;
+  if(Math.abs(denom)<1e-12){out[i]=Sw?Sy/Sw:values[i];continue}
+  const beta=(Sw*Sxy-Sx*Sy)/denom;
+  const alpha=(Sy-beta*Sx)/Sw;
+  out[i]=alpha+beta*i;
+ }
+ return out;
+}
+
+function smoothedDatasetData(rows,key){
+ const raw=rows.map(r=>r[key]);
+ return {raw,smoothed:loessSmooth(raw)};
+}
+
+
+function electionAnchorIndices(rows,markers){
+ if(!rows.length)return[];
+ return markers.map(m=>{
+  let exact=rows.findIndex(r=>r.date.getTime()===m.date);
+  if(exact!==-1)return exact;
+  let best=-1,bestDiff=Infinity;
+  rows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-m.date);if(d<bestDiff){bestDiff=d;best=i}});
+  return best;
+ }).filter(i=>i>=0);
+}
+function electionAnchoredLoess(rows,key,anchorIndices,span){
+ const values=rows.map(r=>r[key]);
+ const n=values.length;
+ if(!n)return[];
+ const bounds=[0,...anchorIndices,n-1].filter((v,i,a)=>v>=0&&v<n&&a.indexOf(v)===i).sort((a,b)=>a-b);
+ const out=new Array(n).fill(null);
+ for(let s=0;s<bounds.length-1;s++){
+  const segStart=bounds[s],segEnd=bounds[s+1],segLen=segEnd-segStart+1;
+  const segValues=values.slice(segStart,segEnd+1);
+  const segSmoothed=loessSmooth(segValues,span);
+  const leftIsAnchor=anchorIndices.includes(segStart)&&Number.isFinite(values[segStart]);
+  const rightIsAnchor=anchorIndices.includes(segEnd)&&Number.isFinite(values[segEnd]);
+  const leftTarget=leftIsAnchor?values[segStart]:segSmoothed[0];
+  const rightTarget=rightIsAnchor?values[segEnd]:segSmoothed[segLen-1];
+  const leftCorrection=segSmoothed[0]===null?0:leftTarget-segSmoothed[0];
+  const rightCorrection=segSmoothed[segLen-1]===null?0:rightTarget-segSmoothed[segLen-1];
+  for(let i=0;i<segLen;i++){
+   if(segSmoothed[i]===null){out[segStart+i]=null;continue}
+   const t=segLen>1?i/(segLen-1):0;
+   out[segStart+i]=segSmoothed[i]+(1-t)*leftCorrection+t*rightCorrection;
+  }
+ }
+ return out;
+}
+
 function renderLineChart(){
  const ctx=$("lineChart").getContext("2d");if(lineChart)lineChart.destroy();
  const labels=latestRows.map(r=>dtext(r.date));
- const datasets=latestPoll.map(p=>{const has=latestRows.some(r=>r[p.key]!==null&&r[p.key]!==undefined);if(!has)return null;return{label:p.name,data:latestRows.map(r=>r[p.key]),borderColor:p.colour,backgroundColor:p.colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:.2,spanGaps:true}}).filter(Boolean);
+ const datasets=latestPoll.map(p=>{const has=latestRows.some(r=>r[p.key]!==null&&r[p.key]!==undefined);if(!has)return null;const series=smoothedDatasetData(latestRows,p.key);return{label:p.name,data:series.smoothed,_rawData:series.raw,borderColor:p.colour,backgroundColor:p.colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,spanGaps:true}}).filter(Boolean);
  const markers=latestRows.length?EVENT_MARKERS.map(m=>{let idx=0,diff=Infinity;latestRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-m.date);if(d<diff){diff=d;idx=i}});return{idx,label:m.label}}):[];
  const th=chartTheme();
  lineChart=new Chart(ctx,{
@@ -485,13 +649,34 @@ function renderLineChart(){
  });
 }
 
+const NEXT_ELECTION_DATE=Date.UTC(2027,2,7);
+function renderLeadSummary(){
+ const el=$("leadSummary");if(!el)return;
+ const now=new Date();
+ const today=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate());
+ const daysLeft=Math.max(0,Math.floor((NEXT_ELECTION_DATE-today)/86400000));
+ const electionLine=`There are ${daysLeft.toLocaleString()} days or fewer until the next Riigikogu election.`;
+ if(!latestPoll.length){el.textContent=electionLine;return}
+ const sorted=[...latestPoll].sort((a,b)=>b.support-a.support);
+ const [first,second]=sorted;
+ const partyTag=p=>`<b style="color:${esc(p.colour)}">${esc(p.name)}</b>`;
+ const r1=Math.round(first.support*10)/10,r2=Math.round(second.support*10)/10;
+ let leadLine;
+ if(r1===r2){
+  leadLine=`${partyTag(first)} and ${partyTag(second)} are tied.`;
+ }else{
+  leadLine=`${partyTag(first)} is leading ${partyTag(second)} by ${(r1-r2).toFixed(1)} points.`;
+ }
+ el.innerHTML=`${leadLine} ${electionLine}`;
+}
+
 function renderLatestPolling(){
  const c=$("latestChart"),note=$("latestNote");c.innerHTML="";if(!latestPoll.length){note.textContent="No current party observations.";return}
  const sorted=[...latestPoll].sort((a,b)=>b.support-a.support);
- const marRow=latestRows.find(r=>r.date.getUTCFullYear()===2023&&r.date.getUTCMonth()===2&&r.date.getUTCDate()===5);
- const oldOf=p=>{if(!marRow)return null;const v=marRow[p.key];return v===null||v===undefined?null:v};
+ const marIndex=findDateIndex(2023,2,5);
+ const oldOf=p=>rawValueAt(marIndex,p.key);
  const max=Math.max(...sorted.map(p=>p.support),...sorted.map(oldOf).filter(v=>v!==null),1);
- note.textContent=`Latest update: ${dtext(latestRows.at(-1).date)}. Support differences shaded vs 5 Mar 2023: stripy bars indicate lost support while lighter (light mode)/darker (dark mode) bars indicate gains.`;
+ note.textContent=`Latest update: ${dtext(latestRows.at(-1).date)}. Support differences shaded vs previous election: stripy bars indicate lost support while lighter (light mode)/darker (dark mode) bars indicate gains.`;
  const isDark=document.body.classList.contains("dark");
  for(const p of sorted){
   const old=oldOf(p);
@@ -614,13 +799,8 @@ function renderSupportChanges() {
     container.style.justifyContent = "center";
   }
 
-  const baselineRow = latestRows.find(r => 
-    r.date.getUTCFullYear() === 2023 && 
-    r.date.getUTCMonth() === 2 && 
-    r.date.getUTCDate() === 5
-  );
+  const baselineIndex = findDateIndex(2023,2,5);
 
-  const FALLBACK_2023 = { Reform: 31.24, EKRE: 16.05, Centre: 15.28, E200: 13.33, SDE: 9.27, Isamaa: 8.21, PP: 2.3, Greens: 0.96 };
   const allowedParties = ["Reform", "EKRE", "Centre", "Isamaa", "E200", "PP", "SDE", "Greens"];
 
   let gainers = [];
@@ -630,7 +810,7 @@ function renderSupportChanges() {
     const partyData = latestPoll.find(p => p.name === partyKey || p.key === partyKey);
     if (!partyData) return;
 
-    let baselineVal = baselineRow && baselineRow[partyKey] !== undefined ? baselineRow[partyKey] : FALLBACK_2023[partyKey];
+    const baselineVal = rawValueAt(baselineIndex, partyKey);
 
     if (baselineVal !== undefined && baselineVal !== null) {
       const currentPct = Number(partyData.support || 0);
@@ -687,22 +867,14 @@ function renderSupportChanges() {
   });
 }
   
-function findBaselineRow(daysAgo) {
-  if (!latestRows.length) return null;
-  const last = latestRows.at(-1);
-  const targetTime = last.date.getTime() - daysAgo * 86400000;
-  let best = null, bestDiff = Infinity;
-  for (const r of latestRows) {
-    const diff = Math.abs(r.date.getTime() - targetTime);
-    if (diff < bestDiff) { bestDiff = diff; best = r; }
-  }
-  return best;
+function findBaselineIndex(daysAgo) {
+  return nearestRowIndex(daysAgo);
 }
 
-function renderSupportChangeGeneric(gainersId, losersId, baselineRow) {
+function renderSupportChangeGeneric(gainersId, losersId, baselineIndex) {
   const gainersCol = $(gainersId);
   const losersCol = $(losersId);
-  if (!gainersCol || !losersCol || !latestPoll || !baselineRow) return;
+  if (!gainersCol || !losersCol || !latestPoll || baselineIndex<0) return;
 
   gainersCol.innerHTML = "";
   losersCol.innerHTML = "";
@@ -716,7 +888,7 @@ function renderSupportChangeGeneric(gainersId, losersId, baselineRow) {
     const partyData = latestPoll.find(p => p.name === partyKey || p.key === partyKey);
     if (!partyData) return;
 
-    const baselineVal = baselineRow[partyKey];
+    const baselineVal = smoothedValueAt(baselineIndex, partyKey);
 
     if (baselineVal !== undefined && baselineVal !== null) {
       const currentPct = Number(partyData.support || 0);
@@ -774,8 +946,8 @@ function renderSupportChangeGeneric(gainersId, losersId, baselineRow) {
 }
 
 function renderRecentSupportChanges() {
-  renderSupportChangeGeneric("gainersColMonth", "losersColMonth", findBaselineRow(30));
-  renderSupportChangeGeneric("gainersColYear", "losersColYear", findBaselineRow(365));
+  renderSupportChangeGeneric("gainersColMonth", "losersColMonth", findBaselineIndex(30));
+  renderSupportChangeGeneric("gainersColYear", "losersColYear", findBaselineIndex(365));
 }
 
 function renderTopArchChart() {
@@ -864,9 +1036,9 @@ function renderCoalitionSummary(){
  }else{
   badge.style.background="";
  }
- $("coalitionSummary").innerHTML=names.length?`<strong>${maj?"Chosen parties:":"Chosen parties:"}</strong> ${esc(names.join(", "))}`:"Select parties using the boxes."
+ $("coalitionSummary").innerHTML=names.length?`<strong>${maj?"Chosen parties:":"Chosen parties:"}</strong> ${esc(names.join(", "))}`:"Select parties using the boxes.<br>Reform currently rules out Centre and EKRE. SDE rules out EKRE."
 }
-$("reloadBtn").onclick=()=>{loadGoogleSheet();loadLongTermData();};
+$("reloadBtn").onclick=()=>{loadGoogleSheet().finally(loadLongTermData);};
 $("themeBtn").onclick=()=>{
  document.body.classList.toggle("dark");
  $("themeBtn").textContent=document.body.classList.contains("dark")?"Light mode":"Dark mode";
@@ -892,7 +1064,7 @@ async function loadGovtSheet(){
   for(const row of rows){const c=row.c||[],dc=c[di]||{},d=dt(dc.v!==undefined?dc.v:dc.f);if(!d)continue;const rec={date:d};headers.forEach((h,i)=>{if(i!==di){const x=c[i]||{};rec[h]=pct(x.v!==undefined?x.v:x.f)}});govtRows.push(rec)}
   govtRows.sort((a,b)=>a.date-b.date);if(!govtRows.length)return;
   const last=govtRows.at(-1);
-  govtLatestPoll=headers.filter(h=>h!==headers[di]).map(name=>({key:name,name,colour:GOVT_COLOURS[name]||"#777",support:last[name]})).filter(p=>p.support!==null);
+  govtLatestPoll=headers.filter(h=>h!==headers[di]).map(name=>({key:name,name,colour:GOVT_COLOURS[name]||"#777",support:last[name]}));
   renderGovtLineChart();
  }catch(e){console.error(e)}
 }
@@ -902,7 +1074,7 @@ function renderGovtLineChart(){
  if(!canvas) return;
  const ctx=canvas.getContext("2d");if(govtLineChart)govtLineChart.destroy();
  const labels=govtRows.map(r=>dtext(r.date));
- const datasets=govtLatestPoll.map(p=>{const has=govtRows.some(r=>r[p.key]!==null&&r[p.key]!==undefined);if(!has)return null;return{label:p.name,data:govtRows.map(r=>r[p.key]),borderColor:p.colour,backgroundColor:p.colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:.2,spanGaps:true}}).filter(Boolean);
+ const datasets=govtLatestPoll.map(p=>{const has=govtRows.some(r=>r[p.key]!==null&&r[p.key]!==undefined);if(!has)return null;const series=smoothedDatasetData(govtRows,p.key);return{label:p.name,data:series.smoothed,_rawData:series.raw,borderColor:p.colour,backgroundColor:p.colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,spanGaps:true}}).filter(Boolean);
  const markers=govtRows.length?EVENT_MARKERS.map(m=>{let idx=0,diff=Infinity;govtRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-m.date);if(d<diff){diff=d;idx=i}});return{idx,label:m.label}}):[];
  const th=chartTheme();
  govtLineChart=new Chart(ctx,{
@@ -917,7 +1089,7 @@ function renderGovtLineChart(){
     legend:{display:false},
     tooltip:{enabled:false,external:retroTooltip},
     eventMarkers:{markers,lineColour:th.markerLine,textColour:th.markerText},
-    endLineLabels:{}
+    endLineLabels:{allowedParties:["Government parties (Michal I)","Parliamentary opposition (Michal I)","Extraparliamentary opposition (Michal I)"]}
    },
    scales:{
     x:{
@@ -954,6 +1126,19 @@ function renderGovtLineChart(){
 }
 
 let longLineChart=null,longRows=[];
+
+let longSmoothedSeries=null;
+function computeLongSmoothedSeries(){
+ const partyKeys=longRows.length?Object.keys(longRows[0]).filter(k=>k!=="date"):[];
+ const anchorIndices=electionAnchorIndices(longRows,ELECTION_MARKERS);
+ const series={};
+ for(const key of partyKeys){
+  const raw=longRows.map(r=>r[key]);
+  if(!raw.some(v=>v!==null&&v!==undefined))continue;
+  series[key]={raw,smoothed:electionAnchoredLoess(longRows,key,anchorIndices,LONG_LOESS_SPAN)};
+ }
+ return series;
+}
 
 function parseCSV(text){
  const rows=[];let row=[],field="",inQuotes=false;
@@ -1016,9 +1201,10 @@ async function loadLongTermData(){
   }
   longRows.sort((a,b)=>a.date-b.date);
   if(!longRows.length)throw Error("No dated rows found in the historical polling file.");
+  longSmoothedSeries=computeLongSmoothedSeries();
   renderLongLineChart();
   const first=longRows[0],last=longRows.at(-1);
-  if(note)note.textContent=`Covers ${dtext(first.date)} to ${dtext(last.date)}, ${longRows.length.toLocaleString()} days of data.`;
+  if(note)note.textContent=`Covers ${dtext(first.date)} to ${dtext(last.date)}, ${longRows.length.toLocaleString()} days of data. End values differ from normal polling average (above) due to LOESS.`;
  }catch(e){
   if(note)note.textContent=`Historical polling data error: ${e.message}`;
   console.error(e);
@@ -1030,12 +1216,10 @@ function renderLongLineChart(){
  const canvas=$("longLineChart");if(!canvas)return;
  const ctx=canvas.getContext("2d");if(longLineChart)longLineChart.destroy();
  const labels=longRows.map(r=>dtext(r.date));
- const partyKeys=longRows.length?Object.keys(longRows[0]).filter(k=>k!=="date"):[];
- const datasets=partyKeys.map(key=>{
-  const has=longRows.some(r=>r[key]!==null&&r[key]!==undefined);if(!has)return null;
+ const datasets=Object.entries(longSmoothedSeries||{}).map(([key,{raw,smoothed}])=>{
   const colour=PARTY_COLOURS[key]||"#777";
-  return{label:key,data:longRows.map(r=>r[key]),borderColor:colour,backgroundColor:colour,borderWidth:1.5,pointRadius:0,pointHoverRadius:4,tension:.15,spanGaps:true};
- }).filter(Boolean);
+  return{label:key,data:smoothed,_rawData:raw,borderColor:colour,backgroundColor:colour,borderWidth:1.5,pointRadius:0,pointHoverRadius:4,tension:0,spanGaps:true};
+ });
  const markers=longRows.length?ELECTION_MARKERS.map(m=>{let idx=0,diff=Infinity;longRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-m.date);if(d<diff){diff=d;idx=i}});return{idx,label:m.label}}):[];
  const th=chartTheme();
  longLineChart=new Chart(ctx,{
@@ -1070,7 +1254,7 @@ function renderLongLineChart(){
      },
      grid:{display:false}
     },
-    y:{beginAtZero:true,suggestedMax:35,ticks:{callback:v=>`${v}%`,color:th.text},grid:{color:th.grid}}
+    y:{beginAtZero:true,min:0,suggestedMax:35,ticks:{callback:v=>`${v}%`,color:th.text},grid:{color:th.grid}}
    }
   }
  });
@@ -1160,6 +1344,8 @@ function renderCustomCoalitionChart(){
 
  const side1Data=getCoalitionData(side1Coalition);
  const side2Data=getCoalitionData(side2Coalition);
+ const side1Smoothed=loessSmooth(side1Data);
+ const side2Smoothed=loessSmooth(side2Data);
 
  let datasets=[];
 
@@ -1169,25 +1355,27 @@ function renderCustomCoalitionChart(){
 
   datasets.push({
    label: side1Name,
-   data: side1Data,
+   data: side1Smoothed,
+   _rawData: side1Data,
    borderColor: color1,
    backgroundColor: color1,
    borderWidth: 2,
    pointRadius: 0,
    pointHoverRadius: 4,
-   tension: 0.2,
+   tension: 0,
    spanGaps: true
   });
 
   datasets.push({
    label: side2Name,
-   data: side2Data,
+   data: side2Smoothed,
+   _rawData: side2Data,
    borderColor: color2,
    backgroundColor: color2,
    borderWidth: 2,
    pointRadius: 0,
    pointHoverRadius: 4,
-   tension: 0.2,
+   tension: 0,
    spanGaps: true
   });
  } else {
@@ -1197,17 +1385,19 @@ function renderCustomCoalitionChart(){
    const v2=side2Data[i]||0;
    return v1 - v2;
   });
+  const netSmoothed=loessSmooth(netData);
 
   const netColor="#7c3aed";
   datasets.push({
    label: netLabel,
-   data: netData,
+   data: netSmoothed,
+   _rawData: netData,
    borderColor: netColor,
    backgroundColor: netColor,
    borderWidth: 2,
    pointRadius: 0,
    pointHoverRadius: 4,
-   tension: 0.2,
+   tension: 0,
    spanGaps: true
   });
  }
@@ -1268,8 +1458,9 @@ function renderCustomCoalitionChart(){
  });
 }
 
-loadGoogleSheet();
-loadLongTermData();
+renderLeadSummary();
+
+loadGoogleSheet().finally(loadLongTermData);
 </script>
 </body>
 </html>
