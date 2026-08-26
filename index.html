@@ -1049,7 +1049,7 @@ function renderCoalitionSummary(){
  }else{
   badge.style.background="";
  }
- $("coalitionSummary").innerHTML=names.length?`<strong>${maj?"Chosen parties:":"Chosen parties:"}</strong> ${esc(names.join(", "))}`:"Select parties using the boxes.<br>Reform currently rules out Centre and EKRE. SDE rules out EKRE."
+ $("coalitionSummary").innerHTML=names.length?`<strong>${maj?"'Safe majority' refers to a majority where governing parties are expected to have a majority in all committees.<br>Reform currently rules out Centre and EKRE. SDE rules out EKRE.<br>Chosen parties:":"'Safe majority' refers to a majority where governing parties are expected to have a majority in all committees.<br>Reform currently rules out Centre and EKRE. SDE rules out EKRE.<br>Chosen parties:"}</strong> ${esc(names.join(", "))}`:"'Safe majority' refers to a majority where governing parties are expected to have a majority in all committees.<br>Reform currently rules out Centre and EKRE. SDE rules out EKRE.<br>Select parties using the boxes."
 }
 $("reloadBtn").onclick=()=>{loadGoogleSheet().finally(loadLongTermData);};
 $("themeBtn").onclick=()=>{
