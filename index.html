@@ -1199,7 +1199,7 @@ async function loadLongTermData(){
  const note=$("longNote");
  if(note)note.textContent="Loading the long-run polling history, this can take a moment given the row count…";
  try{
-  const r=await fetch(HISTORICAL_CSV_URL,{cache:"no-cache"});
+  const r=await fetch(HISTORICAL_CSV_URL,{cache:"no-store"});
   if(!r.ok)throw Error(`Could not load ${HISTORICAL_CSV_URL} (HTTP ${r.status}).`);
   const table=parseCSV(await r.text());
   if(!table.length)throw Error("Historical polling file is empty.");
