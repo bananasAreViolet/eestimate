@@ -259,8 +259,6 @@ body.dark a {
 </div>
 </div></section>
 
-<section class="window"><div class="titlebar"><span>RIIGIKOGU COMPOSITION CHANGE OVER TIME</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="compositionChart"></canvas></div></div><p class="header-note" id="compositionNote">Loading Riigikogu composition history…</p><p class="header-note">Based on party affiliation, not factions.</p></div></section>
-
 <section class="window"><div class="titlebar"><span>1999 TO PRESENT DAY POLLING AVERAGE</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="longLineChart"></canvas></div></div><p class="header-note" id="longNote">Loading the long polling history…</p><p class="header-note">Res Publica ended up merging into Isamaaliit to form IRL, later renamed Isamaa.<br>ERL became EKRE in 2012.<br>Trend lines are LOESS-smoothed separately within each election cycle and tied to the actual result on each election date.</p></div></section>
 </div>
 
@@ -286,8 +284,7 @@ ERK:"#d7c262",
 Free:"#b6d3dd",
 "EÜRP":"#b5651d",
 Coalition:"#044999",
-"Res Publica":"#ff7750",
-"Ind.":"#8a8d91",
+"Res Publica":"#ff7750"};
 const PREFERRED_ORDER=["VL","SDE","Greens","E200","Reform","PP","Free","Isamaa","Centre","ERK","EKRE","Koos"];
 const DISTRICTS=[10,13,8,16,6,5,6,7,7,8,8,7],RIIGIKOGU_SEATS=101,NATIONAL_THRESHOLD=5,MODIFIED_DHONDT_EXPONENT=.9;
 const EVENT_MARKERS=[
@@ -347,9 +344,8 @@ const endLineLabelsPlugin = {
      const val = dataset.data[lastIdx];
      if (point && !isNaN(point.x) && !isNaN(point.y)) {
       const sign = (val > 0 && opts.showPlusSign) ? "+" : "";
-      const valueText = opts.valueFormatter ? opts.valueFormatter(val) : `${sign}${val.toFixed(1)}%`;
       labelsToDraw.push({
-       text: ` ${dataset.label} ${valueText}`,
+       text: ` ${dataset.label} ${sign}${val.toFixed(1)}%`,
        color: dataset.borderColor,
        x: point.x + 6,
        y: point.y
@@ -427,9 +423,6 @@ const GOVT_COLOURS={
 };
 let govtLineChart=null,govtRows=[],govtLatestPoll=[];
 
-const COMPOSITION_SHEET_NAME="RKavg",COMPOSITION_SHEET_RANGE="A:Z";
-let compositionChart=null,compositionRows=[];
-
 // coalition stuffs
 let side1Coalition=new Set(["Reform", "E200"]);
 let side2Coalition=new Set();
@@ -455,14 +448,13 @@ function retroTooltip(context){
 
  if(tooltip.body){
   const dataPoints=tooltip.dataPoints||[];
-  const isSeatCount=chart.canvas&&chart.canvas.id==="compositionChart";
   let html="";
   if(tooltip.title&&tooltip.title.length) html+=`<div class="chartjs-tooltip-date">${esc(tooltip.title[0])}</div>`;
   dataPoints.forEach(dp=>{
    const colour=dp.dataset.borderColor||"#888";
    const name=dp.dataset.label||"";
    const displayValue=dp.parsed.y;
-   const val=displayValue===null?"—":isSeatCount?`${Math.round(displayValue)} seats`:`${Number(displayValue).toFixed(1)}%`;
+   const val=displayValue===null?"—":`${Number(displayValue).toFixed(1)}%`;
    html+=`<div class="chartjs-tooltip-row"><span class="party-box" style="background:${esc(colour)}">${esc(name)}</span><span class="chartjs-tooltip-value">${val}</span></div>`;
   });
   el.innerHTML=html;
@@ -493,7 +485,6 @@ async function loadGoogleSheet(){
   renderLineChart();renderLatestPolling();renderLeadSummary();renderProjection();renderCoalitionBuilder();
   renderCustomCoalitionTool();
   loadGovtSheet();
-  loadCompositionSheet();
   $("status").textContent=`Latest update: ${dtext(last.date)}, ${latestRows.length.toLocaleString()} days from the previous election`;$("setupPanel").style.display="none";
  }catch(e){$("status").textContent="";$("setupPanel").style.display="block";$("setupText").innerHTML=`<strong>Connection error:</strong> ${esc(e.message)}`}
  finally{document.body.classList.remove("loading")}
@@ -1060,7 +1051,6 @@ $("themeBtn").onclick=()=>{
  }
  if(govtRows.length){renderGovtLineChart();}
  if(longRows.length){renderLongLineChart();}
- if(compositionRows.length){renderCompositionChart();}
 };
 
 async function loadGovtSheet(){
@@ -1131,89 +1121,6 @@ function renderGovtLineChart(){
      grid:{display:false}
     },
     y:{beginAtZero:true,suggestedMax:60,ticks:{callback:v=>`${v}%`,color:th.text},grid:{color:th.grid}}
-   }
-  }
- });
-}
-
-async function loadCompositionSheet(){
- const id=idOf(GOOGLE_SHEET_URL);
- if(!id) return;
- const note=$("compositionNote");
- try{
-  const u=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&headers=1&range=${encodeURIComponent(`${COMPOSITION_SHEET_NAME}!${COMPOSITION_SHEET_RANGE}`)}`;
-  const r=await fetch(u,{cache:"no-store"});if(!r.ok)throw Error(`Google Sheets returned HTTP ${r.status}.`);
-  const g=parseGviz(await r.text()),cols=g.table?.cols||[],rows=g.table?.rows||[],headers=cols.map((c,i)=>String(c.label||c.id||"").trim()||`Column ${i+1}`),di=headers.findIndex(h=>h.toLowerCase()==="date");
-  if(di<0)throw Error("Composition sheet is missing a Date column.");
-  compositionRows=[];
-  for(const row of rows){const c=row.c||[],dc=c[di]||{},d=dt(dc.v!==undefined?dc.v:dc.f);if(!d)continue;const rec={date:d};headers.forEach((h,i)=>{if(i!==di){const x=c[i]||{};rec[h]=n(x.v!==undefined?x.v:x.f)}});compositionRows.push(rec)}
-  compositionRows.sort((a,b)=>a.date-b.date);
-  if(!compositionRows.length)throw Error("No dated rows found in the composition sheet.");
-  renderCompositionChart();
-  const last=compositionRows.at(-1);
-  if(note)note.textContent=`Latest update: ${dtext(last.date)}, ${compositionRows.length.toLocaleString()} data points.`;
- }catch(e){
-  if(note)note.textContent=`Composition data error: ${e.message}`;
-  console.error(e);
- }
-}
-
-function renderCompositionChart(){
- const canvas=$("compositionChart");if(!canvas)return;
- const ctx=canvas.getContext("2d");if(compositionChart)compositionChart.destroy();
- const labels=compositionRows.map(r=>dtext(r.date));
- const partyKeys=compositionRows.length?Object.keys(compositionRows[0]).filter(k=>k!=="date"):[];
- const datasets=partyKeys.map(key=>{
-  const raw=compositionRows.map(r=>r[key]);
-  if(!raw.some(v=>v!==null&&v!==undefined)) return null;
-  const colour=PARTY_COLOURS[key]||"#777";
-  return{label:key,data:raw,_rawData:raw,borderColor:colour,backgroundColor:colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,stepped:"after",spanGaps:true};
- }).filter(Boolean);
- const markers=compositionRows.length?EVENT_MARKERS.map(m=>{let idx=0,diff=Infinity;compositionRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-m.date);if(d<diff){diff=d;idx=i}});return{idx,label:m.label}}):[];
- const th=chartTheme();
- compositionChart=new Chart(ctx,{
-  type:"line",
-  data:{labels,datasets},
-  options:{
-   responsive:true,
-   maintainAspectRatio:false,
-   layout:{padding:{right:110}},
-   interaction:{mode:"nearest",axis:"xy",intersect:false},
-   plugins:{
-    legend:{display:false},
-    tooltip:{enabled:false,external:retroTooltip},
-    eventMarkers:{markers,lineColour:th.markerLine,textColour:th.markerText},
-    endLineLabels:{allowedParties:[],valueFormatter:v=>`${Math.round(v)}`}
-   },
-   scales:{
-    x:{
-     ticks:{
-      color:th.text,
-      font:{family:'"VCR OSD Mono", monospace', size:14},
-      autoSkip: false,
-      maxRotation: 0,
-      minRotation: 0,
-      callback: function(val, index) {
-       const row = compositionRows[index];
-       if (!row) return "";
-
-       const prevRow = compositionRows[index - 1];
-       if (prevRow && row.date.getUTCMonth() === prevRow.date.getUTCMonth() && row.date.getUTCFullYear() === prevRow.date.getUTCFullYear()) {
-        return "";
-       }
-
-       const month = row.date.getUTCMonth();
-       if (month === 0) return ["Jan", row.date.getUTCFullYear()];
-       if (month === 3) return "Apr";
-       if (month === 6) return "Jul";
-       if (month === 9) return "Oct";
-
-       return "";
-      }
-     },
-     grid:{display:false}
-    },
-    y:{beginAtZero:true,min:0,ticks:{color:th.text,callback:v=>`${v}`},grid:{color:th.grid}}
    }
   }
  });
