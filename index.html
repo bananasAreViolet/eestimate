@@ -3,19 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=720">
-  <title>Eestimate - Riigikogu projections</title>
-
-  <meta property="og:title" content="Eestimate" />
-  <meta property="og:description" content="Eestimate is an Estonian party preference polling tracker by bananasAreViolet. Charts based on weighted (by pollster and date) 30-day average, with LOESS smoothing applied to the displayed trend lines. Updates will be sporadic but for now, here they are. We shall all pray that I do not suffer from burnout 🙃" />
-  <meta property="og:image" content="https://bananasareviolet.github.io/eestimate/embed.png" />
-  <meta property="og:url" content="https://bananasareviolet.github.io/eestimate/" />
-  <meta property="og:type" content="website" />
-
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Eestimate" />
-  <meta name="twitter:description" content="Eestimate is an Estonian party preference polling tracker by bananasAreViolet. Charts based on weighted (by pollster and date) 30-day average, with LOESS smoothing applied to the displayed trend lines. Updates will be sporadic but for now, here they are. We shall all pray that I do not suffer from burnout 🙃" />
-  <meta name="twitter:image" content="https://bananasareviolet.github.io/eestimate/embed.png" />
-  <link rel="icon" type="image/x-icon" href="https://bananasareviolet.github.io/eestimate/eestimate.png">
+  <title>Eestimate - Riigikogu projections</title> 
+  <link rel="icon" type="image/x-icon" href="/eestimate.png">
 
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
@@ -158,7 +147,6 @@ body.dark a {
 <b><a href="https://reitingud.ee/" target="_blank" rel="noopener">Norstat/ÜI</a></b> polls are given a weight of 0.2 due to their frequency of appearing per week, adding up to a total weight of 0.8 per month.<br>
 <b><a href="https://www.err.ee/reitingud" target="_blank" rel="noopener">Emor/ERR</a></b> polls are given a weight of 1.<br>
 <b><a href="https://turu-uuringute.eu/uudised/" target="_blank" rel="noopener">Turu-uuringute AS</a></b> polls are given a weight of 0.7.<br>
-<b><a href="https://bananasareviolet.github.io/eestimate/pollstercomparison.png" target="_blank" rel="noopener">Why?</a></b><br>
 <br>Updates will be sporadic but for now, here they are. We shall all pray that I do not suffer from burnout 🙃</p>
     <div class="toolbar">
       <button class="action" id="reloadBtn">Refresh page</button>
@@ -271,13 +259,15 @@ body.dark a {
 </div>
 </div></section>
 
+<section class="window"><div class="titlebar"><span>RIIGIKOGU COMPOSITION CHANGE OVER TIME</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="compositionChart"></canvas></div></div><p class="header-note" id="compositionNote">Loading Riigikogu composition history…</p><p class="header-note">Based on party affiliation, not factions.</p></div></section>
+
 <section class="window"><div class="titlebar"><span>1999 TO PRESENT DAY POLLING AVERAGE</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="longLineChart"></canvas></div></div><p class="header-note" id="longNote">Loading the long polling history…</p><p class="header-note">Res Publica ended up merging into Isamaaliit to form IRL, later renamed Isamaa.<br>ERL became EKRE in 2012.<br>Trend lines are LOESS-smoothed separately within each election cycle and tied to the actual result on each election date.</p></div></section>
 </div>
 
 
 <script>
 const GOOGLE_SHEET_URL="https://docs.google.com/spreadsheets/d/1gGBmEUW5bwp23602WfQF4eciRrZT4M-VrAz1r5M2JHU/edit?usp=sharing";
-const SHEET_NAME="EEavg2",SHEET_RANGE="A:M";
+const SHEET_NAME="EEavg",SHEET_RANGE="A:M";
 
   
 const HISTORICAL_CSV_URL="Eesti1999.csv";
@@ -296,7 +286,8 @@ ERK:"#d7c262",
 Free:"#b6d3dd",
 "EÜRP":"#b5651d",
 Coalition:"#044999",
-"Res Publica":"#ff7750"};
+"Res Publica":"#ff7750",
+"Ind.":"#8a8d91",
 const PREFERRED_ORDER=["VL","SDE","Greens","E200","Reform","PP","Free","Isamaa","Centre","ERK","EKRE","Koos"];
 const DISTRICTS=[10,13,8,16,6,5,6,7,7,8,8,7],RIIGIKOGU_SEATS=101,NATIONAL_THRESHOLD=5,MODIFIED_DHONDT_EXPONENT=.9;
 const EVENT_MARKERS=[
@@ -356,8 +347,9 @@ const endLineLabelsPlugin = {
      const val = dataset.data[lastIdx];
      if (point && !isNaN(point.x) && !isNaN(point.y)) {
       const sign = (val > 0 && opts.showPlusSign) ? "+" : "";
+      const valueText = opts.valueFormatter ? opts.valueFormatter(val) : `${sign}${val.toFixed(1)}%`;
       labelsToDraw.push({
-       text: ` ${dataset.label} ${sign}${val.toFixed(1)}%`,
+       text: ` ${dataset.label} ${valueText}`,
        color: dataset.borderColor,
        x: point.x + 6,
        y: point.y
@@ -435,6 +427,9 @@ const GOVT_COLOURS={
 };
 let govtLineChart=null,govtRows=[],govtLatestPoll=[];
 
+const COMPOSITION_SHEET_NAME="RKavg",COMPOSITION_SHEET_RANGE="A:Z";
+let compositionChart=null,compositionRows=[];
+
 // coalition stuffs
 let side1Coalition=new Set(["Reform", "E200"]);
 let side2Coalition=new Set();
@@ -460,13 +455,14 @@ function retroTooltip(context){
 
  if(tooltip.body){
   const dataPoints=tooltip.dataPoints||[];
+  const isSeatCount=chart.canvas&&chart.canvas.id==="compositionChart";
   let html="";
   if(tooltip.title&&tooltip.title.length) html+=`<div class="chartjs-tooltip-date">${esc(tooltip.title[0])}</div>`;
   dataPoints.forEach(dp=>{
    const colour=dp.dataset.borderColor||"#888";
    const name=dp.dataset.label||"";
    const displayValue=dp.parsed.y;
-   const val=displayValue===null?"—":`${Number(displayValue).toFixed(1)}%`;
+   const val=displayValue===null?"—":isSeatCount?`${Math.round(displayValue)} seats`:`${Number(displayValue).toFixed(1)}%`;
    html+=`<div class="chartjs-tooltip-row"><span class="party-box" style="background:${esc(colour)}">${esc(name)}</span><span class="chartjs-tooltip-value">${val}</span></div>`;
   });
   el.innerHTML=html;
@@ -497,6 +493,7 @@ async function loadGoogleSheet(){
   renderLineChart();renderLatestPolling();renderLeadSummary();renderProjection();renderCoalitionBuilder();
   renderCustomCoalitionTool();
   loadGovtSheet();
+  loadCompositionSheet();
   $("status").textContent=`Latest update: ${dtext(last.date)}, ${latestRows.length.toLocaleString()} days from the previous election`;$("setupPanel").style.display="none";
  }catch(e){$("status").textContent="";$("setupPanel").style.display="block";$("setupText").innerHTML=`<strong>Connection error:</strong> ${esc(e.message)}`}
  finally{document.body.classList.remove("loading")}
@@ -1049,7 +1046,7 @@ function renderCoalitionSummary(){
  }else{
   badge.style.background="";
  }
- $("coalitionSummary").innerHTML=names.length?`<strong>${maj?"'Safe majority' refers to a majority where governing parties are expected to have a majority in all committees.<br>Reform currently rules out Centre and EKRE. SDE rules out EKRE.<br>Chosen parties:":"'Safe majority' refers to a majority where governing parties are expected to have a majority in all committees.<br>Reform currently rules out Centre and EKRE. SDE rules out EKRE.<br>Chosen parties:"}</strong> ${esc(names.join(", "))}`:"'Safe majority' refers to a majority where governing parties are expected to have a majority in all committees.<br>Reform currently rules out Centre and EKRE. SDE rules out EKRE.<br>Select parties using the boxes."
+ $("coalitionSummary").innerHTML=names.length?`<strong>${maj?"Chosen parties:":"Chosen parties:"}</strong> ${esc(names.join(", "))}`:"Select parties using the boxes.<br>Reform currently rules out Centre and EKRE. SDE rules out EKRE."
 }
 $("reloadBtn").onclick=()=>{loadGoogleSheet().finally(loadLongTermData);};
 $("themeBtn").onclick=()=>{
@@ -1063,6 +1060,7 @@ $("themeBtn").onclick=()=>{
  }
  if(govtRows.length){renderGovtLineChart();}
  if(longRows.length){renderLongLineChart();}
+ if(compositionRows.length){renderCompositionChart();}
 };
 
 async function loadGovtSheet(){
@@ -1138,6 +1136,89 @@ function renderGovtLineChart(){
  });
 }
 
+async function loadCompositionSheet(){
+ const id=idOf(GOOGLE_SHEET_URL);
+ if(!id) return;
+ const note=$("compositionNote");
+ try{
+  const u=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&headers=1&range=${encodeURIComponent(`${COMPOSITION_SHEET_NAME}!${COMPOSITION_SHEET_RANGE}`)}`;
+  const r=await fetch(u,{cache:"no-store"});if(!r.ok)throw Error(`Google Sheets returned HTTP ${r.status}.`);
+  const g=parseGviz(await r.text()),cols=g.table?.cols||[],rows=g.table?.rows||[],headers=cols.map((c,i)=>String(c.label||c.id||"").trim()||`Column ${i+1}`),di=headers.findIndex(h=>h.toLowerCase()==="date");
+  if(di<0)throw Error("Composition sheet is missing a Date column.");
+  compositionRows=[];
+  for(const row of rows){const c=row.c||[],dc=c[di]||{},d=dt(dc.v!==undefined?dc.v:dc.f);if(!d)continue;const rec={date:d};headers.forEach((h,i)=>{if(i!==di){const x=c[i]||{};rec[h]=n(x.v!==undefined?x.v:x.f)}});compositionRows.push(rec)}
+  compositionRows.sort((a,b)=>a.date-b.date);
+  if(!compositionRows.length)throw Error("No dated rows found in the composition sheet.");
+  renderCompositionChart();
+  const last=compositionRows.at(-1);
+  if(note)note.textContent=`Latest update: ${dtext(last.date)}, ${compositionRows.length.toLocaleString()} data points.`;
+ }catch(e){
+  if(note)note.textContent=`Composition data error: ${e.message}`;
+  console.error(e);
+ }
+}
+
+function renderCompositionChart(){
+ const canvas=$("compositionChart");if(!canvas)return;
+ const ctx=canvas.getContext("2d");if(compositionChart)compositionChart.destroy();
+ const labels=compositionRows.map(r=>dtext(r.date));
+ const partyKeys=compositionRows.length?Object.keys(compositionRows[0]).filter(k=>k!=="date"):[];
+ const datasets=partyKeys.map(key=>{
+  const raw=compositionRows.map(r=>r[key]);
+  if(!raw.some(v=>v!==null&&v!==undefined)) return null;
+  const colour=PARTY_COLOURS[key]||"#777";
+  return{label:key,data:raw,_rawData:raw,borderColor:colour,backgroundColor:colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,stepped:"after",spanGaps:true};
+ }).filter(Boolean);
+ const markers=compositionRows.length?EVENT_MARKERS.map(m=>{let idx=0,diff=Infinity;compositionRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-m.date);if(d<diff){diff=d;idx=i}});return{idx,label:m.label}}):[];
+ const th=chartTheme();
+ compositionChart=new Chart(ctx,{
+  type:"line",
+  data:{labels,datasets},
+  options:{
+   responsive:true,
+   maintainAspectRatio:false,
+   layout:{padding:{right:110}},
+   interaction:{mode:"nearest",axis:"xy",intersect:false},
+   plugins:{
+    legend:{display:false},
+    tooltip:{enabled:false,external:retroTooltip},
+    eventMarkers:{markers,lineColour:th.markerLine,textColour:th.markerText},
+    endLineLabels:{allowedParties:[],valueFormatter:v=>`${Math.round(v)}`}
+   },
+   scales:{
+    x:{
+     ticks:{
+      color:th.text,
+      font:{family:'"VCR OSD Mono", monospace', size:14},
+      autoSkip: false,
+      maxRotation: 0,
+      minRotation: 0,
+      callback: function(val, index) {
+       const row = compositionRows[index];
+       if (!row) return "";
+
+       const prevRow = compositionRows[index - 1];
+       if (prevRow && row.date.getUTCMonth() === prevRow.date.getUTCMonth() && row.date.getUTCFullYear() === prevRow.date.getUTCFullYear()) {
+        return "";
+       }
+
+       const month = row.date.getUTCMonth();
+       if (month === 0) return ["Jan", row.date.getUTCFullYear()];
+       if (month === 3) return "Apr";
+       if (month === 6) return "Jul";
+       if (month === 9) return "Oct";
+
+       return "";
+      }
+     },
+     grid:{display:false}
+    },
+    y:{beginAtZero:true,min:0,ticks:{color:th.text,callback:v=>`${v}`},grid:{color:th.grid}}
+   }
+  }
+ });
+}
+
 let longLineChart=null,longRows=[];
 
 let longSmoothedSeries=null;
@@ -1199,7 +1280,7 @@ async function loadLongTermData(){
  const note=$("longNote");
  if(note)note.textContent="Loading the long-run polling history, this can take a moment given the row count…";
  try{
-  const r=await fetch(HISTORICAL_CSV_URL,{cache:"no-store"});
+  const r=await fetch(HISTORICAL_CSV_URL,{cache:"no-cache"});
   if(!r.ok)throw Error(`Could not load ${HISTORICAL_CSV_URL} (HTTP ${r.status}).`);
   const table=parseCSV(await r.text());
   if(!table.length)throw Error("Historical polling file is empty.");
