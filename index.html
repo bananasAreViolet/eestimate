@@ -107,7 +107,6 @@ body.dark .party-select.selected .party-box{box-shadow:0 0 0 2px #fff inset}
 }
 
 .corner-logo{position:absolute;left:6px;bottom:6px;width:18px;height:18px;object-fit:contain;opacity:.9;pointer-events:none;z-index:5}
-.logo-strip{background:var(--surface);border:2px inset var(--inset-border);position:relative;height:30px;margin-top:10px}
 
 /* coalition stuffs */
 .comparison-container{display:flex;gap:16px;justify-content:center;margin-top:15px;align-items:flex-start}
@@ -142,8 +141,7 @@ body.dark a {
 <div class="page">
 <section class="window">
   <div class="titlebar"><span></span></div>
-  <div class="window-body">
-  <div style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
+  <div class="window-body" style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
   <div>
     <h1>Eestimate</h1>
     <p class="lead-summary" id="leadSummary">Loading current standings…</p>
@@ -164,8 +162,6 @@ body.dark a {
   <div style="flex-shrink:0; margin-left:auto;">
     <canvas id="topArchCanvas" width="220" height="120" style="display:block;"></canvas>
   </div>
-</div>
-<div class="logo-strip"><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div>
 </div>
 </section>
 
@@ -237,7 +233,7 @@ body.dark a {
 
 </div>
 
-<section class="window"><div class="titlebar"><span>COALITION BUILDER</span></div><div class="window-body">
+<section class="window"><div class="titlebar"><span>COALITION BUILDER</span></div><div class="window-body" style="position:relative;">
 <div class="coalition-top"><div><div class="coalition-score" id="coalitionSeats">0 / 101</div><div class="status">Combined seats of selected parties</div></div><div class="majority" id="majorityBadge">Short of a majority</div></div>
 <div class="coalition-bar"><div class="coalition-fill" id="coalitionFill"></div>
 <span class="threshold" style="left:20.792%"></span><span class="threshold-label" style="left:20.792%"><strong>21</strong>Presidential candidate nomination line</span>
@@ -248,7 +244,7 @@ body.dark a {
 <span class="threshold" style="left:80.198%"></span><span class="threshold-label" style="left:80.198%"><strong>81</strong>Constitution amending line</span>
 </div>
 <div class="party-selector" id="partySelector" style="margin-top:44px"></div><div class="coalition-summary" id="coalitionSummary">Select parties using the boxes.<br>Reform currently rules out Centre and EKRE. SDE rules out EKRE.</div>
-<div class="logo-strip"><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div>
+<img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo">
 </div></section>
 
 <section class="window"><div class="titlebar"><span>GOVERNMENT VS OPPOSITION POLLING AVERAGE</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="govtLineChart"></canvas></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div><p class="header-note"></p></div></section>
@@ -346,18 +342,19 @@ const endLineLabelsPlugin = {
 
 
   const labelsToDraw = [];
+  const pointValue = v => (v && typeof v === "object") ? v.y : v;
   chart.data.datasets.forEach((dataset, i) => {
    if (allowedParties && allowedParties.length && !allowedParties.includes(dataset.label)) return;
 
    const meta = chart.getDatasetMeta(i);
    if (!meta.hidden && meta.data && meta.data.length > 0) {
     let lastIdx = dataset.data.length - 1;
-    while (lastIdx >= 0 && (dataset.data[lastIdx] === null || dataset.data[lastIdx] === undefined)) {
+    while (lastIdx >= 0 && (pointValue(dataset.data[lastIdx]) === null || pointValue(dataset.data[lastIdx]) === undefined)) {
      lastIdx--;
     }
     if (lastIdx >= 0) {
      const point = meta.data[lastIdx];
-     const val = dataset.data[lastIdx];
+     const val = pointValue(dataset.data[lastIdx]);
      if (point && !isNaN(point.x) && !isNaN(point.y)) {
       const sign = (val > 0 && opts.showPlusSign) ? "+" : "";
       const valueText = opts.valueFormatter ? opts.valueFormatter(val) : `${sign}${val.toFixed(1)}%`;
