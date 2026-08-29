@@ -1192,7 +1192,7 @@ function renderCompositionChart(){
   const raw=compositionRows.map(r=>({x:r.date.getTime(),y:r[key]}));
   if(!raw.some(p=>p.y!==null&&p.y!==undefined)) return null;
   const colour=PARTY_COLOURS[key]||"#777";
-  return{label:key,data:raw,borderColor:colour,backgroundColor:colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,stepped:"after",spanGaps:true};
+  return{label:key,data:raw,borderColor:colour,backgroundColor:colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,stepped:"before",spanGaps:true};
  }).filter(Boolean);
  const markers=EVENT_MARKERS.map(m=>({value:m.date,label:m.label}));
  const th=chartTheme();
