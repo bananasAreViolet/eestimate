@@ -1163,7 +1163,7 @@ async function loadCompositionSheet(){
   if(!compositionRows.length)throw Error("No dated rows found in the composition sheet.");
   renderCompositionChart();
   const last=compositionRows.at(-1);
-  if(note)note.textContent=`Latest update: ${dtext(last.date)}, ${compositionRows.length.toLocaleString()} data points.`;
+  if(note)note.textContent=``;
  }catch(e){
   if(note)note.textContent=`Composition data error: ${e.message}`;
   console.error(e);
