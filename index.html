@@ -38,8 +38,8 @@ button,input{font:inherit}.page{width:min(1320px,calc(100% - 24px));margin:12px 
 .action{background:#d4d0c8;color:#000;border:2px solid var(--light);border-right-color:var(--dark);border-bottom-color:var(--dark);padding:3px 10px;cursor:pointer;border-radius:0}
 .action:active{border:2px solid var(--dark);border-right-color:var(--light);border-bottom-color:var(--light)}
 body.dark .action{background:#c8c8c8}.status{color:var(--muted);font-size:12px}
-.chart-surface{background:var(--surface);padding:6px;border:2px inset var(--inset-border)}.chart-wrap{height:440px}
-.latest-scroll{overflow-x:auto;padding:8px;background:var(--surface);border:2px inset var(--inset-border)}
+.chart-surface{background:var(--surface);padding:6px 6px 32px;border:2px inset var(--inset-border);position:relative}.chart-wrap{height:440px}
+.latest-scroll{overflow-x:auto;padding:8px 8px 32px;background:var(--surface);border:2px inset var(--inset-border);position:relative}
 .latest-chart{min-width:920px;width:max-content;margin:0 auto;height:410px;display:flex;align-items:flex-end;gap:10px;padding:12px 8px 0;}
 .latest-col{width:72px;flex:0 0 72px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
 .latest-bar-area{width:100%;height:275px;display:flex;align-items:flex-end;justify-content:center}
@@ -102,8 +102,12 @@ body.dark .party-select.selected .party-box{box-shadow:0 0 0 2px #fff inset}
 .internal-window {
   background: var(--surface);
   border: 2px inset var(--inset-border);
-  padding: 10px;
+  padding: 10px 10px 34px;
+  position: relative;
 }
+
+.corner-logo{position:absolute;left:6px;bottom:6px;width:18px;height:18px;object-fit:contain;opacity:.9;pointer-events:none;z-index:5}
+.logo-strip{background:var(--surface);border:2px inset var(--inset-border);position:relative;height:30px;margin-top:10px}
 
 /* coalition stuffs */
 .comparison-container{display:flex;gap:16px;justify-content:center;margin-top:15px;align-items:flex-start}
@@ -138,7 +142,8 @@ body.dark a {
 <div class="page">
 <section class="window">
   <div class="titlebar"><span></span></div>
-  <div class="window-body" style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
+  <div class="window-body">
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
   <div>
     <h1>Eestimate</h1>
     <p class="lead-summary" id="leadSummary">Loading current standings…</p>
@@ -160,11 +165,13 @@ body.dark a {
     <canvas id="topArchCanvas" width="220" height="120" style="display:block;"></canvas>
   </div>
 </div>
+<div class="logo-strip"><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div>
+</div>
 </section>
 
-<section class="window"><div class="titlebar"><span>POLLING AVERAGE</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="lineChart"></canvas></div></div><p class="header-note"></p></div></section>
+<section class="window"><div class="titlebar"><span>POLLING AVERAGE</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="lineChart"></canvas></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div><p class="header-note"></p></div></section>
 
-<section class="window"><div class="titlebar"><span>LATEST NUMBERS</span></div><div class="window-body"><p class="header-note" id="latestNote">If this text lasts for a readable length and several seconds beyond that, there may possibly be a data error involved</p><div class="latest-scroll"><div class="latest-chart" id="latestChart"></div></div></div></section>
+<section class="window"><div class="titlebar"><span>LATEST NUMBERS</span></div><div class="window-body"><p class="header-note" id="latestNote">If this text lasts for a readable length and several seconds beyond that, there may possibly be a data error involved</p><div style="position:relative;"><div class="latest-scroll"><div class="latest-chart" id="latestChart"></div></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div></div></section>
 
 
 <div class="projection-row">
@@ -176,6 +183,7 @@ body.dark a {
       <div class="internal-window">
         <div id="parliament" class="parliament"></div>
         <div id="projectionKey" class="projection-key"></div>
+        <img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo">
       </div>
     </div>
   </section>
@@ -190,6 +198,7 @@ body.dark a {
           <div class="divider"></div>
           <div id="losersCol"></div>
         </div>
+        <img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo">
       </div>
     </div>
   </section>
@@ -207,6 +216,7 @@ body.dark a {
           <div class="divider"></div>
           <div id="losersColMonth" class="support-col"></div>
         </div>
+        <img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo">
       </div>
     </div>
   </section>
@@ -220,6 +230,7 @@ body.dark a {
           <div class="divider"></div>
           <div id="losersColYear" class="support-col"></div>
         </div>
+        <img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo">
       </div>
     </div>
   </section>
@@ -237,16 +248,17 @@ body.dark a {
 <span class="threshold" style="left:80.198%"></span><span class="threshold-label" style="left:80.198%"><strong>81</strong>Constitution amending line</span>
 </div>
 <div class="party-selector" id="partySelector" style="margin-top:44px"></div><div class="coalition-summary" id="coalitionSummary">Select parties using the boxes.<br>Reform currently rules out Centre and EKRE. SDE rules out EKRE.</div>
+<div class="logo-strip"><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div>
 </div></section>
 
-<section class="window"><div class="titlebar"><span>GOVERNMENT VS OPPOSITION POLLING AVERAGE</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="govtLineChart"></canvas></div></div><p class="header-note"></p></div></section>
+<section class="window"><div class="titlebar"><span>GOVERNMENT VS OPPOSITION POLLING AVERAGE</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="govtLineChart"></canvas></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div><p class="header-note"></p></div></section>
 
 <section class="window"><div class="titlebar"><span>CUSTOM COALITION COMPARISON</span></div><div class="window-body">
 <div class="mode-toggle-bar">
  <button class="action mode-btn active" id="modeSeparateBtn">Separate lines</button>
  <button class="action mode-btn" id="modeNetBtn">Net support (Side 1 minus Side 2)</button>
 </div>
-<div class="chart-surface"><div class="chart-wrap"><canvas id="customCoalitionChart"></canvas></div></div>
+<div class="chart-surface"><div class="chart-wrap"><canvas id="customCoalitionChart"></canvas></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div>
 <div class="comparison-container">
  <div class="comparison-column">
   <div class="column-title" style="color:#2563eb">Side 1</div>
@@ -259,13 +271,15 @@ body.dark a {
 </div>
 </div></section>
 
-<section class="window"><div class="titlebar"><span>1999 TO PRESENT DAY POLLING AVERAGE</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="longLineChart"></canvas></div></div><p class="header-note" id="longNote">Loading the long polling history…</p><p class="header-note">Res Publica ended up merging into Isamaaliit to form IRL, later renamed Isamaa.<br>ERL became EKRE in 2012.<br>Trend lines are LOESS-smoothed separately within each election cycle and tied to the actual result on each election date.</p></div></section>
+<section class="window"><div class="titlebar"><span>RIIGIKOGU COMPOSITION CHANGE OVER TIME</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="compositionChart"></canvas></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div><p class="header-note" id="compositionNote">Loading Riigikogu composition history…</p><p class="header-note">Based on party affiliation, not factions.</p></div></section>
+
+<section class="window"><div class="titlebar"><span>1999 TO PRESENT DAY POLLING AVERAGE</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="longLineChart"></canvas></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div><p class="header-note" id="longNote">Loading the long polling history…</p><p class="header-note">Res Publica ended up merging into Isamaaliit to form IRL, later renamed Isamaa.<br>ERL became EKRE in 2012.<br>Trend lines are LOESS-smoothed separately within each election cycle and tied to the actual result on each election date.</p></div></section>
 </div>
 
 
 <script>
 const GOOGLE_SHEET_URL="https://docs.google.com/spreadsheets/d/1gGBmEUW5bwp23602WfQF4eciRrZT4M-VrAz1r5M2JHU/edit?usp=sharing";
-const SHEET_NAME="EEavg2",SHEET_RANGE="A:M";
+const SHEET_NAME="EEavg",SHEET_RANGE="A:M";
 
   
 const HISTORICAL_CSV_URL="Eesti1999.csv";
@@ -284,7 +298,8 @@ ERK:"#d7c262",
 Free:"#b6d3dd",
 "EÜRP":"#b5651d",
 Coalition:"#044999",
-"Res Publica":"#ff7750"};
+"Res Publica":"#ff7750",
+"Ind.":"#8a8d91"};
 const PREFERRED_ORDER=["VL","SDE","Greens","E200","Reform","PP","Free","Isamaa","Centre","ERK","EKRE","Koos"];
 const DISTRICTS=[10,13,8,16,6,5,6,7,7,8,8,7],RIIGIKOGU_SEATS=101,NATIONAL_THRESHOLD=5,MODIFIED_DHONDT_EXPONENT=.9;
 const EVENT_MARKERS=[
@@ -344,8 +359,9 @@ const endLineLabelsPlugin = {
      const val = dataset.data[lastIdx];
      if (point && !isNaN(point.x) && !isNaN(point.y)) {
       const sign = (val > 0 && opts.showPlusSign) ? "+" : "";
+      const valueText = opts.valueFormatter ? opts.valueFormatter(val) : `${sign}${val.toFixed(1)}%`;
       labelsToDraw.push({
-       text: ` ${dataset.label} ${sign}${val.toFixed(1)}%`,
+       text: ` ${dataset.label} ${valueText}`,
        color: dataset.borderColor,
        x: point.x + 6,
        y: point.y
@@ -423,6 +439,9 @@ const GOVT_COLOURS={
 };
 let govtLineChart=null,govtRows=[],govtLatestPoll=[];
 
+const COMPOSITION_SHEET_NAME="RKavg",COMPOSITION_SHEET_RANGE="A:Z";
+let compositionChart=null,compositionRows=[];
+
 // coalition stuffs
 let side1Coalition=new Set(["Reform", "E200"]);
 let side2Coalition=new Set();
@@ -448,13 +467,14 @@ function retroTooltip(context){
 
  if(tooltip.body){
   const dataPoints=tooltip.dataPoints||[];
+  const isSeatCount=chart.canvas&&chart.canvas.id==="compositionChart";
   let html="";
   if(tooltip.title&&tooltip.title.length) html+=`<div class="chartjs-tooltip-date">${esc(tooltip.title[0])}</div>`;
   dataPoints.forEach(dp=>{
    const colour=dp.dataset.borderColor||"#888";
    const name=dp.dataset.label||"";
    const displayValue=dp.parsed.y;
-   const val=displayValue===null?"—":`${Number(displayValue).toFixed(1)}%`;
+   const val=displayValue===null?"—":isSeatCount?`${Math.round(displayValue)} seats`:`${Number(displayValue).toFixed(1)}%`;
    html+=`<div class="chartjs-tooltip-row"><span class="party-box" style="background:${esc(colour)}">${esc(name)}</span><span class="chartjs-tooltip-value">${val}</span></div>`;
   });
   el.innerHTML=html;
@@ -485,6 +505,7 @@ async function loadGoogleSheet(){
   renderLineChart();renderLatestPolling();renderLeadSummary();renderProjection();renderCoalitionBuilder();
   renderCustomCoalitionTool();
   loadGovtSheet();
+  loadCompositionSheet();
   $("status").textContent=`Latest update: ${dtext(last.date)}, ${latestRows.length.toLocaleString()} days from the previous election`;$("setupPanel").style.display="none";
  }catch(e){$("status").textContent="";$("setupPanel").style.display="block";$("setupText").innerHTML=`<strong>Connection error:</strong> ${esc(e.message)}`}
  finally{document.body.classList.remove("loading")}
@@ -1051,6 +1072,7 @@ $("themeBtn").onclick=()=>{
  }
  if(govtRows.length){renderGovtLineChart();}
  if(longRows.length){renderLongLineChart();}
+ if(compositionRows.length){renderCompositionChart();}
 };
 
 async function loadGovtSheet(){
@@ -1121,6 +1143,89 @@ function renderGovtLineChart(){
      grid:{display:false}
     },
     y:{beginAtZero:true,suggestedMax:60,ticks:{callback:v=>`${v}%`,color:th.text},grid:{color:th.grid}}
+   }
+  }
+ });
+}
+
+async function loadCompositionSheet(){
+ const id=idOf(GOOGLE_SHEET_URL);
+ if(!id) return;
+ const note=$("compositionNote");
+ try{
+  const u=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&headers=1&range=${encodeURIComponent(`${COMPOSITION_SHEET_NAME}!${COMPOSITION_SHEET_RANGE}`)}`;
+  const r=await fetch(u,{cache:"no-store"});if(!r.ok)throw Error(`Google Sheets returned HTTP ${r.status}.`);
+  const g=parseGviz(await r.text()),cols=g.table?.cols||[],rows=g.table?.rows||[],headers=cols.map((c,i)=>String(c.label||c.id||"").trim()||`Column ${i+1}`),di=headers.findIndex(h=>h.toLowerCase()==="date");
+  if(di<0)throw Error("Composition sheet is missing a Date column.");
+  compositionRows=[];
+  for(const row of rows){const c=row.c||[],dc=c[di]||{},d=dt(dc.v!==undefined?dc.v:dc.f);if(!d)continue;const rec={date:d};headers.forEach((h,i)=>{if(i!==di){const x=c[i]||{};rec[h]=n(x.v!==undefined?x.v:x.f)}});compositionRows.push(rec)}
+  compositionRows.sort((a,b)=>a.date-b.date);
+  if(!compositionRows.length)throw Error("No dated rows found in the composition sheet.");
+  renderCompositionChart();
+  const last=compositionRows.at(-1);
+  if(note)note.textContent=`Latest update: ${dtext(last.date)}, ${compositionRows.length.toLocaleString()} data points.`;
+ }catch(e){
+  if(note)note.textContent=`Composition data error: ${e.message}`;
+  console.error(e);
+ }
+}
+
+function renderCompositionChart(){
+ const canvas=$("compositionChart");if(!canvas)return;
+ const ctx=canvas.getContext("2d");if(compositionChart)compositionChart.destroy();
+ const labels=compositionRows.map(r=>dtext(r.date));
+ const partyKeys=compositionRows.length?Object.keys(compositionRows[0]).filter(k=>k!=="date"):[];
+ const datasets=partyKeys.map(key=>{
+  const raw=compositionRows.map(r=>r[key]);
+  if(!raw.some(v=>v!==null&&v!==undefined)) return null;
+  const colour=PARTY_COLOURS[key]||"#777";
+  return{label:key,data:raw,_rawData:raw,borderColor:colour,backgroundColor:colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,stepped:"after",spanGaps:true};
+ }).filter(Boolean);
+ const markers=compositionRows.length?EVENT_MARKERS.map(m=>{let idx=0,diff=Infinity;compositionRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-m.date);if(d<diff){diff=d;idx=i}});return{idx,label:m.label}}):[];
+ const th=chartTheme();
+ compositionChart=new Chart(ctx,{
+  type:"line",
+  data:{labels,datasets},
+  options:{
+   responsive:true,
+   maintainAspectRatio:false,
+   layout:{padding:{right:110}},
+   interaction:{mode:"nearest",axis:"xy",intersect:false},
+   plugins:{
+    legend:{display:false},
+    tooltip:{enabled:false,external:retroTooltip},
+    eventMarkers:{markers,lineColour:th.markerLine,textColour:th.markerText},
+    endLineLabels:{allowedParties:[],valueFormatter:v=>`${Math.round(v)}`}
+   },
+   scales:{
+    x:{
+     ticks:{
+      color:th.text,
+      font:{family:'"VCR OSD Mono", monospace', size:14},
+      autoSkip: false,
+      maxRotation: 0,
+      minRotation: 0,
+      callback: function(val, index) {
+       const row = compositionRows[index];
+       if (!row) return "";
+
+       const prevRow = compositionRows[index - 1];
+       if (prevRow && row.date.getUTCMonth() === prevRow.date.getUTCMonth() && row.date.getUTCFullYear() === prevRow.date.getUTCFullYear()) {
+        return "";
+       }
+
+       const month = row.date.getUTCMonth();
+       if (month === 0) return ["Jan", row.date.getUTCFullYear()];
+       if (month === 3) return "Apr";
+       if (month === 6) return "Jul";
+       if (month === 9) return "Oct";
+
+       return "";
+      }
+     },
+     grid:{display:false}
+    },
+    y:{beginAtZero:true,min:0,ticks:{color:th.text,callback:v=>`${v}`},grid:{color:th.grid}}
    }
   }
  });
