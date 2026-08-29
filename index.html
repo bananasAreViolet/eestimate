@@ -1179,7 +1179,7 @@ function renderCompositionChart(){
   const raw=compositionRows.map(r=>r[key]);
   if(!raw.some(v=>v!==null&&v!==undefined)) return null;
   const colour=PARTY_COLOURS[key]||"#777";
-  return{label:key,data:raw,_rawData:raw,borderColor:colour,backgroundColor:colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,stepped:"after",spanGaps:true};
+  return{label:key,data:raw,_rawData:raw,borderColor:colour,backgroundColor:colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,stepped:"before",spanGaps:true};
  }).filter(Boolean);
  const markers=compositionRows.length?EVENT_MARKERS.map(m=>{let idx=0,diff=Infinity;compositionRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-m.date);if(d<diff){diff=d;idx=i}});return{idx,label:m.label}}):[];
  const th=chartTheme();
