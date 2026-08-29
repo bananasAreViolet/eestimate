@@ -486,51 +486,29 @@ function retroTooltip(context){
  el.style.top=(rect.top+window.scrollY+tooltip.caretY)+"px";
 }
 
-async function loadCompositionSheet(){
+async function loadGoogleSheet(){
  const id=idOf(GOOGLE_SHEET_URL);
- if(!id) return;
- const note=$("compositionNote");
+ if(!id){$("setupPanel").style.display="block";$("setupText").textContent="Setup failure.";return}
+ $("status").textContent="Loading the data, just a moment of patience…";document.body.classList.add("loading");
  try{
-  const u=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&headers=1&range=${encodeURIComponent(`${COMPOSITION_SHEET_NAME}!${COMPOSITION_SHEET_RANGE}`)}`;
+  const u=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&headers=1&range=${encodeURIComponent(`${SHEET_NAME}!${SHEET_RANGE}`)}`;
   const r=await fetch(u,{cache:"no-store"});if(!r.ok)throw Error(`Google Sheets returned HTTP ${r.status}.`);
   const g=parseGviz(await r.text()),cols=g.table?.cols||[],rows=g.table?.rows||[],headers=cols.map((c,i)=>String(c.label||c.id||"").trim()||`Column ${i+1}`),di=headers.findIndex(h=>h.toLowerCase()==="date");
-  if(di<0)throw Error("Composition sheet is missing a Date column.");
-  
-  const rawCompRows=[];
-  for(const row of rows){
-   const c=row.c||[],dc=c[di]||{},d=dt(dc.v!==undefined?dc.v:dc.f);
-   if(!d)continue;
-   const rec={date:d};
-   headers.forEach((h,i)=>{if(i!==di){const x=c[i]||{};rec[h]=n(x.v!==undefined?x.v:x.f)}});
-   rawCompRows.push(rec);
-  }
-  rawCompRows.sort((a,b)=>a.date-b.date);
-  if(!rawCompRows.length)throw Error("No dated rows found in the composition sheet.");
-   
-  compositionRows=[];
-  const endDate = (latestRows && latestRows.length) ? latestRows[latestRows.length - 1].date : rawCompRows[rawCompRows.length - 1].date;
-  let currIdx = 0;
-  let currTime = new Date(rawCompRows[0].date.getTime());
-
-  while (currTime.getTime() <= endDate.getTime()) {
-   while (currIdx + 1 < rawCompRows.length && rawCompRows[currIdx + 1].date.getTime() <= currTime.getTime()) {
-    currIdx++;
-   }
-   const currRec = rawCompRows[currIdx];
-   const dayRec = { date: new Date(currTime.getTime()) };
-   headers.forEach((h, i) => {
-    if (i !== di) dayRec[h] = currRec[h] !== undefined ? currRec[h] : null;
-   });
-   compositionRows.push(dayRec);
-   currTime.setUTCDate(currTime.getUTCDate() + 1);
-  }
-
-  renderCompositionChart();
-  if(note)note.textContent=``;
- }catch(e){
-  if(note)note.textContent=`Composition data error: ${e.message}`;
-  console.error(e);
- }
+  if(di<0)throw Error("Error with database missing a defined date column, it seems.");
+  latestRows=[];
+  for(const row of rows){const c=row.c||[],dc=c[di]||{},d=dt(dc.v!==undefined?dc.v:dc.f);if(!d)continue;const rec={date:d};headers.forEach((h,i)=>{if(i!==di){const x=c[i]||{};rec[h]=pct(x.v!==undefined?x.v:x.f)}});latestRows.push(rec)}
+  latestRows.sort((a,b)=>a.date-b.date);if(!latestRows.length)throw Error("Error with database missing dates, it seems.");
+  buildSmoothedRows(headers.filter(h=>h!==headers[di]));
+  const last=latestRows.at(-1);
+  const lastSmoothed=smoothedRows.at(-1);
+  latestPoll=headers.filter(h=>h!==headers[di]).map(name=>({key:name,name,colour:PARTY_COLOURS[name]||"#777",support:lastSmoothed[name]})).filter(p=>p.support!==null);
+  renderLineChart();renderLatestPolling();renderLeadSummary();renderProjection();renderCoalitionBuilder();
+  renderCustomCoalitionTool();
+  loadGovtSheet();
+  loadCompositionSheet();
+  $("status").textContent=`Latest update: ${dtext(last.date)}, ${latestRows.length.toLocaleString()} days from the previous election`;$("setupPanel").style.display="none";
+ }catch(e){$("status").textContent="";$("setupPanel").style.display="block";$("setupText").innerHTML=`<strong>Connection error:</strong> ${esc(e.message)}`}
+ finally{document.body.classList.remove("loading")}
 }
 
 
@@ -1185,7 +1163,7 @@ async function loadCompositionSheet(){
   if(!compositionRows.length)throw Error("No dated rows found in the composition sheet.");
   renderCompositionChart();
   const last=compositionRows.at(-1);
-  if(note)note.textContent=``;
+  if(note)note.textContent=`Latest update: ${dtext(last.date)}, ${compositionRows.length.toLocaleString()} data points.`;
  }catch(e){
   if(note)note.textContent=`Composition data error: ${e.message}`;
   console.error(e);
@@ -1201,7 +1179,7 @@ function renderCompositionChart(){
   const raw=compositionRows.map(r=>r[key]);
   if(!raw.some(v=>v!==null&&v!==undefined)) return null;
   const colour=PARTY_COLOURS[key]||"#777";
-  return{label:key,data:raw,_rawData:raw,borderColor:colour,backgroundColor:colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,stepped:"before",spanGaps:true};
+  return{label:key,data:raw,_rawData:raw,borderColor:colour,backgroundColor:colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,stepped:"after",spanGaps:true};
  }).filter(Boolean);
  const markers=compositionRows.length?EVENT_MARKERS.map(m=>{let idx=0,diff=Infinity;compositionRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-m.date);if(d<diff){diff=d;idx=i}});return{idx,label:m.label}}):[];
  const th=chartTheme();
