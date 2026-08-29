@@ -326,7 +326,8 @@ const eventMarkerPlugin={
   const{ctx,chartArea:{top,bottom},scales:{x}}=chart;
   ctx.save();
   markers.forEach((m,i)=>{
-   const px=x.getPixelForValue(m.idx);if(px==null||Number.isNaN(px))return;
+   const xVal=(m.value!==undefined&&m.value!==null)?m.value:m.idx;
+   const px=x.getPixelForValue(xVal);if(px==null||Number.isNaN(px))return;
    ctx.beginPath();ctx.setLineDash([4,3]);ctx.strokeStyle=lineColour;ctx.lineWidth=1;
    ctx.moveTo(px,top);ctx.lineTo(px,bottom);ctx.stroke();ctx.setLineDash([]);
    ctx.font="10px Tahoma,Arial,sans-serif";ctx.fillStyle=textColour;ctx.textBaseline="top";ctx.textAlign="left";
@@ -457,6 +458,19 @@ const pct=v=>{if(v===null||v===undefined||v==="")return null;const hasPercentSig
 const dt=v=>{if(v===null||v===undefined||v==="")return null;if(typeof v==="number")return new Date(Date.UTC(1899,11,30)+v*86400000);const s=String(v).trim();const gviz=s.match(/^Date\((\d{4}),(\d{1,2}),(\d{1,2})/);if(gviz)return new Date(Date.UTC(+gviz[1],+gviz[2],+gviz[3]));const dmy=s.match(/^(\d{1,2})[-\/ ]([A-Za-z]{3,})[-\/ ](\d{2,4})$/);if(dmy){const day=+dmy[1],mon=MONTH_ABBR[dmy[2].slice(0,3).toLowerCase()];let year=+dmy[3];if(dmy[3].length<=2)year=year<30?2000+year:1900+year;if(mon!==undefined)return new Date(Date.UTC(year,mon,day))}const d=new Date(s);return Number.isNaN(d.getTime())?null:d};
 const dtext=d=>d?new Intl.DateTimeFormat("en-GB",{year:"numeric",month:"short",day:"numeric"}).format(d):"—";
 function parseGviz(t){const a=t.indexOf("{"),b=t.lastIndexOf("}");if(a<0||b<=a)throw Error("No response from database, hm.");return JSON.parse(t.slice(a,b+1))}
+
+async function fetchWithTimeout(url,options={},timeoutMs=12000){
+ const controller=new AbortController();
+ const timer=setTimeout(()=>controller.abort(),timeoutMs);
+ try{
+  return await fetch(url,{...options,signal:controller.signal});
+ }catch(e){
+  if(e.name==="AbortError")throw Error(`Request timed out after ${(timeoutMs/1000).toFixed(0)}s: ${url}`);
+  throw e;
+ }finally{
+  clearTimeout(timer);
+ }
+}
 
 function retroTooltip(context){
  const {chart,tooltip}=context;
@@ -1173,19 +1187,20 @@ async function loadCompositionSheet(){
 function renderCompositionChart(){
  const canvas=$("compositionChart");if(!canvas)return;
  const ctx=canvas.getContext("2d");if(compositionChart)compositionChart.destroy();
- const labels=compositionRows.map(r=>dtext(r.date));
  const partyKeys=compositionRows.length?Object.keys(compositionRows[0]).filter(k=>k!=="date"):[];
  const datasets=partyKeys.map(key=>{
-  const raw=compositionRows.map(r=>r[key]);
-  if(!raw.some(v=>v!==null&&v!==undefined)) return null;
+  const raw=compositionRows.map(r=>({x:r.date.getTime(),y:r[key]}));
+  if(!raw.some(p=>p.y!==null&&p.y!==undefined)) return null;
   const colour=PARTY_COLOURS[key]||"#777";
-  return{label:key,data:raw,_rawData:raw,borderColor:colour,backgroundColor:colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,stepped:"after",spanGaps:true};
+  return{label:key,data:raw,borderColor:colour,backgroundColor:colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,stepped:"after",spanGaps:true};
  }).filter(Boolean);
- const markers=compositionRows.length?EVENT_MARKERS.map(m=>{let idx=0,diff=Infinity;compositionRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-m.date);if(d<diff){diff=d;idx=i}});return{idx,label:m.label}}):[];
+ const markers=EVENT_MARKERS.map(m=>({value:m.date,label:m.label}));
  const th=chartTheme();
+ const minTs=compositionRows.length?compositionRows[0].date.getTime():undefined;
+ const maxTs=compositionRows.length?compositionRows.at(-1).date.getTime():undefined;
  compositionChart=new Chart(ctx,{
   type:"line",
-  data:{labels,datasets},
+  data:{datasets},
   options:{
    responsive:true,
    maintainAspectRatio:false,
@@ -1193,33 +1208,41 @@ function renderCompositionChart(){
    interaction:{mode:"nearest",axis:"xy",intersect:false},
    plugins:{
     legend:{display:false},
-    tooltip:{enabled:false,external:retroTooltip},
+    tooltip:{enabled:false,external:retroTooltip,callbacks:{title:items=>items.length?dtext(new Date(items[0].parsed.x)):""}},
     eventMarkers:{markers,lineColour:th.markerLine,textColour:th.markerText},
     endLineLabels:{allowedParties:[],valueFormatter:v=>`${Math.round(v)}`}
    },
    scales:{
     x:{
+     type:"linear",
+     min:minTs,
+     max:maxTs,
+     afterBuildTicks: axis => {
+      const ticks=[];
+      const lo=axis.min,hi=axis.max;
+      if(!Number.isFinite(lo)||!Number.isFinite(hi)) { axis.ticks=ticks; return; }
+      const start=new Date(lo);
+      let cursor=Date.UTC(start.getUTCFullYear(), Math.floor(start.getUTCMonth()/3)*3, 1);
+      while(cursor<=hi){
+       if(cursor>=lo) ticks.push({value:cursor});
+       const d=new Date(cursor);
+       cursor=Date.UTC(d.getUTCFullYear(), d.getUTCMonth()+3, 1);
+      }
+      axis.ticks=ticks;
+     },
      ticks:{
       color:th.text,
       font:{family:'"VCR OSD Mono", monospace', size:14},
       autoSkip: false,
       maxRotation: 0,
       minRotation: 0,
-      callback: function(val, index) {
-       const row = compositionRows[index];
-       if (!row) return "";
-
-       const prevRow = compositionRows[index - 1];
-       if (prevRow && row.date.getUTCMonth() === prevRow.date.getUTCMonth() && row.date.getUTCFullYear() === prevRow.date.getUTCFullYear()) {
-        return "";
-       }
-
-       const month = row.date.getUTCMonth();
-       if (month === 0) return ["Jan", row.date.getUTCFullYear()];
+      callback: function(value) {
+       const d = new Date(value);
+       const month = d.getUTCMonth();
+       if (month === 0) return ["Jan", d.getUTCFullYear()];
        if (month === 3) return "Apr";
        if (month === 6) return "Jul";
        if (month === 9) return "Oct";
-
        return "";
       }
      },
