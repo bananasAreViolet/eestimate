@@ -383,14 +383,14 @@ const UI_STRINGS = {
   titleComposition:"RIIGIKOGU KOOSSEISU MUUTUMINE AJAS",
   titleLongTerm:"KÜSITLUSTE KESKMINE 1999. AASTAST TÄNAPÄEVANI",
   latestNoteInitial:"Kui see tekst püsib siin loetava aja ja veel mitu sekundit kauem, on tõenäoliselt tegu andmeveaga",
-  latestNoteTemplate:date=>`Viimane uuendus: ${date}. Toetuse muutus on varjutatud võrreldes viimaste valimistega: triibulised tulbad tähistavad kaotatud toetust, heledamad (hele režiim) ehk tumedamad (tume režiim) tulbad tähistavad kasvu.`,
+  latestNoteTemplate:date=>`Viimane värskendus: ${date}. Toetuse muutus on varjutatud võrreldes viimaste valimistega: triibulised tulbad tähistavad kaotatud toetust, heledamad (helerežiimis)/tumedamad (tumerežiimis) tulbad tähistavad kasvu.`,
   upFrom:(pct,date)=>`Tõus tasemelt ${pct}% (${date})`,
   downFrom:(pct,date)=>`Langus tasemelt ${pct}% (${date})`,
   coalitionSeatsLabel:"Valitud erakondade kohtade summa",
   majorityReached:"Enamus saavutatud",
   majorityShort:"Enamusest puudu",
   chosenParties:"Valitud erakonnad:",
-  thPresidential:"Presidendikandidaadi ülesseadmise piir",
+  thPresidential:"Presidendikandidaadi<br>ülesseadmise piir",
   thBlocking:"Kvalifitseeritud häälteenamuse blokeerimise piir",
   thMajority:"Enamuse piir",
   thSafeMajority:"Kindla enamuse piir",
@@ -405,7 +405,7 @@ const UI_STRINGS = {
   netPrefix:"Neto:",
   compositionLoading:"Riigikogu koosseisu ajaloo laadimine…",
   compositionFactionNote:"Põhineb erakondlikul kuuluvusel, mitte fraktsioonidel.",
-  compositionUpdateTemplate:(date,n)=>`Viimane uuendus: ${date}, ${n} andmepunkti.`,
+  compositionUpdateTemplate:(date,n)=>`Viimane värskendus: ${date}, ${n} andmepunkti.`,
   compositionErrTemplate:msg=>`Koosseisu andmete viga: ${msg}`,
   compositionErrNoDate:"Koosseisu tabelil puudub kuupäevaveerg.",
   compositionErrNoRows:"Koosseisu tabelist ei leitud ühtegi kuupäevaga rida.",
@@ -418,7 +418,7 @@ const UI_STRINGS = {
   longErrEmpty:"Pikaajaliste küsitlusandmete fail on tühi.",
   longErrNoDateColumn:"Pikaajaliste küsitlusandmete failil puudub kuupäevaveerg.",
   longErrNoRows:"Pikaajaliste küsitlusandmete failist ei leitud ühtegi kuupäevaga rida.",
-  statusUpdateTemplate:(date,n)=>`Viimane uuendus: ${date}, ${n} päeva pärast eelmisi valimisi`,
+  statusUpdateTemplate:(date,n)=>`Viimane värskendus: ${date}, ${n} päeva pärast eelmisi valimisi`,
   daysUntilElection:n=>`Järgmiste Riigikogu valimisteni on jäänud kuni ${n} päeva.`,
   tied:(a,b)=>`${a} ja ${b} on viigis.`,
   leading:(a,b,diff)=>`${a} juhib ${b} ees ${diff} punktiga.`,
@@ -439,20 +439,20 @@ function t(key){
 // listed here (e.g. a brand-new party added to the sheet) simply falls back
 // to whatever name the sheet itself uses.
 const PARTY_NAME_ET={
- Reform:"Reformerakond",
+ Reform:"Reform",
  EKRE:"EKRE",
- Centre:"Keskerakond",
+ Centre:"Kesk",
  E200:"E200",
  SDE:"SDE",
  Isamaa:"Isamaa",
- VL:"Vasakliit",
+ VL:"Vasak",
  Koos:"Koos",
- PP:"Parempoolsed",
- Greens:"Rohelised",
+ PP:"Parem",
+ Greens:"Rohe",
  ERK:"ERK",
- Free:"Vabaerakond",
+ Free:"Vaba",
  "EÜRP":"EÜRP",
- Coalition:"Koonderakond",
+ Coalition:"Koond",
  "Res Publica":"Res Publica",
  "Ind.":"Sõltumatud"
 };
@@ -577,7 +577,7 @@ function applyStaticTranslations(){
 
 function coalitionSelectPrompt(){
  if(currentLang==="et"){
-  return `Vali erakonnad kastikeste abil.<br>${partyLabel("Reform")} ei kaalu praegu koalitsiooni erakondadega ${partyLabel("Centre")} ega ${partyLabel("EKRE")}. ${partyLabel("SDE")} ei kaalu koalitsiooni erakonnaga ${partyLabel("EKRE")}.`;
+  return `Vali erakonnad kastikeste abil.<br>${partyLabel("Reform")} välistab hetkel koalitsiooni tegemist Keskerakonna või EKREga. ${partyLabel("SDE")} välistab EKREt.`;
  }
  return `Select parties using the boxes.<br>Reform currently rules out Centre and EKRE. SDE rules out EKRE.`;
 }
