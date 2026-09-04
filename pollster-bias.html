@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=720">
+  <title>Eestimate - Pollster house effects</title>
+  <link rel="icon" type="image/x-icon" href="/eestimate.png">
+
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+  @font-face{
+  font-family:"VCR OSD Mono";
+  src:url("VCR_OSD_MONO.woff2") format("woff2");
+}
+:root{--bg:linear-gradient(180deg,#7c1f3f 0%,#a92d3e 9%,#d14a34 20%,#e97a2e 30%,#f2a13f 39%,#f6c665 47%,#f8e39e 53%,#eb96a0 58%,#dd6a9c 64%,#c94e9a 71%,#ab3f92 79%,#833a80 88%,#583468 100%);--panel:#d4d0c8;--text:#000;--muted:#404040;--light:#fff;--dark:#808080;--title:#000080;--surface:#fff;--inset-border:#d4d0c8}
+body.dark{--bg: linear-gradient(
+    180deg,
+    #0d0414 0%,
+    #1b072b 22%,
+    #3b0e4e 45%,
+    #7a1d77 62%,
+    #b248a3 74%,
+    #c483be 83%,
+    #5c7b93 90%,
+    #344b5c 100%
+  );--panel:#333438;--text:#f4f4f4;--muted:#c9c9c9;--light:#5e5f63;--dark:#111214;--title:#b21233;--surface:#313d4e;--inset-border:#111214}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:Tahoma,sans-serif;font-size:13px;background:var(--bg);color:var(--text)}
+button,input{font:inherit}.page{width:min(1100px,calc(100% - 24px));margin:12px auto 28px}
+.window{border:2px solid var(--dark);border-right-color:var(--light);border-bottom-color:var(--light);background:var(--panel);padding:3px;margin-top:10px}
+.titlebar{background:var(--title);color:#fff;padding:3px 6px;font-weight:bold;display:flex;justify-content:space-between;font-family:"VCR OSD Mono",monospace}
+.window-body{padding:10px}
+h1{font-size:18px;margin:0 0 4px;font-family:"VCR OSD Mono",monospace}
+.header-note{margin:8px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+.lead-summary{margin:0 0 6px;color:var(--text);font-size:14px}
+.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.action{background:#d4d0c8;color:#000;border:2px solid var(--light);border-right-color:var(--dark);border-bottom-color:var(--dark);padding:3px 10px;cursor:pointer;border-radius:0}
+.action:active{border:2px solid var(--dark);border-right-color:var(--light);border-bottom-color:var(--light)}
+body.dark .action{background:#c8c8c8}
+.status{color:var(--muted);font-size:12px}
+.latest-scroll{overflow-x:auto;padding:2px}
+.party-box{width:auto;min-width:66px;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:12px;padding:5px 8px;font-family:"Archivo Black",sans-serif;white-space:nowrap}
+.error .window-body{color:#000}
+.error{background:#f6dddd}
+a{color:#0066cc;text-decoration:none}
+body.dark a{color:#00f7f7;text-decoration:none}
+
+/* ---- bias table ("at a glance") ---- */
+.bias-table{border-collapse:collapse;font-size:12px;min-width:100%}
+.bias-table th,.bias-table td{padding:6px 10px;border-bottom:1px solid var(--dark);text-align:center;white-space:nowrap}
+.bias-table th{text-align:center;background:var(--surface);font-family:"VCR OSD Mono",monospace;font-size:11px}
+.bias-table td:first-child,.bias-table th:first-child{text-align:left}
+.bias-figure{font-weight:700;font-size:13px}
+.bias-n{font-size:10px;color:var(--muted)}
+.bias-cell.positive .bias-figure{color:#1b6d2f}
+.bias-cell.negative .bias-figure{color:#b3261e}
+.bias-cell.neutral .bias-figure{color:var(--text)}
+.bias-cell.insufficient{color:var(--muted);font-style:italic;font-size:11px}
+body.dark .bias-cell.positive .bias-figure{color:#79d488}
+body.dark .bias-cell.negative .bias-figure{color:#ff8a80}
+
+/* ---- per-pollster dot-strip panels ---- */
+.bias-panel{margin-top:10px}
+.bias-row{display:flex;align-items:center;gap:10px;margin:9px 0}
+.bias-label{width:92px;flex:0 0 92px}
+.bias-label .party-box{width:100%;min-width:0}
+.bias-track-wrap{flex:1;position:relative;height:30px;background:var(--surface);border:2px inset var(--inset-border)}
+.bias-zero-line{position:absolute;left:50%;top:2px;bottom:2px;width:1px;background:var(--dark)}
+body.dark .bias-zero-line{background:var(--muted)}
+.bias-dot{position:absolute;top:50%;width:9px;height:9px;border-radius:50%;transform:translate(-50%,-50%);opacity:.55;border:1px solid rgba(0,0,0,.25)}
+.bias-dot.clipped{opacity:.85;box-shadow:0 0 0 2px rgba(0,0,0,.25)}
+.bias-mean-marker{position:absolute;top:3px;bottom:3px;width:3px;transform:translateX(-50%);border-radius:1px;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.bias-summary-value{width:150px;flex:0 0 150px;text-align:right;font-size:12px;line-height:1.3}
+.bias-scale-row{display:flex;align-items:center;gap:10px;margin-top:2px}
+.bias-scale-row .bias-label,.bias-scale-row .bias-summary-value{visibility:hidden}
+.bias-scale-labels{flex:1;display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}
+.low-sample{font-style:italic;opacity:.75}
+
+@media(max-width:720px){
+ .page{width:calc(100% - 10px);margin-top:5px}
+ .window-body{padding:7px}
+ .bias-label{width:64px;flex:0 0 64px}
+ .bias-label .party-box{font-size:10px;padding:4px 3px}
+ .bias-summary-value{width:96px;flex:0 0 96px;font-size:11px}
+}
+</style>
+</head>
+
+<body>
+<script>(function(){try{if(localStorage.getItem("eestimateTheme")==="dark"){document.body.classList.add("dark")}}catch(e){}})();</script>
+<div class="page">
+
+<section class="window">
+  <div class="titlebar"><span>POLLSTER HOUSE EFFECTS</span></div>
+  <div class="window-body">
+    <h1>Pollster house effects</h1>
+    <p class="lead-summary">How each pollster's numbers tend to run above or below Eestimate's polling average, party by party.</p>
+    <p class="header-note">For every individual poll, this page compares its reported number for a party against Eestimate's LOESS-smoothed polling average on that poll's date. The gap (in percentage points) is that poll's "bias" for the party: positive means the pollster reported a higher number than the average, negative means lower. Averaging that gap across a pollster's polls gives a rough house-effect estimate.
+    <br><br><b>Caveat:</b> the polling average is itself partly built from these same pollsters' numbers, so it isn't a fully independent benchmark — read this as a description of how each pollster compares to the pack, not a scored accuracy test. Figures resting on fewer than <span id="minPollsNote">3</span> matched polls are flagged as a low sample.</p>
+    <div class="toolbar">
+      <button class="action" id="reloadBtn">Refresh page</button>
+      <button class="action" id="themeBtn">Dark mode</button>
+      <button class="action" onclick="window.location.href='./'">← Back to Eestimate</button>
+      <span class="status" id="status">Data needs a moment to load in, thanks for the patience…</span>
+    </div>
+    <div class="window error" id="errorBox" style="display:none;margin-top:10px;"><div class="window-body"><p id="errorText" style="margin:0"></p></div></div>
+  </div>
+</section>
+
+<section class="window">
+  <div class="titlebar"><span>AT A GLANCE</span></div>
+  <div class="window-body">
+    <div class="latest-scroll" id="glanceTableWrap"></div>
+    <p class="header-note">Green means the pollster tends to report this party higher than the polling average; red means lower. Neither direction is "more correct" on its own — it's just the size and direction of the gap.</p>
+  </div>
+</section>
+
+<div id="pollsterPanels"></div>
+
+<section class="window">
+  <div class="titlebar"><span>NOTES</span></div>
+  <div class="window-body">
+    <p class="header-note">Each dot below is one individual poll's bias for a party; the thicker vertical marker is the average across all of that pollster's polls. Polls are matched to the polling average on the nearest date, within a few days either way — anything further apart than that is left out rather than guessed at.
+    <br><br>Pollster weighting on the main tracker: <b><a href="https://reitingud.ee/" target="_blank" rel="noopener">Norstat/ÜI</a></b> (weight 0.2 per poll, published weekly), <b><a href="https://www.err.ee/reitingud" target="_blank" rel="noopener">Emor/ERR</a></b> (weight 1), <b><a href="https://turu-uuringute.eu/uudised/" target="_blank" rel="noopener">Turu-uuringute AS</a></b> (weight 0.7). See the main <a href="./">Eestimate</a> page for the polling average itself.</p>
+  </div>
+</section>
+
+</div>
+
+<script>
+/* =====================================================================
+   CONFIG — edit these to match your Google Sheet setup.
+   ===================================================================== */
+
+// Same spreadsheet the main Eestimate page reads from, and the same tab
+// that feeds its "POLLING AVERAGE" chart (one row per day, LOESS-smoothed
+// here exactly the same way the main page smooths it).
+const GOOGLE_SHEET_URL="https://docs.google.com/spreadsheets/d/1gGBmEUW5bwp23602WfQF4eciRrZT4M-VrAz1r5M2JHU/edit?usp=sharing";
+const AVERAGE_SHEET_NAME="EEavg2", AVERAGE_SHEET_RANGE="A:M";
+
+// The per-poll dataset: one row per individual poll, with a Date column,
+// a Pollster column, and one column per party (same party names as the
+// AVERAGE_SHEET_NAME tab above). Change RAW_POLLS_SHEET_URL too if this
+// data lives in a different spreadsheet from the one above.
+const RAW_POLLS_SHEET_URL = GOOGLE_SHEET_URL;
+const RAW_POLLS_SHEET_NAME = "pollst"; // <-- CHANGE THIS to your tab's name
+const RAW_POLLS_RANGE = "A:Z";
+
+// If a party is spelled differently in the per-poll tab than in the
+// average tab, map it here: "nameInPollsRaw":"nameInEEavg2".
+const PARTY_COLUMN_ALIASES = {};
+
+const MIN_POLLS_FOR_BIAS = 3;       // below this, a figure is flagged as a low sample
+const DATE_MATCH_TOLERANCE_DAYS = 3; // how far a poll's date may sit from an average data point and still be matched
+const NOTABLE_BIAS_THRESHOLD = 0.5;  // pp threshold used only for the auto-written summary sentences
+const POLLSTER_ORDER = ["Norstat","Emor","Turu-uuringute"]; // display order; anything else is appended after
+
+/* =================== END CONFIG =================== */
+
+const PARTY_COLOURS={
+Reform:"#f4dd52",
+EKRE:"#8e7b6d",
+Centre:"#58a367",
+E200:"#6c5db7",
+SDE:"#d34564",
+Isamaa:"#6396e8",
+VL:"#b064a5",
+Koos:"#55c0c9",
+PP:"#e88743",
+Greens:"#98C62B",
+ERK:"#d7c262",
+Free:"#b6d3dd",
+"EÜRP":"#b5651d",
+Coalition:"#044999",
+"Res Publica":"#ff7750",
+"Ind.":"#8a8d91"};
+const PREFERRED_ORDER=["VL","SDE","Greens","E200","Reform","PP","Free","Isamaa","Centre","ERK","EKRE","Koos"];
+const PARTY_NAME_ET={}; // left empty on purpose: this page is English-only for now
+function partyLabel(name){ return name; }
+
+const $=id=>document.getElementById(id);
+const esc=v=>String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+const idOf=url=>((String(url||"").match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)||[])[1]||"");
+const MONTH_ABBR={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+const n=v=>{if(v===null||v===undefined||v==="")return null;const x=Number(String(v).trim().replace(",",".").replace(/%\s*$/,""));return Number.isFinite(x)?x:null};
+const pct=v=>{if(v===null||v===undefined||v==="")return null;const hasPercentSign=/%\s*$/.test(String(v).trim());const x=n(v);return x===null?null:(!hasPercentSign&&Math.abs(x)<=1.5)?x*100:x};
+const dt=v=>{if(v===null||v===undefined||v==="")return null;if(typeof v==="number")return new Date(Date.UTC(1899,11,30)+v*86400000);const s=String(v).trim();const gviz=s.match(/^Date\((\d{4}),(\d{1,2}),(\d{1,2})/);if(gviz)return new Date(Date.UTC(+gviz[1],+gviz[2],+gviz[3]));const dmy=s.match(/^(\d{1,2})[-\/ ]([A-Za-z]{3,})[-\/ ](\d{2,4})$/);if(dmy){const day=+dmy[1],mon=MONTH_ABBR[dmy[2].slice(0,3).toLowerCase()];let year=+dmy[3];if(dmy[3].length<=2)year=year<30?2000+year:1900+year;if(mon!==undefined)return new Date(Date.UTC(year,mon,day))}const d=new Date(s);return Number.isNaN(d.getTime())?null:d};
+function parseGviz(t){const a=t.indexOf("{"),b=t.lastIndexOf("}");if(a<0||b<=a)throw Error("No response from database, hm.");return JSON.parse(t.slice(a,b+1))}
+const dtext=d=>{ if(!d) return "—"; return new Intl.DateTimeFormat("en-GB",{year:"numeric",month:"short",day:"numeric"}).format(d); };
+const fmtSigned=v=>(v>0?"+":"")+v.toFixed(1);
+
+const LOESS_SPAN=0.03;
+function loessSmooth(values, span=LOESS_SPAN){
+ const points=[];
+ values.forEach((value,index)=>{
+  if(Number.isFinite(value)) points.push({x:index,y:value});
+ });
+ if(points.length<4) return values.slice();
+ const k=Math.max(4,Math.min(points.length,Math.ceil(points.length*span)));
+ const out=values.slice();
+ for(let i=0;i<values.length;i++){
+  if(!Number.isFinite(values[i])){out[i]=null;continue;}
+  let nearest=points.map(p=>({p,dist:Math.abs(p.x-i)})).sort((a,b)=>a.dist-b.dist).slice(0,k);
+  const maxDist=nearest.at(-1).dist||1;
+  let Sw=0,Sx=0,Sy=0,Sxx=0,Sxy=0;
+  for(const {p,dist} of nearest){
+   const u=Math.min(1,dist/maxDist);
+   const w=Math.pow(1-Math.pow(u,3),3);
+   Sw+=w;Sx+=w*p.x;Sy+=w*p.y;Sxx+=w*p.x*p.x;Sxy+=w*p.x*p.y;
+  }
+  const denom=Sw*Sxx-Sx*Sx;
+  if(Math.abs(denom)<1e-12){out[i]=Sw?Sy/Sw:values[i];continue}
+  const beta=(Sw*Sxy-Sx*Sy)/denom;
+  const alpha=(Sy-beta*Sx)/Sw;
+  out[i]=alpha+beta*i;
+ }
+ return out;
+}
+
+async function fetchSheet(sheetUrl, sheetName, range){
+ const id=idOf(sheetUrl);
+ if(!id) throw new Error(`Could not find a spreadsheet ID in "${sheetUrl}".`);
+ const u=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&headers=1&range=${encodeURIComponent(`${sheetName}!${range}`)}`;
+ const r=await fetch(u,{cache:"no-store"});
+ if(!r.ok) throw new Error(`The "${sheetName}" tab responded with HTTP ${r.status}.`);
+ return parseGviz(await r.text());
+}
+
+async function loadAggregateSeries(){
+ const g=await fetchSheet(GOOGLE_SHEET_URL, AVERAGE_SHEET_NAME, AVERAGE_SHEET_RANGE);
+ const cols=g.table?.cols||[], rows=g.table?.rows||[];
+ const headers=cols.map((c,i)=>String(c.label||c.id||"").trim()||`Column ${i+1}`);
+ const di=headers.findIndex(h=>h.toLowerCase()==="date");
+ if(di<0) throw new Error(`The "${AVERAGE_SHEET_NAME}" tab doesn't have a Date column.`);
+ const partyKeys=headers.filter((h,i)=>i!==di);
+ let rowsOut=[];
+ for(const row of rows){
+  const c=row.c||[]; const dc=c[di]||{}; const d=dt(dc.v!==undefined?dc.v:dc.f);
+  if(!d) continue;
+  const rec={date:d};
+  headers.forEach((h,i)=>{ if(i!==di){ const x=c[i]||{}; rec[h]=pct(x.v!==undefined?x.v:x.f); } });
+  rowsOut.push(rec);
+ }
+ rowsOut.sort((a,b)=>a.date-b.date);
+ if(!rowsOut.length) throw new Error(`No dated rows found in the "${AVERAGE_SHEET_NAME}" tab.`);
+ const smoothed=rowsOut.map(r=>({date:r.date}));
+ partyKeys.forEach(key=>{
+  const series=loessSmooth(rowsOut.map(r=>r[key]));
+  series.forEach((v,i)=>{ smoothed[i][key]=v; });
+ });
+ return {partyKeys, smoothed};
+}
+
+async function loadRawPolls(){
+ const g=await fetchSheet(RAW_POLLS_SHEET_URL, RAW_POLLS_SHEET_NAME, RAW_POLLS_RANGE);
+ const cols=g.table?.cols||[], rows=g.table?.rows||[];
+ const headers=cols.map((c,i)=>String(c.label||c.id||"").trim()||`Column ${i+1}`);
+ const di=headers.findIndex(h=>h.toLowerCase()==="date");
+ const pi=headers.findIndex(h=>h.toLowerCase()==="pollster");
+ if(di<0) throw new Error(`The "${RAW_POLLS_SHEET_NAME}" tab doesn't have a Date column.`);
+ if(pi<0) throw new Error(`The "${RAW_POLLS_SHEET_NAME}" tab doesn't have a Pollster column.`);
+ const partyCols=headers.map((h,i)=>i).filter(i=>i!==di&&i!==pi);
+ let out=[];
+ for(const row of rows){
+  const c=row.c||[]; const dc=c[di]||{}; const d=dt(dc.v!==undefined?dc.v:dc.f);
+  if(!d) continue;
+  const pc=c[pi]||{}; const pollster=String((pc.v!==undefined?pc.v:pc.f)||"").trim();
+  if(!pollster) continue;
+  const values={};
+  partyCols.forEach(i=>{
+   const rawName=headers[i];
+   const partyName=PARTY_COLUMN_ALIASES[rawName]||rawName;
+   const x=c[i]||{};
+   values[partyName]=pct(x.v!==undefined?x.v:x.f);
+  });
+  out.push({date:d,pollster,values});
+ }
+ out.sort((a,b)=>a.date-b.date);
+ return out;
+}
+
+function findAggregateValue(smoothed, date, party, toleranceDays){
+ const target=date.getTime();
+ let best=null,bestDiff=Infinity;
+ for(const row of smoothed){
+  const v=row[party];
+  if(v===null||v===undefined||!Number.isFinite(v)) continue;
+  const diff=Math.abs(row.date.getTime()-target);
+  if(diff<bestDiff){bestDiff=diff;best=v;}
+ }
+ if(best===null||bestDiff>toleranceDays*86400000) return null;
+ return best;
+}
+
+function computeBiasRecords(rawPolls, aggregate){
+ const records=[];
+ for(const poll of rawPolls){
+  for(const party of Object.keys(poll.values)){
+   const pollValue=poll.values[party];
+   if(pollValue===null||pollValue===undefined) continue;
+   const aggValue=findAggregateValue(aggregate.smoothed, poll.date, party, DATE_MATCH_TOLERANCE_DAYS);
+   if(aggValue===null) continue;
+   records.push({pollster:poll.pollster, party, date:poll.date, pollValue, aggValue, bias:pollValue-aggValue});
+  }
+ }
+ return records;
+}
+
+function groupBias(records){
+ const map={};
+ for(const rec of records){
+  map[rec.pollster]=map[rec.pollster]||{};
+  map[rec.pollster][rec.party]=map[rec.pollster][rec.party]||{records:[]};
+  map[rec.pollster][rec.party].records.push(rec);
+ }
+ for(const pollster in map){
+  for(const party in map[pollster]){
+   const g=map[pollster][party];
+   g.records.sort((a,b)=>a.date-b.date);
+   const nn=g.records.length;
+   const sum=g.records.reduce((s,r)=>s+r.bias,0);
+   g.n=nn;
+   g.mean=nn?sum/nn:null;
+   g.higher=g.records.filter(r=>r.bias>0.05).length;
+   g.lower=g.records.filter(r=>r.bias<-0.05).length;
+   g.latest=g.records.at(-1);
+  }
+ }
+ return map;
+}
+
+function niceScale(maxAbs){
+ const options=[0.5,1,1.5,2,2.5,3,4,5,6,8,10,12,15,20,25,30];
+ const target=(maxAbs||0)*1.15;
+ for(const o of options) if(o>=target) return o;
+ return Math.ceil(target)||1;
+}
+
+function orderedParties(partyMap){
+ const keys=Object.keys(partyMap);
+ return PREFERRED_ORDER.filter(p=>keys.includes(p)).concat(keys.filter(p=>!PREFERRED_ORDER.includes(p)).sort());
+}
+function orderedPollsters(biasMap){
+ const keys=Object.keys(biasMap);
+ return POLLSTER_ORDER.filter(p=>keys.includes(p)).concat(keys.filter(p=>!POLLSTER_ORDER.includes(p)).sort());
+}
+
+function renderGlanceTable(biasMap){
+ const pollsters=orderedPollsters(biasMap);
+ const partiesSet=new Set();
+ pollsters.forEach(p=>Object.keys(biasMap[p]).forEach(party=>partiesSet.add(party)));
+ const parties=orderedParties(Object.fromEntries([...partiesSet].map(p=>[p,true])));
+
+ let html='<table class="bias-table"><thead><tr><th>Party</th>'+pollsters.map(p=>`<th>${esc(p)}</th>`).join("")+"</tr></thead><tbody>";
+ parties.forEach(party=>{
+  html+=`<tr><td><span class="party-box" style="background:${esc(PARTY_COLOURS[party]||"#888")}">${esc(partyLabel(party))}</span></td>`;
+  pollsters.forEach(pollster=>{
+   const g=biasMap[pollster] && biasMap[pollster][party];
+   if(!g || g.n<MIN_POLLS_FOR_BIAS){
+    const nText=g?g.n:0;
+    html+=`<td class="bias-cell insufficient">low sample${nText?` (n=${nText})`:" (n=0)"}</td>`;
+   }else{
+    const cls=g.mean>0.05?"positive":g.mean<-0.05?"negative":"neutral";
+    html+=`<td class="bias-cell ${cls}"><span class="bias-figure">${fmtSigned(g.mean)}pp</span><br><span class="bias-n">n=${g.n}</span></td>`;
+   }
+  });
+  html+="</tr>";
+ });
+ html+="</tbody></table>";
+ $("glanceTableWrap").innerHTML=html;
+}
+
+let GLOBAL_SCALE=1;
+
+function renderBiasRow(party,g){
+ const colour=PARTY_COLOURS[party]||"#888";
+ const rows=g?g.records:[];
+ const dotsHtml=rows.map(r=>{
+  let pos=50+(r.bias/GLOBAL_SCALE)*50;
+  const clipped=pos<2||pos>98;
+  pos=Math.min(98,Math.max(2,pos));
+  const title=`${dtext(r.date)}: ${r.pollValue.toFixed(1)}% vs avg ${r.aggValue.toFixed(1)}% (${fmtSigned(r.bias)}pp)${clipped?" — off the scale shown, clipped to the edge":""}`;
+  return `<span class="bias-dot${clipped?" clipped":""}" style="left:${pos}%;background:${esc(colour)}" title="${esc(title)}"></span>`;
+ }).join("");
+ let meanHtml="";
+ if(g && g.n){
+  let pos=50+(g.mean/GLOBAL_SCALE)*50;
+  pos=Math.min(98,Math.max(2,pos));
+  meanHtml=`<span class="bias-mean-marker" style="left:${pos}%;background:${esc(colour)}" title="Average: ${fmtSigned(g.mean)}pp across ${g.n} poll${g.n===1?"":"s"}"></span>`;
+ }
+ const summaryText=g && g.n
+  ? `${fmtSigned(g.mean)}pp<br><span class="${g.n<MIN_POLLS_FOR_BIAS?"low-sample":""}">n=${g.n}${g.n<MIN_POLLS_FOR_BIAS?" — low sample":""}</span>`
+  : "no matched polls";
+ return `<div class="bias-row">
+  <div class="bias-label"><span class="party-box" style="background:${esc(colour)}">${esc(partyLabel(party))}</span></div>
+  <div class="bias-track-wrap"><span class="bias-zero-line"></span>${dotsHtml}${meanHtml}</div>
+  <div class="bias-summary-value">${summaryText}</div>
+ </div>`;
+}
+
+function pollsterNarrative(pollster, partyMap, pollCount){
+ const entries=Object.entries(partyMap).filter(([,g])=>g.n>=MIN_POLLS_FOR_BIAS);
+ if(!entries.length) return `Not enough matched polls yet to describe a pattern for ${esc(pollster)}.`;
+ entries.sort((a,b)=>b[1].mean-a[1].mean);
+ const top=entries[0], bottom=entries[entries.length-1];
+ const notableTop=top[1].mean>=NOTABLE_BIAS_THRESHOLD;
+ const notableBottom=bottom[0]!==top[0] && bottom[1].mean<=-NOTABLE_BIAS_THRESHOLD;
+ let sentence=`Across ${pollCount} poll${pollCount===1?"":"s"}, ${esc(pollster)} `;
+ if(notableTop && notableBottom){
+  sentence+=`tends to score ${partyLabel(top[0])} above the polling average (${fmtSigned(top[1].mean)}pp on average) and ${partyLabel(bottom[0])} below it (${fmtSigned(bottom[1].mean)}pp).`;
+ }else if(notableTop){
+  sentence+=`tends to score ${partyLabel(top[0])} above the polling average (${fmtSigned(top[1].mean)}pp on average); no other party shows a clear pattern yet.`;
+ }else if(notableBottom){
+  sentence+=`tends to score ${partyLabel(bottom[0])} below the polling average (${fmtSigned(bottom[1].mean)}pp on average); no other party shows a clear pattern yet.`;
+ }else{
+  sentence+=`hasn't shown a strong, consistent house effect for any party so far.`;
+ }
+ return sentence;
+}
+
+function renderPollsterPanels(biasMap, rawPolls){
+ const pollsters=orderedPollsters(biasMap);
+ const html=pollsters.map(pollster=>{
+  const partyMap=biasMap[pollster];
+  const parties=orderedParties(partyMap);
+  const pollCount=rawPolls.filter(p=>p.pollster===pollster).length;
+  const rowsHtml=parties.map(party=>renderBiasRow(party, partyMap[party])).join("");
+  return `<section class="window">
+   <div class="titlebar"><span>${esc(pollster.toUpperCase())}</span></div>
+   <div class="window-body">
+    <p class="lead-summary">${pollsterNarrative(pollster, partyMap, pollCount)}</p>
+    <div class="bias-panel">
+     ${rowsHtml}
+     <div class="bias-scale-row">
+      <div class="bias-label"></div>
+      <div class="bias-scale-labels"><span>underestimates by ${GLOBAL_SCALE}pp</span><span>polling average</span><span>overestimates by ${GLOBAL_SCALE}pp</span></div>
+      <div class="bias-summary-value"></div>
+     </div>
+    </div>
+   </div>
+  </section>`;
+ }).join("");
+ $("pollsterPanels").innerHTML=html;
+}
+
+async function init(){
+ $("errorBox").style.display="none";
+ $("minPollsNote").textContent=String(MIN_POLLS_FOR_BIAS);
+ try{
+  $("status").textContent="Loading the polling average…";
+  const aggregate=await loadAggregateSeries();
+  $("status").textContent="Loading individual poll results…";
+  const rawPolls=await loadRawPolls();
+  if(!rawPolls.length) throw new Error(`No rows found in the "${RAW_POLLS_SHEET_NAME}" tab. Check RAW_POLLS_SHEET_NAME / RAW_POLLS_RANGE in the config at the top of the script.`);
+  const records=computeBiasRecords(rawPolls, aggregate);
+  if(!records.length) throw new Error(`None of the polls could be matched to a polling-average date. Check that party column names match between "${RAW_POLLS_SHEET_NAME}" and "${AVERAGE_SHEET_NAME}" (use PARTY_COLUMN_ALIASES if they differ) and that the date ranges overlap.`);
+  GLOBAL_SCALE=niceScale(Math.max(...records.map(r=>Math.abs(r.bias))));
+  const biasMap=groupBias(records);
+  renderGlanceTable(biasMap);
+  renderPollsterPanels(biasMap, rawPolls);
+  const distinctPollsters=new Set(rawPolls.map(p=>p.pollster)).size;
+  $("status").textContent=`Loaded ${rawPolls.length} poll${rawPolls.length===1?"":"s"} from ${distinctPollsters} pollster${distinctPollsters===1?"":"s"}, matched to the polling average within ±${DATE_MATCH_TOLERANCE_DAYS} day${DATE_MATCH_TOLERANCE_DAYS===1?"":"s"}.`;
+ }catch(e){
+  $("status").textContent="";
+  $("errorBox").style.display="block";
+  $("errorText").innerHTML=`<strong>Couldn't load the bias comparison:</strong> ${esc(e.message)}`;
+ }
+}
+
+$("reloadBtn").onclick=()=>location.reload();
+$("themeBtn").onclick=()=>{
+ document.body.classList.toggle("dark");
+ try{ localStorage.setItem("eestimateTheme", document.body.classList.contains("dark")?"dark":"light"); }catch(e){}
+};
+
+init();
+</script>
+</body>
+</html>
