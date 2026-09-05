@@ -402,7 +402,7 @@ SV:"#5c63da",
 JKP:"#79c2fe",
 ASL:"#ffaaaa",
 MMN:"#87c9bd"};
-const PREFERRED_ORDER=["JV","ZZS","AS","NA","ST!","LPV","PRO","Par!","LA","Saskaņa","GS","LKS","SV","JKP","ASL","MMN"];
+const PREFERRED_ORDER=["Saskaņa","PRO","ZZS","Par!","JV","LA","JKP","AS","NA","GS","MMN","LPV","ASL","ST!","SV","LKS"];
 const DISTRICTS=[38,26,13,12,11],SAEIMA_SEATS=100,NATIONAL_THRESHOLD=5;
 const EVENT_MARKERS=[
  {date:Date.UTC(2023,3,17),label:"Kallas' third cabinet"},
@@ -702,13 +702,14 @@ function electionAnchoredLoess(rows,key,anchorIndices,span){
 
 function renderLineChart(){
  const ctx=$("lineChart").getContext("2d");if(lineChart)lineChart.destroy();
- const labels=latestRows.map(r=>dtext(r.date));
- const datasets=latestPoll.map(p=>{const has=latestRows.some(r=>r[p.key]!==null&&r[p.key]!==undefined);if(!has)return null;const series=smoothedDatasetData(latestRows,p.key);return{label:partyLabel(p.name),data:series.smoothed,_rawData:series.raw,borderColor:p.colour,backgroundColor:p.colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,spanGaps:true}}).filter(Boolean);
- const markers=latestRows.length?EVENT_MARKERS.map(m=>{let idx=0,diff=Infinity;latestRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-m.date);if(d<diff){diff=d;idx=i}});return{idx,label:eventLabel(m.label)}}):[];
+ const datasets=latestPoll.map(p=>{const has=latestRows.some(r=>r[p.key]!==null&&r[p.key]!==undefined);if(!has)return null;const series=smoothedDatasetData(latestRows,p.key);const data=latestRows.map((r,i)=>({x:r.date.getTime(),y:series.smoothed[i]}));return{label:partyLabel(p.name),data,_rawData:series.raw,borderColor:p.colour,backgroundColor:p.colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,spanGaps:true}}).filter(Boolean);
+ const markers=latestRows.length?EVENT_MARKERS.map(m=>({value:m.date,label:eventLabel(m.label)})):[];
  const th=chartTheme();
+ const minTs=latestRows.length?latestRows[0].date.getTime():undefined;
+ const maxTs=latestRows.length?latestRows.at(-1).date.getTime():undefined;
  lineChart=new Chart(ctx,{
   type:"line",
-  data:{labels,datasets},
+  data:{datasets},
   options:{
    responsive:true,
    maintainAspectRatio:false,
@@ -716,28 +717,37 @@ function renderLineChart(){
    interaction:{mode:"nearest",axis:"xy",intersect:false},
    plugins:{
     legend:{position:"bottom",labels:{usePointStyle:true,pointStyle:"line",boxWidth:26,padding:14,color:th.text,font:{family:'"VCR OSD Mono", monospace', size:12}}},
-    tooltip:{enabled:false,external:retroTooltip},
+    tooltip:{enabled:false,external:retroTooltip,callbacks:{title:items=>items.length?dtext(new Date(items[0].parsed.x)):""}},
     eventMarkers:{markers,lineColour:th.markerLine,textColour:th.markerText},
     endLineLabels:{allowedParties:["JV","ZZS","AS","NA","LPV","PRO","SV"].map(partyLabel)}
    },
    scales:{
     x:{
+     type:"linear",
+     min:minTs,
+     max:maxTs,
+     afterBuildTicks: axis => {
+      const ticks=[];
+      const lo=axis.min,hi=axis.max;
+      if(!Number.isFinite(lo)||!Number.isFinite(hi)) { axis.ticks=ticks; return; }
+      const start=new Date(lo);
+      let cursor=Date.UTC(start.getUTCFullYear(), Math.floor(start.getUTCMonth()/3)*3, 1);
+      while(cursor<=hi){
+       if(cursor>=lo) ticks.push({value:cursor});
+       const d=new Date(cursor);
+       cursor=Date.UTC(d.getUTCFullYear(), d.getUTCMonth()+3, 1);
+      }
+      axis.ticks=ticks;
+     },
      ticks:{
       color:th.text,
       font:{family:'"VCR OSD Mono", monospace', size:14},
       autoSkip: false,
       maxRotation: 0,
       minRotation: 0,
-      callback: function(val, index) {
-       const row = latestRows[index];
-       if (!row) return "";
-       
-       const prevRow = latestRows[index - 1];
-       if (prevRow && row.date.getUTCMonth() === prevRow.date.getUTCMonth() && row.date.getUTCFullYear() === prevRow.date.getUTCFullYear()) {
-        return "";
-       }
-       
-       return quarterTick(row.date.getUTCMonth(), row.date.getUTCFullYear());
+      callback: function(value) {
+       const d = new Date(value);
+       return quarterTick(d.getUTCMonth(), d.getUTCFullYear());
       }
      },
      grid:{display:false}
@@ -772,9 +782,9 @@ function renderLeadSummary(){
 function renderLatestPolling(){
  const c=$("latestChart"),note=$("latestNote");c.innerHTML="";if(!latestPoll.length){note.textContent="No current party observations.";return}
  const sorted=[...latestPoll].sort((a,b)=>b.support-a.support);
- const marIndex=findDateIndex(2023,2,5);
+ const marIndex=findDateIndex(2022,9,1);
  const oldOf=p=>rawValueAt(marIndex,p.key);
- const baselineDate=dtext(latestRows[marIndex]?latestRows[marIndex].date:new Date(Date.UTC(2023,2,5)));
+ const baselineDate=dtext(latestRows[marIndex]?latestRows[marIndex].date:new Date(Date.UTC(2022,9,1)));
  const max=Math.max(...sorted.map(p=>p.support),...sorted.map(oldOf).filter(v=>v!==null),1);
  note.textContent=t("latestNoteTemplate")(dtext(latestRows.at(-1).date));
  const isDark=document.body.classList.contains("dark");
@@ -856,7 +866,7 @@ function renderProjection(){
   for(let i = 0; i < p.total; i++) seatColours.push(p);
  });
 
- const viewW = 620, viewH = 340, centerX = viewW/2, centerY = viewH - 20, dotR = 11;
+ const viewW = 620, viewH = 360, centerX = viewW/2, centerY = viewH - 40, dotR = 11;
  const rows = hemicycleRows(SAEIMA_SEATS, 9, 40, 300);
  const points = hemicyclePoints(rows);
 
@@ -898,7 +908,7 @@ function renderSupportChanges() {
     container.style.justifyContent = "center";
   }
 
-  const baselineIndex = findDateIndex(2023,2,5);
+  const baselineIndex = findDateIndex(2022,9,1);
 
   const allowedParties = ["JV", "ZZS", "AS", "NA", "LPV", "PRO", "SV", "LA", "MMN"];
 
