@@ -97,8 +97,7 @@ body.dark .bias-zero-line{background:var(--muted)}
   <div class="window-body">
     <h1>Pollster house effects</h1>
     <p class="lead-summary">How each pollster's numbers tend to run above or below Eestimate's polling average, party by party.</p>
-    <p class="header-note">For every individual poll, this page compares its reported number for a party against Eestimate's LOESS-smoothed polling average on that poll's date. The gap (in percentage points) is that poll's "bias" for the party: positive means the pollster reported a higher number than the average, negative means lower. Averaging that gap across a pollster's polls gives a rough house-effect estimate.
-    <br><br><b>Caveat:</b> the polling average is itself partly built from these same pollsters' numbers, so it isn't a fully independent benchmark — read this as a description of how each pollster compares to the pack, not a scored accuracy test. Figures resting on fewer than <span id="minPollsNote">3</span> matched polls are flagged as a low sample.</p>
+    <p class="header-note">For every individual poll, this page compares its reported number for a party against a LOESS-smoothed polling average on that poll's date — specifically, a version of the average recomputed with that pollster's own polls left out, so the comparison isn't circular. The gap (in percentage points) is that poll's "bias" for the party: positive means the pollster reported a higher number than the average of everyone else, negative means lower. Averaging that gap across a pollster's polls gives a house-effect estimate. Figures resting on fewer than <span id="minPollsNote">3</span> matched polls are flagged as a low sample.</p>
     <div class="toolbar">
       <button class="action" id="reloadBtn">Refresh page</button>
       <button class="action" id="themeBtn">Dark mode</button>
@@ -113,6 +112,7 @@ body.dark .bias-zero-line{background:var(--muted)}
   <div class="titlebar"><span>AT A GLANCE</span></div>
   <div class="window-body">
     <div class="latest-scroll" id="glanceTableWrap"></div>
+    <p class="header-note" id="glanceFootnote"></p>
     <p class="header-note">Green means the pollster tends to report this party higher than the polling average; red means lower. Neither direction is "more correct" on its own — it's just the size and direction of the gap.</p>
   </div>
 </section>
@@ -122,7 +122,7 @@ body.dark .bias-zero-line{background:var(--muted)}
 <section class="window">
   <div class="titlebar"><span>NOTES</span></div>
   <div class="window-body">
-    <p class="header-note">Each dot below is one individual poll's bias for a party; the thicker vertical marker is the average across all of that pollster's polls. Polls are matched to the polling average on the nearest date, within a few days either way — anything further apart than that is left out rather than guessed at.
+    <p class="header-note">Each dot below is one individual poll's bias for a party; the thicker vertical marker is the average across all of that pollster's polls. Polls are matched to their pollster-specific leave-one-out average on the nearest date, within a few days either way — anything further apart than that is left out rather than guessed at.
     <br><br>Pollster weighting on the main tracker: <b><a href="https://reitingud.ee/" target="_blank" rel="noopener">Norstat/ÜI</a></b> (weight 0.2 per poll, published weekly), <b><a href="https://www.err.ee/reitingud" target="_blank" rel="noopener">Emor/ERR</a></b> (weight 1), <b><a href="https://turu-uuringute.eu/uudised/" target="_blank" rel="noopener">Turu-uuringute AS</a></b> (weight 0.7). See the main <a href="./">Eestimate</a> page for the polling average itself.</p>
   </div>
 </section>
@@ -134,19 +134,30 @@ body.dark .bias-zero-line{background:var(--muted)}
    CONFIG — edit these to match your Google Sheet setup.
    ===================================================================== */
 
-// Same spreadsheet the main Eestimate page reads from, and the same tab
-// that feeds its "POLLING AVERAGE" chart (one row per day, LOESS-smoothed
-// here exactly the same way the main page smooths it).
+// Same spreadsheet the main Eestimate page reads from.
 const GOOGLE_SHEET_URL="https://docs.google.com/spreadsheets/d/1gGBmEUW5bwp23602WfQF4eciRrZT4M-VrAz1r5M2JHU/edit?usp=sharing";
-const AVERAGE_SHEET_NAME="EEavg2", AVERAGE_SHEET_RANGE="A:M";
 
 // The per-poll dataset: one row per individual poll, with a Date column,
-// a Pollster column, and one column per party (same party names as the
-// AVERAGE_SHEET_NAME tab above). Change RAW_POLLS_SHEET_URL too if this
-// data lives in a different spreadsheet from the one above.
+// a Pollster column, and one column per party.
 const RAW_POLLS_SHEET_URL = GOOGLE_SHEET_URL;
-const RAW_POLLS_SHEET_NAME = "pollst"; // <-- CHANGE THIS to your tab's name
+const RAW_POLLS_SHEET_NAME = "pollst";
 const RAW_POLLS_RANGE = "A:Z";
+
+// Leave-one-out polling averages: each tab below should be built the same
+// way as the main page's "EEavg2" average, but recomputed with that one
+// pollster's own polls excluded — so comparing a pollster against it isn't
+// circular. Add/remove entries here to match whichever sheets you've built.
+const POLLSTER_AGGREGATE_SHEETS = {
+ "Norstat": { name: "forNSTAT", range: "A:M" },
+ "Emor": { name: "forEMOR", range: "A:M" },
+ "Turu-uuringute AS": { name: "forTURU", range: "A:M" }
+};
+
+// Used only for a pollster that shows up in RAW_POLLS_SHEET_NAME but has no
+// entry in POLLSTER_AGGREGATE_SHEETS above — falls back to the regular
+// (non-independent) polling average tab from the main page.
+const FALLBACK_AVERAGE_SHEET_NAME = "EEavg2";
+const FALLBACK_AVERAGE_RANGE = "A:M";
 
 // If a party is spelled differently in the per-poll tab than in the
 // average tab, map it here: "nameInPollsRaw":"nameInEEavg2".
@@ -155,7 +166,7 @@ const PARTY_COLUMN_ALIASES = {};
 const MIN_POLLS_FOR_BIAS = 3;       // below this, a figure is flagged as a low sample
 const DATE_MATCH_TOLERANCE_DAYS = 3; // how far a poll's date may sit from an average data point and still be matched
 const NOTABLE_BIAS_THRESHOLD = 0.5;  // pp threshold used only for the auto-written summary sentences
-const POLLSTER_ORDER = ["Norstat","Emor","Turu-uuringute"]; // display order; anything else is appended after
+const POLLSTER_ORDER = ["Norstat","Emor","Turu-uuringute AS"]; // display order; anything else is appended after
 
 /* =================== END CONFIG =================== */
 
@@ -228,12 +239,12 @@ async function fetchSheet(sheetUrl, sheetName, range){
  return parseGviz(await r.text());
 }
 
-async function loadAggregateSeries(){
- const g=await fetchSheet(GOOGLE_SHEET_URL, AVERAGE_SHEET_NAME, AVERAGE_SHEET_RANGE);
+async function loadAggregateSheet(sheetUrl, sheetName, range){
+ const g=await fetchSheet(sheetUrl, sheetName, range);
  const cols=g.table?.cols||[], rows=g.table?.rows||[];
  const headers=cols.map((c,i)=>String(c.label||c.id||"").trim()||`Column ${i+1}`);
  const di=headers.findIndex(h=>h.toLowerCase()==="date");
- if(di<0) throw new Error(`The "${AVERAGE_SHEET_NAME}" tab doesn't have a Date column.`);
+ if(di<0) throw new Error(`The "${sheetName}" tab doesn't have a Date column.`);
  const partyKeys=headers.filter((h,i)=>i!==di);
  let rowsOut=[];
  for(const row of rows){
@@ -244,13 +255,32 @@ async function loadAggregateSeries(){
   rowsOut.push(rec);
  }
  rowsOut.sort((a,b)=>a.date-b.date);
- if(!rowsOut.length) throw new Error(`No dated rows found in the "${AVERAGE_SHEET_NAME}" tab.`);
+ if(!rowsOut.length) throw new Error(`No dated rows found in the "${sheetName}" tab.`);
  const smoothed=rowsOut.map(r=>({date:r.date}));
  partyKeys.forEach(key=>{
   const series=loessSmooth(rowsOut.map(r=>r[key]));
   series.forEach((v,i)=>{ smoothed[i][key]=v; });
  });
  return {partyKeys, smoothed};
+}
+
+// Works out, for every pollster present in the raw-poll data, which
+// leave-one-out sheet (or the shared fallback) to compare it against, then
+// fetches each distinct sheet only once.
+async function loadPollsterAggregates(pollsters){
+ const plan=pollsters.map(pollster=>{
+  const dedicated=POLLSTER_AGGREGATE_SHEETS[pollster];
+  return dedicated
+   ? {pollster, sheetName:dedicated.name, range:dedicated.range, isIndependent:true}
+   : {pollster, sheetName:FALLBACK_AVERAGE_SHEET_NAME, range:FALLBACK_AVERAGE_RANGE, isIndependent:false};
+ });
+ const uniqueSheets=[...new Map(plan.map(p=>[p.sheetName,p])).values()];
+ const loaded=await Promise.all(uniqueSheets.map(p=>loadAggregateSheet(GOOGLE_SHEET_URL, p.sheetName, p.range)));
+ const bySheet={};
+ uniqueSheets.forEach((p,i)=>{ bySheet[p.sheetName]=loaded[i]; });
+ const byPollster={};
+ plan.forEach(p=>{ byPollster[p.pollster]={ aggregate:bySheet[p.sheetName], sheetName:p.sheetName, isIndependent:p.isIndependent }; });
+ return byPollster;
 }
 
 async function loadRawPolls(){
@@ -294,13 +324,15 @@ function findAggregateValue(smoothed, date, party, toleranceDays){
  return best;
 }
 
-function computeBiasRecords(rawPolls, aggregate){
+function computeBiasRecords(rawPolls, pollsterAggregates){
  const records=[];
  for(const poll of rawPolls){
+  const entry=pollsterAggregates[poll.pollster];
+  if(!entry || !entry.aggregate) continue;
   for(const party of Object.keys(poll.values)){
    const pollValue=poll.values[party];
    if(pollValue===null||pollValue===undefined) continue;
-   const aggValue=findAggregateValue(aggregate.smoothed, poll.date, party, DATE_MATCH_TOLERANCE_DAYS);
+   const aggValue=findAggregateValue(entry.aggregate.smoothed, poll.date, party, DATE_MATCH_TOLERANCE_DAYS);
    if(aggValue===null) continue;
    records.push({pollster:poll.pollster, party, date:poll.date, pollValue, aggValue, bias:pollValue-aggValue});
   }
@@ -353,7 +385,8 @@ function renderGlanceTable(biasMap){
  pollsters.forEach(p=>Object.keys(biasMap[p]).forEach(party=>partiesSet.add(party)));
  const parties=orderedParties(Object.fromEntries([...partiesSet].map(p=>[p,true])));
 
- let html='<table class="bias-table"><thead><tr><th>Party</th>'+pollsters.map(p=>`<th>${esc(p)}</th>`).join("")+"</tr></thead><tbody>";
+ const fallbackPollsters=pollsters.filter(p=>POLLSTER_INDEPENDENCE[p] && !POLLSTER_INDEPENDENCE[p].isIndependent);
+ let html='<table class="bias-table"><thead><tr><th>Party</th>'+pollsters.map(p=>`<th>${esc(p)}${fallbackPollsters.includes(p)?" *":""}</th>`).join("")+"</tr></thead><tbody>";
  parties.forEach(party=>{
   html+=`<tr><td><span class="party-box" style="background:${esc(PARTY_COLOURS[party]||"#888")}">${esc(partyLabel(party))}</span></td>`;
   pollsters.forEach(pollster=>{
@@ -370,6 +403,9 @@ function renderGlanceTable(biasMap){
  });
  html+="</tbody></table>";
  $("glanceTableWrap").innerHTML=html;
+ $("glanceFootnote").textContent=fallbackPollsters.length
+  ? `* ${fallbackPollsters.join(", ")} — no dedicated leave-one-out average yet, so these columns compare against the shared polling average instead (less independent than the others).`
+  : "";
 }
 
 let GLOBAL_SCALE=1;
@@ -427,10 +463,15 @@ function renderPollsterPanels(biasMap, rawPolls){
   const parties=orderedParties(partyMap);
   const pollCount=rawPolls.filter(p=>p.pollster===pollster).length;
   const rowsHtml=parties.map(party=>renderBiasRow(party, partyMap[party])).join("");
+  const independence=POLLSTER_INDEPENDENCE[pollster];
+  const fallbackNote=(independence && !independence.isIndependent)
+   ? `<p class="header-note">No dedicated leave-one-out average exists for ${esc(pollster)} yet, so this compares against the shared polling average — treat these figures as less independent than the other pollsters shown here.</p>`
+   : "";
   return `<section class="window">
    <div class="titlebar"><span>${esc(pollster.toUpperCase())}</span></div>
    <div class="window-body">
     <p class="lead-summary">${pollsterNarrative(pollster, partyMap, pollCount)}</p>
+    ${fallbackNote}
     <div class="bias-panel">
      ${rowsHtml}
      <div class="bias-scale-row">
@@ -445,23 +486,32 @@ function renderPollsterPanels(biasMap, rawPolls){
  $("pollsterPanels").innerHTML=html;
 }
 
+let POLLSTER_INDEPENDENCE={}; // pollster -> {sheetName, isIndependent}
+
 async function init(){
  $("errorBox").style.display="none";
  $("minPollsNote").textContent=String(MIN_POLLS_FOR_BIAS);
  try{
-  $("status").textContent="Loading the polling average…";
-  const aggregate=await loadAggregateSeries();
   $("status").textContent="Loading individual poll results…";
   const rawPolls=await loadRawPolls();
   if(!rawPolls.length) throw new Error(`No rows found in the "${RAW_POLLS_SHEET_NAME}" tab. Check RAW_POLLS_SHEET_NAME / RAW_POLLS_RANGE in the config at the top of the script.`);
-  const records=computeBiasRecords(rawPolls, aggregate);
-  if(!records.length) throw new Error(`None of the polls could be matched to a polling-average date. Check that party column names match between "${RAW_POLLS_SHEET_NAME}" and "${AVERAGE_SHEET_NAME}" (use PARTY_COLUMN_ALIASES if they differ) and that the date ranges overlap.`);
+  const distinctPollsterNames=[...new Set(rawPolls.map(p=>p.pollster))];
+
+  $("status").textContent="Loading polling averages (leave-one-out per pollster)…";
+  const pollsterAggregates=await loadPollsterAggregates(distinctPollsterNames);
+  POLLSTER_INDEPENDENCE=pollsterAggregates;
+
+  const records=computeBiasRecords(rawPolls, pollsterAggregates);
+  if(!records.length) throw new Error(`None of the polls could be matched to a polling-average date. Check that party column names match between "${RAW_POLLS_SHEET_NAME}" and the average tabs (use PARTY_COLUMN_ALIASES if they differ) and that the date ranges overlap.`);
   GLOBAL_SCALE=niceScale(Math.max(...records.map(r=>Math.abs(r.bias))));
   const biasMap=groupBias(records);
   renderGlanceTable(biasMap);
   renderPollsterPanels(biasMap, rawPolls);
-  const distinctPollsters=new Set(rawPolls.map(p=>p.pollster)).size;
-  $("status").textContent=`Loaded ${rawPolls.length} poll${rawPolls.length===1?"":"s"} from ${distinctPollsters} pollster${distinctPollsters===1?"":"s"}, matched to the polling average within ±${DATE_MATCH_TOLERANCE_DAYS} day${DATE_MATCH_TOLERANCE_DAYS===1?"":"s"}.`;
+  const distinctPollsters=distinctPollsterNames.length;
+  const fallbackUsed=distinctPollsterNames.filter(p=>pollsterAggregates[p] && !pollsterAggregates[p].isIndependent);
+  let statusMsg=`Loaded ${rawPolls.length} poll${rawPolls.length===1?"":"s"} from ${distinctPollsters} pollster${distinctPollsters===1?"":"s"}, matched within ±${DATE_MATCH_TOLERANCE_DAYS} day${DATE_MATCH_TOLERANCE_DAYS===1?"":"s"}.`;
+  if(fallbackUsed.length) statusMsg+=` (${fallbackUsed.join(", ")} used the shared average — see note below.)`;
+  $("status").textContent=statusMsg;
  }catch(e){
   $("status").textContent="";
   $("errorBox").style.display="block";
