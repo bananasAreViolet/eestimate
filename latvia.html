@@ -368,12 +368,8 @@ function applyStaticTranslations(){
  const coalSummary=document.getElementById("coalitionSummary");
  if(coalSummary) coalSummary.innerHTML=coalitionSelectPrompt();
  if(headerNote){
-  headerNote.innerHTML=`Eestimate is an Estonian party preference polling tracker and aggregator by bananasAreViolet.
-<br>Charts based on weighted (by pollster and date) 30-day average, with LOESS smoothing applied to the displayed trend lines.<br><br>
-<b><a href="https://reitingud.ee/" target="_blank" rel="noopener">Norstat/ÜI</a></b> polls are given a weight of 0.2 due to their frequency of appearing per week, adding up to a total weight of 0.8 per month.<br>
-<b><a href="https://www.err.ee/reitingud" target="_blank" rel="noopener">Emor/ERR</a></b> polls are given a weight of 1.<br>
-<b><a href="https://turu-uuringute.eu/uudised/" target="_blank" rel="noopener">Turu-uuringute AS</a></b> polls are given a weight of 0.7.<br>
-<b><a href="https://bananasareviolet.github.io/eestimate/pollstercomparison.png" target="_blank" rel="noopener">Why?</a></b><br>
+  headerNote.innerHTML=`The Latvian version of Eestimate tracks Saeima party preference polls. Charts by bananasAreViolet.
+<br>Charts based on polling, smootherned with LOESS.<br><br>
 <br>Updates will be sporadic but for now, here they are. We shall all pray that I do not suffer from burnout 🙃`;
  }
 }
