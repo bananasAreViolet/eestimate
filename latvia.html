@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=720">
-  <title id="pageTitle">Eestimate - Latvian edition</title> 
+  <title id="pageTitle">Eestimate - Latvia edition</title> 
   <link rel="icon" type="image/x-icon" href="/eestimate.png">
 
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
@@ -144,7 +144,7 @@ body.dark a {
   <div class="titlebar"><span></span></div>
   <div class="window-body" style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
   <div>
-    <h1>Eestimate - Latvia edition</h1>
+    <h1>Eestimate - Latvia edition, Saeima prediction</h1>
     <p class="lead-summary" id="leadSummary">Loading current standings…</p>
     <p class="header-note" id="headerNoteText">This is a Latvian party preference polling tracker by bananasAreViolet.
 <br>Charts based on LOESS smoothing applied to the polling.<br>
@@ -232,16 +232,13 @@ body.dark a {
 </div>
 
 <section class="window"><div class="titlebar"><span data-i18n="titleCoalitionBuilder">COALITION BUILDER</span></div><div class="window-body" style="position:relative;padding-bottom:32px;">
-<div class="coalition-top"><div><div class="coalition-score" id="coalitionSeats">0 / 101</div><div class="status" data-i18n="coalitionSeatsLabel">Combined seats of selected parties</div></div><div class="majority" id="majorityBadge" data-i18n="majorityShort">Short of a majority</div></div>
+<div class="coalition-top"><div><div class="coalition-score" id="coalitionSeats">0 / 100</div><div class="status" data-i18n="coalitionSeatsLabel">Combined seats of selected parties</div></div><div class="majority" id="majorityBadge" data-i18n="majorityShort">Short of a majority</div></div>
 <div class="coalition-bar"><div class="coalition-fill" id="coalitionFill"></div>
-<span class="threshold" style="left:20.792%"></span><span class="threshold-label" style="left:20.792%"><strong>21</strong><span data-i18n="thPresidential">Presidential candidate nomination line</span></span>
-<span class="threshold" style="left:33.663%"></span><span class="threshold-label" style="left:33.663%"><strong>34</strong><span data-i18n="thBlocking">Supermajority blocking line</span></span>
-<span class="threshold major" style="left:50.495%"></span><span class="threshold-label" style="left:50.495%"><strong>51</strong><span data-i18n="thMajority">Majority line</span></span>
-<span class="threshold" style="left:54.455%"></span><span class="threshold-label upper-label" style="left:54.455%"><strong>55</strong><span data-i18n="thSafeMajority">Safe majority line</span></span>
-<span class="threshold" style="left:67.327%"></span><span class="threshold-label" style="left:67.327%"><strong>68</strong><span data-i18n="thSupermajority">Supermajority line</span></span>
-<span class="threshold" style="left:80.198%"></span><span class="threshold-label" style="left:80.198%"><strong>81</strong><span data-i18n="thConstitution">Constitution amending line</span></span>
+<span class="threshold" style="left:34%"></span><span class="threshold-label" style="left:34%"><strong>34</strong><span data-i18n="thBlocking">Supermajority blocking line</span></span>
+<span class="threshold major" style="left:51%"></span><span class="threshold-label" style="left:51%"><strong>51</strong><span data-i18n="thMajority">Majority line</span></span>
+<span class="threshold" style="left:67%"></span><span class="threshold-label" style="left:67%"><strong>67</strong><span data-i18n="thSupermajority">Supermajority line</span></span>
 </div>
-<div class="party-selector" id="partySelector" style="margin-top:44px"></div><div class="coalition-summary" id="coalitionSummary">Select parties using the boxes.<br>Reform currently rules out Centre and EKRE. SDE rules out EKRE.</div>
+<div class="party-selector" id="partySelector" style="margin-top:44px"></div><div class="coalition-summary" id="coalitionSummary">Select parties using the boxes.<br>PRO rules out LPV and SV. JV excludes LPV and NA prefers to not work with PRO.</div>
 <img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo">
 </div></section>
 
@@ -302,12 +299,9 @@ const UI_STRINGS = {
   majorityReached:"Majority reached",
   majorityShort:"Short of a majority",
   chosenParties:"Chosen parties:",
-  thPresidential:"Presidential candidate nomination line",
   thBlocking:"Supermajority blocking line",
   thMajority:"Majority line",
-  thSafeMajority:"Safe majority line",
   thSupermajority:"Supermajority line",
-  thConstitution:"Constitution amending line",
   modeSeparate:"Separate lines",
   modeNet:"Net support (Side 1 minus Side 2)",
   side1Title:"Side 1",
@@ -385,7 +379,7 @@ function applyStaticTranslations(){
 }
 
 function coalitionSelectPrompt(){
- return `Select parties using the boxes.`;
+ return `Select parties using the boxes.<br>PRO rules out LPV and SV. JV excludes LPV and NA prefers to not work with PRO.`;
 }
 
 const GOOGLE_SHEET_URL="https://docs.google.com/spreadsheets/d/10Uq9yOtAXJyzTFZtpdOJGCIAg217N-727PclTCxSPEg/edit?gid=0#gid=0";
@@ -409,7 +403,7 @@ JKP:"#79c2fe",
 ASL:"#ffaaaa",
 MMN:"#87c9bd"};
 const PREFERRED_ORDER=["JV","ZZS","AS","NA","ST!","LPV","PRO","Par!","LA","Saskaņa","P21","LKS","SV","JKP","ASL","MMN"];
-const DISTRICTS=[10,13,8,16,6,5,6,7,7,8,8,7],RIIGIKOGU_SEATS=101,NATIONAL_THRESHOLD=5,MODIFIED_DHONDT_EXPONENT=.9;
+const DISTRICTS=[38,26,13,12,11],SAEIMA_SEATS=100,NATIONAL_THRESHOLD=5;
 const EVENT_MARKERS=[
  {date:Date.UTC(2023,3,17),label:"Kallas' third cabinet"},
  {date:Date.UTC(2024,6,23),label:"Michal's cabinet"},
@@ -724,7 +718,7 @@ function renderLineChart(){
     legend:{position:"bottom",labels:{usePointStyle:true,pointStyle:"line",boxWidth:26,padding:14,color:th.text,font:{family:'"VCR OSD Mono", monospace', size:12}}},
     tooltip:{enabled:false,external:retroTooltip},
     eventMarkers:{markers,lineColour:th.markerLine,textColour:th.markerText},
-    endLineLabels:{allowedParties:["Isamaa","Centre","SDE","EKRE","Reform","PP","E200"].map(partyLabel)}
+    endLineLabels:{allowedParties:["JV","ZZS","AS","NA","LPV","PRO","SV"].map(partyLabel)}
    },
    scales:{
     x:{
@@ -810,8 +804,8 @@ function renderLatestPolling(){
 function projectSeats(poll){
  const q=poll.filter(p=>p.support>=NATIONAL_THRESHOLD),d=Object.fromEntries(q.map(p=>[p.key,0]));
  for(const seats of DISTRICTS)for(const p of q)d[p.key]+=Math.floor(p.support/100*seats+1e-9);
- let left=Math.max(0,101-Object.values(d).reduce((a,b)=>a+b,0)),comp=Object.fromEntries(q.map(p=>[p.key,0]));
- const div=n=>(n<=1?1:Math.pow(n,MODIFIED_DHONDT_EXPONENT));
+ let left=Math.max(0,SAEIMA_SEATS-Object.values(d).reduce((a,b)=>a+b,0)),comp=Object.fromEntries(q.map(p=>[p.key,0]));
+ const div=n=>2*n-1; // unmodified Sainte-Laguë: divisors 1,3,5,7,…
  while(left>0&&q.length){let w=null,best=-Infinity;for(const p of q){const z=p.support/div(d[p.key]+comp[p.key]+1);if(z>best+1e-12||(Math.abs(z-best)<1e-12&&w&&p.support>w.support)){w=p;best=z}}if(!w)break;comp[w.key]++;left--}
  return q.map(p=>({...p,total:d[p.key]+comp[p.key]})).sort((a,b)=>{
   const idxA=PREFERRED_ORDER.indexOf(a.key);
@@ -820,63 +814,62 @@ function projectSeats(poll){
  });
 }
 
+// Computes concentric arc rows (radius + seat count per row) that together
+// sum to exactly `totalSeats`, for drawing a semicircular parliament diagram.
+// Row radii are spaced evenly between rMin and rMax; each row's seat count is
+// proportional to its radius (so dot spacing along each arc stays roughly
+// constant), with largest-remainder rounding to hit the exact total.
+function hemicycleRows(totalSeats,rowCount,rMin,rMax){
+ const radii=[];
+ for(let i=0;i<rowCount;i++) radii.push(rowCount===1?rMin:rMin+(rMax-rMin)*(i/(rowCount-1)));
+ const sumR=radii.reduce((a,b)=>a+b,0);
+ const raw=radii.map(r=>r/sumR*totalSeats);
+ const counts=raw.map(Math.floor);
+ let remaining=totalSeats-counts.reduce((a,b)=>a+b,0);
+ const order=raw.map((v,i)=>({i,rem:v-counts[i]})).sort((a,b)=>b.rem-a.rem);
+ for(let k=0;k<remaining;k++) counts[order[k].i]++;
+ return radii.map((r,i)=>({radius:r,count:Math.max(1,counts[i])}));
+}
+
+function hemicyclePoints(rows){
+ const points=[];
+ rows.forEach(row=>{
+  const startAngle=Math.PI,endAngle=0;
+  for(let i=0;i<row.count;i++){
+   const angle=row.count===1?Math.PI/2:startAngle-(i/(row.count-1))*(startAngle-endAngle);
+   points.push({angle,radius:row.radius});
+  }
+ });
+ points.sort((a,b)=>{
+  if(Math.abs(b.angle-a.angle)>1e-4) return b.angle-a.angle;
+  return b.radius-a.radius;
+ });
+ return points;
+}
+
 function renderProjection(){
  projection = projectSeats(latestPoll);
- $("parliament").innerHTML = "";
  $("projectionKey").innerHTML = "";
- 
- const seats = [];
+
+ const seatColours = [];
  projection.forEach(p => {
-  for(let i = 0; i < p.total; i++) seats.push(p);
+  for(let i = 0; i < p.total; i++) seatColours.push(p);
  });
 
+ const viewW = 620, viewH = 340, centerX = viewW/2, centerY = viewH - 20, dotR = 11;
+ const rows = hemicycleRows(SAEIMA_SEATS, 9, 40, 300);
+ const points = hemicyclePoints(rows);
 
- const fillOrder = [];
- const numPairs = 5; 
-
- for (let pPair = 0; pPair < numPairs; pPair++) {
-  const colA = pPair * 2;
-  const colB = pPair * 2 + 1;
-  const goingDown = (pPair % 2 === 0); 
-
-  if (goingDown) {
-   for (let r = 0; r < 10; r++) {
-    fillOrder.push({ c: colA, r: r });
-    fillOrder.push({ c: colB, r: r });
-   }
-  } else {
-   for (let r = 9; r >= 0; r--) {
-    fillOrder.push({ c: colA, r: r });
-    fillOrder.push({ c: colB, r: r });
-   }
-  }
- }
- 
- 
- fillOrder.push({ c: 9, r: 10 });
-
-
- const seatMap = {};
- fillOrder.forEach((slot, index) => {
-  const p = seats[index];
-  if (p) seatMap[`${slot.c},${slot.r}`] = p;
+ let svg = `<svg viewBox="0 0 ${viewW} ${viewH}" width="100%" style="display:block">`;
+ points.forEach((pt, idx) => {
+  const p = seatColours[idx];
+  if(!p) return;
+  const x = centerX + pt.radius * Math.cos(pt.angle);
+  const y = centerY - pt.radius * Math.sin(pt.angle);
+  svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${dotR}" fill="${esc(p.colour)}" stroke="#000" stroke-width="1" stroke-opacity="0.35"><title>${esc(partyLabel(p.name))}: ${esc(locInt(p.total))}</title></circle>`;
  });
-
- for(let c = 0; c < 10; c++){
-  const col = document.createElement("div");
-  col.className = "seat-col";
-  const numRows = (c === 9 ? 11 : 10);
-  for(let i = 0; i < numRows; i++){
-   const p = seatMap[`${c},${i}`];
-   if(!p) continue;
-   const s = document.createElement("span");
-   s.className = "seat";
-   s.style.background = p.colour;
-   s.title = `${partyLabel(p.name)}: ${locInt(p.total)}`;
-   col.appendChild(s);
-  }
-  $("parliament").appendChild(col);
- }
+ svg += `</svg>`;
+ $("parliament").innerHTML = svg;
 
  for(const p of projection){
   const i = document.createElement("span");
@@ -907,7 +900,7 @@ function renderSupportChanges() {
 
   const baselineIndex = findDateIndex(2023,2,5);
 
-  const allowedParties = ["Reform", "EKRE", "Centre", "Isamaa", "E200", "PP", "SDE", "Greens"];
+  const allowedParties = ["JV", "ZZS", "AS", "NA", "LPV", "PRO", "SV", "LA", "MMN"];
 
   let gainers = [];
   let losers = [];
@@ -985,7 +978,7 @@ function renderSupportChangeGeneric(gainersId, losersId, baselineIndex) {
   gainersCol.innerHTML = "";
   losersCol.innerHTML = "";
 
-  const allowedParties = ["Reform", "EKRE", "Centre", "Isamaa", "E200", "PP", "SDE", "Greens"];
+  const allowedParties = ["JV", "ZZS", "AS", "NA", "LPV", "PRO", "SV", "LA", "MMN"];
 
   let gainers = [];
   let losers = [];
@@ -1071,14 +1064,7 @@ function renderTopArchChart() {
     }
   });
 
-  const rows = [
-    { radius: 28, count: 10 },
-    { radius: 39, count: 13 },
-    { radius: 50, count: 16 },
-    { radius: 61, count: 18 },
-    { radius: 72, count: 21 },
-    { radius: 83, count: 23 }
-  ];
+  const rows = hemicycleRows(SAEIMA_SEATS, 6, 28, 83);
 
   const centerX = canvas.width / 2;
   const centerY = canvas.height - 12;
@@ -1089,7 +1075,7 @@ function renderTopArchChart() {
     const startAngle = Math.PI;
     const endAngle = 0;
     for (let i = 0; i < row.count; i++) {
-      const angle = startAngle - (i / (row.count - 1)) * (startAngle - endAngle);
+      const angle = row.count===1?Math.PI/2:startAngle - (i / (row.count - 1)) * (startAngle - endAngle);
       const x = centerX + row.radius * Math.cos(angle);
       const y = centerY - row.radius * Math.sin(angle);
       points.push({ x, y, angle, radius: row.radius });
@@ -1119,7 +1105,7 @@ function renderTopArchChart() {
   ctx.font = "bold 15px Tahoma, Arial, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "bottom";
-  ctx.fillText("101", centerX, centerY - 1);
+  ctx.fillText(String(SAEIMA_SEATS), centerX, centerY - 1);
 }
 
 function renderCoalitionBuilder(){
@@ -1130,9 +1116,9 @@ function renderCoalitionBuilder(){
 function renderCoalitionSummary(){
  let seats=0,names=[];const fill=$("coalitionFill");fill.innerHTML="";
  projection.forEach(p=>{if(selectedCoalition.has(p.key)){seats+=p.total;names.push(`${partyLabel(p.name)} (${locInt(p.total)})`);
-  const seg=document.createElement("div");seg.className="coalition-fill-seg";seg.style.width=`${p.total/101*100}%`;seg.style.background=p.colour;seg.title=`${partyLabel(p.name)}: ${locInt(p.total)}`;fill.appendChild(seg)
+  const seg=document.createElement("div");seg.className="coalition-fill-seg";seg.style.width=`${p.total/SAEIMA_SEATS*100}%`;seg.style.background=p.colour;seg.title=`${partyLabel(p.name)}: ${locInt(p.total)}`;fill.appendChild(seg)
  }});
- $("coalitionSeats").textContent=`${locInt(seats)} / 101`;
+ $("coalitionSeats").textContent=`${locInt(seats)} / ${locInt(SAEIMA_SEATS)}`;
  const maj=seats>=51;
  const badge=$("majorityBadge");
  badge.textContent=maj?t("majorityReached"):t("majorityShort");
