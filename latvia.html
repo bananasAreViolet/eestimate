@@ -591,9 +591,9 @@ async function loadGoogleSheet(){
 }
 
 
-const LOESS_SPAN=0.08;
+const LOESS_SPAN=0.14;
 
-const LONG_LOESS_SPAN=0.08;
+const LONG_LOESS_SPAN=0.14;
 let smoothedRows=[];
 function buildSmoothedRows(keys){
  smoothedRows=latestRows.map(r=>({date:r.date}));
@@ -863,7 +863,7 @@ function renderProjection(){
  });
 
  const viewW = 620, viewH = 360, centerX = viewW/2, centerY = viewH - 40, dotR = 11;
- const rows = hemicycleRows(SAEIMA_SEATS, 9, 40, 300);
+ const rows = hemicycleRows(SAEIMA_SEATS, 9, 130, 300);
  const points = hemicyclePoints(rows);
 
  let svg = `<svg viewBox="0 0 ${viewW} ${viewH}" width="100%" style="display:block">`;
@@ -1292,7 +1292,22 @@ function renderCustomCoalitionChart(){
   });
  }
 
- const markers=latestRows.length?EVENT_MARKERS.map(m=>{let idx=0,diff=Infinity;latestRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-m.date);if(d<diff){diff=d;idx=i}});return{idx,label:eventLabel(m.label)}}):[];
+ const markers=latestRows.length?EVENT_MARKERS.map(m=>{
+  const n=latestRows.length;
+  let fracIdx;
+  if(m.date<=latestRows[0].date.getTime()){
+   fracIdx=0;
+  }else if(m.date>=latestRows[n-1].date.getTime()){
+   fracIdx=n-1;
+  }else{
+   let i=0;
+   while(i<n-1&&latestRows[i+1].date.getTime()<m.date)i++;
+   const t0=latestRows[i].date.getTime(),t1=latestRows[i+1].date.getTime();
+   const frac=t1>t0?(m.date-t0)/(t1-t0):0;
+   fracIdx=i+frac;
+  }
+  return{value:fracIdx,label:eventLabel(m.label)};
+ }):[];
  const th=chartTheme();
 
  customCoalitionChart=new Chart(ctx,{
