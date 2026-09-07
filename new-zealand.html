@@ -238,7 +238,7 @@ body.dark a {
 <span class="threshold major" id="thMajorityLine" style="left:50.83%"></span><span class="threshold-label" id="thMajorityLabel" style="left:50.83%"><strong id="thMajorityNum">61</strong><span data-i18n="thMajority">Majority line</span></span>
 <span class="threshold" id="thSupermajorityLine" style="left:66.67%"></span><span class="threshold-label" id="thSupermajorityLabel" style="left:66.67%"><strong id="thSupermajorityNum">80</strong><span data-i18n="thSupermajority">Supermajority line</span></span>
 </div>
-<div class="party-selector" id="partySelector" style="margin-top:44px"></div><div class="coalition-summary" id="coalitionSummary">Select parties using the boxes.<br>National, ACT and NZ First currently govern together. Labour, the Greens and Te Pāti Māori have ruled out working with National.</div>
+<div class="party-selector" id="partySelector" style="margin-top:44px"></div><div class="coalition-summary" id="coalitionSummary">Select parties using the boxes.<br>National, ACT and NZF currently govern together. Labour, the Greens and TPM have ruled out working with National. National has ruled out TOP.</div>
 <img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo">
 </div></section>
 
@@ -369,13 +369,13 @@ function applyStaticTranslations(){
  if(headerNote){
   headerNote.innerHTML=`This is an Aotearoa New Zealand party preference polling tracker by bananasAreViolet.
 <br>Charts based on polling, smootherned with LOESS.<br><br>
-Seat projections use New Zealand's modified Sainte-Laguë MMP formula. Te Pāti Māori is floored at ${TPM_GUARANTEED_ELECTORATES} seats for its predicted Māori electorate wins; any shortfall from its party vote becomes an overhang seat, growing the House rather than costing another party a seat.<br><br>
+Seat projections use New Zealand's modified Sainte-Laguë MMP formula. TPM is floored at ${TPM_GUARANTEED_ELECTORATES} seats for its predicted Māori electorate wins; any shortfall from its party vote becomes an overhang seat, growing the House rather than costing another party a seat.<br><br>
 Updates will be sporadic but for now, here they are. We shall all pray that I do not suffer from burnout 🙃`;
  }
 }
 
 function coalitionSelectPrompt(){
- return `Select parties using the boxes.<br>National, ACT and NZ First currently govern together. Labour, the Greens and Te Pāti Māori have ruled out working with National.`;
+ return `Select parties using the boxes.<br>National, ACT and NZ First currently govern together. Labour, the Greens and TPM have ruled out working with National.`;
 }
 
 const GOOGLE_SHEET_URL="https://docs.google.com/spreadsheets/d/10Uq9yOtAXJyzTFZtpdOJGCIAg217N-727PclTCxSPEg/edit?usp=sharing";
@@ -405,7 +405,7 @@ const BASE_SEATS=120,PARTY_VOTE_THRESHOLD=5;
 // alone would earn on the list — guarantee it this floor of seats, and
 // treat any shortfall from the list formula as an overhang seat rather
 // than take a seat from anyone else.
-const TPM_KEY="Te Pāti Māori",TPM_GUARANTEED_ELECTORATES=3;
+const TPM_KEY="TPM",TPM_GUARANTEED_ELECTORATES=3;
 
 const EVENT_MARKERS=[
  {date:Date.UTC(2023,9,14),label:"2023 election"},
