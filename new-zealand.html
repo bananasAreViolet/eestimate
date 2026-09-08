@@ -884,13 +884,18 @@ function hemicycleRows(totalSeats,rowCount,rMin,rMax){
  return radii.map((r,i)=>({radius:r,count:Math.max(1,counts[i])}));
 }
 
-// Sweeps each row from bottom (-90°) to top (+90°), bulging out to the
-// right of a vertical flat edge — a hemicycle rotated 90°, matching the
-// House of Representatives diagram style but oriented vertically.
-function hemicyclePoints(rows){
+// Sweeps each row from bottom to top, bulging out to the right of center.
+// At halfAngleDeg=90 this is a plain hemicycle (flat vertical edge on the
+// left). The NZ House of Representatives diagram is a horseshoe — more
+// than a half-circle — so its rows sweep past ±90°, curling the top and
+// bottom rows back past center to open a "C"-shaped gap on the left. This
+// is that same horseshoe as the Wikipedia NZ Parliament diagram, just
+// rotated 90° so it stands upright instead of lying on its side.
+function hemicyclePoints(rows, halfAngleDeg){
+ const half=(halfAngleDeg===undefined?90:halfAngleDeg)*Math.PI/180;
  const points=[];
  rows.forEach(row=>{
-  const startAngle=-Math.PI/2,endAngle=Math.PI/2;
+  const startAngle=-half,endAngle=half;
   for(let i=0;i<row.count;i++){
    const angle=row.count===1?0:startAngle+(i/(row.count-1))*(endAngle-startAngle);
    points.push({angle,radius:row.radius});
@@ -902,6 +907,12 @@ function hemicyclePoints(rows){
  });
  return points;
 }
+
+// Half-angle (degrees) of the horseshoe sweep. 90 = plain semicircle;
+// >90 wraps the arc further round into NZ's deeper "C" shape. 122° keeps
+// the proportions of the reference diagram (rotated to vertical) — a
+// noticeably open horseshoe rather than a tight ring or a flat hemicycle.
+const HORSESHOE_HALF_ANGLE = 122;
 
 function renderProjection(){
  projection = projectSeats(latestPoll);
@@ -921,9 +932,29 @@ function renderProjection(){
   for(let i = 0; i < p.total; i++) seatColours.push(p);
  });
 
- const viewW = 380, viewH = 460, centerX = 120, centerY = viewH/2, dotR = 10;
- const rows = hemicycleRows(total, 7, 85, 200);
- const points = hemicyclePoints(rows);
+ // Base tuning is for a 120-seat House. An overhang seat (or several —
+ // TPM's electorate floor can occasionally produce more than one) grows
+ // `total` past BASE_SEATS, so row count and dot size scale gently with
+ // it rather than assuming exactly 120 seats will ever need to fit.
+ const rMin = 85, rMax = 200;
+ const rowCount = Math.max(7, Math.round(7 * Math.sqrt(total / BASE_SEATS)));
+ const dotR = Math.max(7, 10 * Math.sqrt(BASE_SEATS / Math.max(total, BASE_SEATS)));
+
+ // Bounding box for a horseshoe of outer radius rMax swept to
+ // ±HORSESHOE_HALF_ANGLE: it bulges rMax to the right of center, and its
+ // curled-back tips reach rMax*cos(halfAngle) — negative, i.e. past
+ // center to the left — so centerX needs enough room on the left for
+ // that overshoot, not just the flat edge a plain semicircle would need.
+ const halfRad = HORSESHOE_HALF_ANGLE * Math.PI / 180;
+ const leftReach = rMax * Math.cos(halfRad); // negative: tips curl left of center
+ const pad = dotR + 4;
+ const centerX = Math.round(-leftReach + pad);
+ const viewW = Math.round(centerX + rMax + pad);
+ const centerY = Math.round(rMax + pad);
+ const viewH = centerY * 2;
+
+ const rows = hemicycleRows(total, rowCount, rMin, rMax);
+ const points = hemicyclePoints(rows, HORSESHOE_HALF_ANGLE);
 
  let svg = `<svg viewBox="0 0 ${viewW} ${viewH}" width="100%" style="display:block">`;
  points.forEach((pt, idx) => {
@@ -931,7 +962,7 @@ function renderProjection(){
   if(!p) return;
   const x = centerX + pt.radius * Math.cos(pt.angle);
   const y = centerY - pt.radius * Math.sin(pt.angle);
-  svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${dotR}" fill="${esc(p.colour)}" stroke="#000" stroke-width="1.5" stroke-opacity="0.6"><title>${esc(partyLabel(p.name))}: ${esc(locInt(p.total))}</title></circle>`;
+  svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${dotR.toFixed(2)}" fill="${esc(p.colour)}" stroke="#000" stroke-width="1.5" stroke-opacity="0.6"><title>${esc(partyLabel(p.name))}: ${esc(locInt(p.total))}</title></circle>`;
  });
  svg += `</svg>`;
  $("parliament").innerHTML = svg;
