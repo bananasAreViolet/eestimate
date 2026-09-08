@@ -884,13 +884,12 @@ function hemicycleRows(totalSeats,rowCount,rMin,rMax){
  return radii.map((r,i)=>({radius:r,count:Math.max(1,counts[i])}));
 }
 
-// Sweeps each row from bottom to top, bulging out to the right of center.
-// At halfAngleDeg=90 this is a plain hemicycle (flat vertical edge on the
-// left). The NZ House of Representatives diagram is a horseshoe — more
-// than a half-circle — so its rows sweep past ±90°, curling the top and
-// bottom rows back past center to open a "C"-shaped gap on the left. This
-// is that same horseshoe as the Wikipedia NZ Parliament diagram, just
-// rotated 90° so it stands upright instead of lying on its side.
+// Returns {angle, radius} for every seat across a set of concentric rows,
+// sweeping angle from +halfAngle (left) through 0 (top) to -halfAngle
+// (right). Used for the domed top of the horseshoe — a plain semicircle
+// at halfAngleDeg=90. Sorted so the fill order runs left-to-right across
+// the dome, which is what lets each row's straight benches (added by the
+// caller) hand off cleanly into the arc.
 function hemicyclePoints(rows, halfAngleDeg){
  const half=(halfAngleDeg===undefined?90:halfAngleDeg)*Math.PI/180;
  const points=[];
@@ -902,17 +901,21 @@ function hemicyclePoints(rows, halfAngleDeg){
   }
  });
  points.sort((a,b)=>{
-  if(Math.abs(b.angle-a.angle)>1e-4) return b.angle-a.angle; // top of the diagram first
+  if(Math.abs(b.angle-a.angle)>1e-4) return b.angle-a.angle; // left tip first, sweeping toward the right tip
   return b.radius-a.radius;
  });
  return points;
 }
 
-// Half-angle (degrees) of the horseshoe sweep. 90 = plain semicircle;
-// >90 wraps the arc further round into NZ's deeper "C" shape. 122° keeps
-// the proportions of the reference diagram (rotated to vertical) — a
-// noticeably open horseshoe rather than a tight ring or a flat hemicycle.
-const HORSESHOE_HALF_ANGLE = 122;
+// NZ's House isn't a plain hemicycle: the front few rows on each side are
+// straight facing benches (government and opposition sit opposite each
+// other), and only the back rows curve into a dome connecting the two
+// sides, with a gap at the bottom for the Speaker's chair. STRAIGHT_RINGS
+// of the innermost rows get a straight bench of STRAIGHT_ROWS seats each;
+// everything else (including the outer portion of those same rings) is
+// the curved dome on top.
+const STRAIGHT_RINGS = 3;
+const STRAIGHT_ROWS = 8;
 
 function renderProjection(){
  projection = projectSeats(latestPoll);
@@ -934,36 +937,61 @@ function renderProjection(){
 
  // Base tuning is for a 120-seat House. An overhang seat (or several —
  // TPM's electorate floor can occasionally produce more than one) grows
- // `total` past BASE_SEATS, so row count and dot size scale gently with
- // it rather than assuming exactly 120 seats will ever need to fit.
+ // `total` past BASE_SEATS. The two benches stay a fixed size (they're a
+ // feature of the chamber, not the seat count) and the extra seats simply
+ // grow the dome — its row count and dot size scale gently with the
+ // dome's own seat total rather than assuming a fixed capacity.
  const rMin = 85, rMax = 200;
- const rowCount = Math.max(7, Math.round(7 * Math.sqrt(total / BASE_SEATS)));
  const dotR = Math.max(7, 10 * Math.sqrt(BASE_SEATS / Math.max(total, BASE_SEATS)));
+ const benchCapacity = STRAIGHT_RINGS * STRAIGHT_ROWS * 2;
+ const domeTotal = Math.max(0, total - benchCapacity);
+ const baseDomeRings = 4;
+ const domeRings = Math.max(baseDomeRings, Math.round(baseDomeRings * Math.sqrt(Math.max(domeTotal,1) / (benchCapacity * 1.5))));
+ const ringCount = STRAIGHT_RINGS + domeRings;
 
- // Bounding box for a horseshoe of outer radius rMax swept to
- // ±HORSESHOE_HALF_ANGLE: it bulges rMax to the right of center, and its
- // curled-back tips reach rMax*cos(halfAngle) — negative, i.e. past
- // center to the left — so centerX needs enough room on the left for
- // that overshoot, not just the flat edge a plain semicircle would need.
- const halfRad = HORSESHOE_HALF_ANGLE * Math.PI / 180;
- const leftReach = rMax * Math.cos(halfRad); // negative: tips curl left of center
+ const ringRadius = i => ringCount===1 ? rMin : rMin + (rMax-rMin) * (i/(ringCount-1));
+ const rowSpacing = dotR * 2.15; // vertical gap between bench seats
+ const benchSpan = rowSpacing * STRAIGHT_ROWS;
+
  const pad = dotR + 4;
- const centerX = Math.round(-leftReach + pad);
- const viewW = Math.round(centerX + rMax + pad);
+ const centerX = Math.round(rMax + pad);
+ const viewW = centerX * 2;
  const centerY = Math.round(rMax + pad);
- const viewH = centerY * 2;
+ const viewH = Math.round(centerY + benchSpan + pad*2 + 20); // +20 leaves room for the Speaker's mark below the benches
 
- const rows = hemicycleRows(total, rowCount, rMin, rMax);
- const points = hemicyclePoints(rows, HORSESHOE_HALF_ANGLE);
+ const domeRows = hemicycleRows(domeTotal, ringCount, rMin, rMax);
+ const domePoints = hemicyclePoints(domeRows, 90);
+
+ // Fill order: left bench (innermost ring outward, bottom seat — nearest
+ // the Speaker — first), then the dome left-to-right, then the right
+ // bench (innermost ring outward, this time top seat first so it reads
+ // top-to-bottom, ending back down at the Speaker's gap). The bench's
+ // row closest to the dome (t=1) sits one rowSpacing below the dome's
+ // own equator seat (t=0, angle=±90) rather than on top of it, so the
+ // two don't draw two seats on the same spot.
+ const points = [];
+ for(let i=0;i<STRAIGHT_RINGS;i++){
+  const r = ringRadius(i);
+  for(let t=STRAIGHT_ROWS;t>=1;t--) points.push({x: centerX-r, y: centerY + t*rowSpacing});
+ }
+ domePoints.forEach(pt => {
+  points.push({x: centerX - pt.radius*Math.sin(pt.angle), y: centerY - pt.radius*Math.cos(pt.angle)});
+ });
+ for(let i=0;i<STRAIGHT_RINGS;i++){
+  const r = ringRadius(i);
+  for(let t=1;t<=STRAIGHT_ROWS;t++) points.push({x: centerX+r, y: centerY + t*rowSpacing});
+ }
 
  let svg = `<svg viewBox="0 0 ${viewW} ${viewH}" width="100%" style="display:block">`;
  points.forEach((pt, idx) => {
   const p = seatColours[idx];
   if(!p) return;
-  const x = centerX + pt.radius * Math.cos(pt.angle);
-  const y = centerY - pt.radius * Math.sin(pt.angle);
-  svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${dotR.toFixed(2)}" fill="${esc(p.colour)}" stroke="#000" stroke-width="1.5" stroke-opacity="0.6"><title>${esc(partyLabel(p.name))}: ${esc(locInt(p.total))}</title></circle>`;
+  svg += `<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${dotR.toFixed(2)}" fill="${esc(p.colour)}" stroke="#000" stroke-width="1.5" stroke-opacity="0.6"><title>${esc(partyLabel(p.name))}: ${esc(locInt(p.total))}</title></circle>`;
  });
+ // Speaker's chair, marking the gap between the two benches.
+ const speakerY = centerY + benchSpan + pad + 6;
+ svg += `<rect x="${(centerX-6).toFixed(1)}" y="${(speakerY-6).toFixed(1)}" width="12" height="12" fill="#ddd" stroke="#000" stroke-width="1.5"/>`;
+ svg += `<text x="${centerX.toFixed(1)}" y="${(speakerY+22).toFixed(1)}" text-anchor="middle" font-size="12" fill="currentColor">Speaker</text>`;
  svg += `</svg>`;
  $("parliament").innerHTML = svg;
 
