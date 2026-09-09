@@ -884,25 +884,26 @@ function hemicycleRows(totalSeats,rowCount,rMin,rMax){
  return radii.map((r,i)=>({radius:r,count:Math.max(1,counts[i])}));
 }
 
-// Returns {angle, radius} for every seat across a set of concentric rows,
-// sweeping angle from +halfAngle (left) through 0 (top) to -halfAngle
-// (right). Used for the domed top of the horseshoe — a plain semicircle
-// at halfAngleDeg=90. Sorted so the fill order runs left-to-right across
-// the dome, which is what lets each row's straight benches (added by the
-// caller) hand off cleanly into the arc.
-function hemicyclePoints(rows, halfAngleDeg){
- const half=(halfAngleDeg===undefined?90:halfAngleDeg)*Math.PI/180;
- const points=[];
- rows.forEach(row=>{
-  const startAngle=-half,endAngle=half;
-  for(let i=0;i<row.count;i++){
-   const angle=row.count===1?0:startAngle+(i/(row.count-1))*(endAngle-startAngle);
-   points.push({angle,radius:row.radius});
+// Returns {angle, rx, ry} for every seat across a set of concentric rows,
+// sweeping angle from +90° (left) through 0 (top) to -90° (right). Each
+// row is an ellipse rather than a circle — rx controls how wide it gets,
+// ry how tall — which is what lets the dome taper into the bench width
+// at the bottom while still climbing to a nice tall peak at the top,
+// instead of every row's tip flaring out to the same wide point as a
+// plain semicircle would. Sorted so the fill order runs left-to-right,
+// letting the straight benches (added by the caller) hand off cleanly.
+function domePoints(counts, rxOf, ryOf){
+ const half = Math.PI/2;
+ const points = [];
+ counts.forEach((count, i) => {
+  for(let k=0;k<count;k++){
+   const angle = count===1 ? 0 : -half + (k/(count-1)) * (2*half);
+   points.push({angle, rx: rxOf(i), ry: ryOf(i)});
   }
  });
- points.sort((a,b)=>{
+ points.sort((a,b) => {
   if(Math.abs(b.angle-a.angle)>1e-4) return b.angle-a.angle; // left tip first, sweeping toward the right tip
-  return b.radius-a.radius;
+  return b.rx-a.rx;
  });
  return points;
 }
@@ -941,7 +942,7 @@ function renderProjection(){
  // feature of the chamber, not the seat count) and the extra seats simply
  // grow the dome — its row count and dot size scale gently with the
  // dome's own seat total rather than assuming a fixed capacity.
- const rMin = 85, rMax = 200;
+ const rMin = 85, rxMax = 150, ryMax = 235;
  const dotR = Math.max(7, 10 * Math.sqrt(BASE_SEATS / Math.max(total, BASE_SEATS)));
  const benchCapacity = STRAIGHT_RINGS * STRAIGHT_ROWS * 2;
  const domeTotal = Math.max(0, total - benchCapacity);
@@ -949,18 +950,28 @@ function renderProjection(){
  const domeRings = Math.max(baseDomeRings, Math.round(baseDomeRings * Math.sqrt(Math.max(domeTotal,1) / (benchCapacity * 1.5))));
  const ringCount = STRAIGHT_RINGS + domeRings;
 
- const ringRadius = i => ringCount===1 ? rMin : rMin + (rMax-rMin) * (i/(ringCount-1));
+ // rx grows much more slowly than ry across the rings — rx0=ry0=rMin at
+ // the innermost ring (matching the bench exactly), but by the outermost
+ // ring rx has only grown to rxMax while ry has climbed to ryMax. That's
+ // the whole trick: outer rows still reach a tall peak without flaring
+ // out sideways nearly as far as a circular arc would.
+ const rxOf = i => ringCount===1 ? rMin : rMin + (rxMax-rMin) * (i/(ringCount-1));
+ const ryOf = i => ringCount===1 ? rMin : rMin + (ryMax-rMin) * (i/(ringCount-1));
  const rowSpacing = dotR * 2.15; // vertical gap between bench seats
  const benchSpan = rowSpacing * STRAIGHT_ROWS;
 
  const pad = dotR + 4;
- const centerX = Math.round(rMax + pad);
+ const centerX = Math.round(rxMax + pad);
  const viewW = centerX * 2;
- const centerY = Math.round(rMax + pad);
+ const centerY = Math.round(ryMax + pad);
  const viewH = Math.round(centerY + benchSpan + pad*2 + 20); // +20 leaves room for the Speaker's mark below the benches
 
- const domeRows = hemicycleRows(domeTotal, ringCount, rMin, rMax);
- const domePoints = hemicyclePoints(domeRows, 90);
+ // hemicycleRows' own radius formula (rMin, step to rMax) is exactly rxOf,
+ // so reusing it for seat-count-per-row (proportional to each row's rx,
+ // i.e. its share of the dome's total width) needs no rewriting — we just
+ // read each row back out by its array index i to also look up ryOf(i).
+ const domeRows = hemicycleRows(domeTotal, ringCount, rMin, rxMax);
+ const dPoints = domePoints(domeRows.map(r=>r.count), rxOf, ryOf);
 
  // Fill order: left bench (innermost ring outward, bottom seat — nearest
  // the Speaker — first), then the dome left-to-right, then the right
@@ -971,14 +982,14 @@ function renderProjection(){
  // two don't draw two seats on the same spot.
  const points = [];
  for(let i=0;i<STRAIGHT_RINGS;i++){
-  const r = ringRadius(i);
+  const r = rxOf(i);
   for(let t=STRAIGHT_ROWS;t>=1;t--) points.push({x: centerX-r, y: centerY + t*rowSpacing});
  }
- domePoints.forEach(pt => {
-  points.push({x: centerX - pt.radius*Math.sin(pt.angle), y: centerY - pt.radius*Math.cos(pt.angle)});
+ dPoints.forEach(pt => {
+  points.push({x: centerX - pt.rx*Math.sin(pt.angle), y: centerY - pt.ry*Math.cos(pt.angle)});
  });
  for(let i=0;i<STRAIGHT_RINGS;i++){
-  const r = ringRadius(i);
+  const r = rxOf(i);
   for(let t=1;t<=STRAIGHT_ROWS;t++) points.push({x: centerX+r, y: centerY + t*rowSpacing});
  }
 
