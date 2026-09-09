@@ -884,39 +884,37 @@ function hemicycleRows(totalSeats,rowCount,rMin,rMax){
  return radii.map((r,i)=>({radius:r,count:Math.max(1,counts[i])}));
 }
 
-// Returns {angle, rx, ry} for every seat across a set of concentric rows,
-// sweeping angle from +90° (left) through 0 (top) to -90° (right). Each
-// row is an ellipse rather than a circle — rx controls how wide it gets,
-// ry how tall — which is what lets the dome taper into the bench width
-// at the bottom while still climbing to a nice tall peak at the top,
-// instead of every row's tip flaring out to the same wide point as a
-// plain semicircle would. Sorted so the fill order runs left-to-right,
-// letting the straight benches (added by the caller) hand off cleanly.
-function domePoints(counts, rxOf, ryOf){
+// Returns {angle, radius} for every seat across a set of concentric rows,
+// sweeping angle from +90° (left) through 0 (bottom) to -90° (right).
+// Sorted so the fill order runs left-to-right across the curve, which is
+// what lets each row's straight benches (added by the caller) hand off
+// cleanly at the equator.
+function domePoints(rows){
  const half = Math.PI/2;
  const points = [];
- counts.forEach((count, i) => {
-  for(let k=0;k<count;k++){
-   const angle = count===1 ? 0 : -half + (k/(count-1)) * (2*half);
-   points.push({angle, rx: rxOf(i), ry: ryOf(i)});
+ rows.forEach(row => {
+  for(let i=0;i<row.count;i++){
+   const angle = row.count===1 ? 0 : -half + (i/(row.count-1)) * (2*half);
+   points.push({angle, radius: row.radius});
   }
  });
  points.sort((a,b) => {
   if(Math.abs(b.angle-a.angle)>1e-4) return b.angle-a.angle; // left tip first, sweeping toward the right tip
-  return b.rx-a.rx;
+  return b.radius-a.radius;
  });
  return points;
 }
 
-// NZ's House isn't a plain hemicycle: the front few rows on each side are
-// straight facing benches (government and opposition sit opposite each
-// other), and only the back rows curve into a dome connecting the two
-// sides, with a gap at the bottom for the Speaker's chair. STRAIGHT_RINGS
-// of the innermost rows get a straight bench of STRAIGHT_ROWS seats each;
-// everything else (including the outer portion of those same rings) is
-// the curved dome on top.
+// NZ's House isn't a plain hemicycle: government and opposition each have
+// a block of straight facing benches running up from the floor, open at
+// the top (no cap — they just end), and it's only the *back* of each
+// block that curves round into a shared bowl at the bottom, where the
+// smaller parties sit closest to the middle. STRAIGHT_RINGS is the
+// outermost (widest) rings — the ones far enough out to be a straight
+// bench rather than curving immediately — each carrying a bench of
+// STRAIGHT_ROWS seats; every other (smaller-radius) ring is pure curve.
 const STRAIGHT_RINGS = 3;
-const STRAIGHT_ROWS = 8;
+const STRAIGHT_ROWS = 9;
 
 function renderProjection(){
  projection = projectSeats(latestPoll);
@@ -940,57 +938,52 @@ function renderProjection(){
  // TPM's electorate floor can occasionally produce more than one) grows
  // `total` past BASE_SEATS. The two benches stay a fixed size (they're a
  // feature of the chamber, not the seat count) and the extra seats simply
- // grow the dome — its row count and dot size scale gently with the
- // dome's own seat total rather than assuming a fixed capacity.
- const rMin = 85, rxMax = 150, ryMax = 235;
+ // grow the curve — its row count and dot size scale gently with the
+ // curve's own seat total rather than assuming a fixed capacity. Crucially,
+ // the extra rows are all *smaller*-radius than the bench (rMin up to
+ // rMax, where rMax is exactly the bench's own outer radius) — they nest
+ // inward toward the middle rather than flaring out past the bench, which
+ // is what keeps the bench-to-curve handoff smooth instead of stepped.
+ const rMin = 20, rMax = 125, curveStretch = 1.3;
  const dotR = Math.max(7, 10 * Math.sqrt(BASE_SEATS / Math.max(total, BASE_SEATS)));
  const benchCapacity = STRAIGHT_RINGS * STRAIGHT_ROWS * 2;
- const domeTotal = Math.max(0, total - benchCapacity);
- const baseDomeRings = 4;
- const domeRings = Math.max(baseDomeRings, Math.round(baseDomeRings * Math.sqrt(Math.max(domeTotal,1) / (benchCapacity * 1.5))));
- const ringCount = STRAIGHT_RINGS + domeRings;
+ const curveTotal = Math.max(0, total - benchCapacity);
+ const baseCurveRings = 4;
+ const curveRings = Math.max(baseCurveRings, Math.round(baseCurveRings * Math.sqrt(Math.max(curveTotal,1) / (benchCapacity * 1.5))));
+ const ringCount = STRAIGHT_RINGS + curveRings;
 
- // rx grows much more slowly than ry across the rings — rx0=ry0=rMin at
- // the innermost ring (matching the bench exactly), but by the outermost
- // ring rx has only grown to rxMax while ry has climbed to ryMax. That's
- // the whole trick: outer rows still reach a tall peak without flaring
- // out sideways nearly as far as a circular arc would.
- const rxOf = i => ringCount===1 ? rMin : rMin + (rxMax-rMin) * (i/(ringCount-1));
- const ryOf = i => ringCount===1 ? rMin : rMin + (ryMax-rMin) * (i/(ringCount-1));
+ const ringRadius = i => ringCount===1 ? rMin : rMin + (rMax-rMin) * (i/(ringCount-1));
  const rowSpacing = dotR * 2.15; // vertical gap between bench seats
  const benchSpan = rowSpacing * STRAIGHT_ROWS;
 
  const pad = dotR + 4;
- const centerX = Math.round(rxMax + pad);
+ const centerX = Math.round(rMax + pad);
  const viewW = centerX * 2;
- const centerY = Math.round(ryMax + pad);
- const viewH = Math.round(centerY + benchSpan + pad*2 + 20); // +20 leaves room for the Speaker's mark below the benches
+ const centerY = Math.round(benchSpan + pad); // benches run upward from here
+ const curveDepth = rMax * curveStretch; // curveStretch pulls the bowl deeper than it is wide, echoing the real chamber's proportions
+ const viewH = Math.round(centerY + curveDepth + pad*2 + 20); // +20 leaves room for the Speaker's mark below the curve
 
- // hemicycleRows' own radius formula (rMin, step to rMax) is exactly rxOf,
- // so reusing it for seat-count-per-row (proportional to each row's rx,
- // i.e. its share of the dome's total width) needs no rewriting — we just
- // read each row back out by its array index i to also look up ryOf(i).
- const domeRows = hemicycleRows(domeTotal, ringCount, rMin, rxMax);
- const dPoints = domePoints(domeRows.map(r=>r.count), rxOf, ryOf);
+ const curveRows = hemicycleRows(curveTotal, ringCount, rMin, rMax);
+ const dPoints = domePoints(curveRows);
 
- // Fill order: left bench (innermost ring outward, bottom seat — nearest
- // the Speaker — first), then the dome left-to-right, then the right
- // bench (innermost ring outward, this time top seat first so it reads
- // top-to-bottom, ending back down at the Speaker's gap). The bench's
- // row closest to the dome (t=1) sits one rowSpacing below the dome's
- // own equator seat (t=0, angle=±90) rather than on top of it, so the
- // two don't draw two seats on the same spot.
+ // Fill order: left bench (outermost ring inward, topmost seat — furthest
+ // from the floor — first, ending at the row nearest the curve), then the
+ // curve left-to-right, then the right bench (outermost ring inward,
+ // nearest-the-curve seat first, ending at the topmost row). The bench's
+ // row closest to the curve (t=1) sits one rowSpacing above the curve's
+ // own equator seat (angle=±90) rather than on top of it, so the two
+ // don't draw two seats on the same spot.
  const points = [];
- for(let i=0;i<STRAIGHT_RINGS;i++){
-  const r = rxOf(i);
-  for(let t=STRAIGHT_ROWS;t>=1;t--) points.push({x: centerX-r, y: centerY + t*rowSpacing});
+ for(let idx=0; idx<STRAIGHT_RINGS; idx++){
+  const r = ringRadius(ringCount-STRAIGHT_RINGS+idx); // the widest rings
+  for(let t=STRAIGHT_ROWS;t>=1;t--) points.push({x: centerX-r, y: centerY - t*rowSpacing});
  }
  dPoints.forEach(pt => {
-  points.push({x: centerX - pt.rx*Math.sin(pt.angle), y: centerY - pt.ry*Math.cos(pt.angle)});
+  points.push({x: centerX - pt.radius*Math.sin(pt.angle), y: centerY + pt.radius*Math.cos(pt.angle)*curveStretch});
  });
- for(let i=0;i<STRAIGHT_RINGS;i++){
-  const r = rxOf(i);
-  for(let t=1;t<=STRAIGHT_ROWS;t++) points.push({x: centerX+r, y: centerY + t*rowSpacing});
+ for(let idx=0; idx<STRAIGHT_RINGS; idx++){
+  const r = ringRadius(ringCount-STRAIGHT_RINGS+idx);
+  for(let t=1;t<=STRAIGHT_ROWS;t++) points.push({x: centerX+r, y: centerY - t*rowSpacing});
  }
 
  let svg = `<svg viewBox="0 0 ${viewW} ${viewH}" width="100%" style="display:block">`;
@@ -999,8 +992,8 @@ function renderProjection(){
   if(!p) return;
   svg += `<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${dotR.toFixed(2)}" fill="${esc(p.colour)}" stroke="#000" stroke-width="1.5" stroke-opacity="0.6"><title>${esc(partyLabel(p.name))}: ${esc(locInt(p.total))}</title></circle>`;
  });
- // Speaker's chair, marking the gap between the two benches.
- const speakerY = centerY + benchSpan + pad + 6;
+ // Speaker's chair, at the foot of the curve.
+ const speakerY = centerY + curveDepth + pad + 6;
  svg += `<rect x="${(centerX-6).toFixed(1)}" y="${(speakerY-6).toFixed(1)}" width="12" height="12" fill="#ddd" stroke="#000" stroke-width="1.5"/>`;
  svg += `<text x="${centerX.toFixed(1)}" y="${(speakerY+22).toFixed(1)}" text-anchor="middle" font-size="12" fill="currentColor">Speaker</text>`;
  svg += `</svg>`;
