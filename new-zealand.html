@@ -944,7 +944,13 @@ function renderProjection(){
  // rMax, where rMax is exactly the bench's own outer radius) — they nest
  // inward toward the middle rather than flaring out past the bench, which
  // is what keeps the bench-to-curve handoff smooth instead of stepped.
- const rMin = 20, rMax = 125, curveStretch = 1.3;
+ // rMin is deliberately not tiny: if the innermost rings shrink too close
+ // to a point, a small party landing near the exact centre of the sweep
+ // (angle 0, where every ring's x-offset is 0 regardless of its radius)
+ // draws as a thin vertical spike rather than a rounded cluster. Keeping
+ // rMin a decent fraction of rMax bounds how tall that spike can get, and
+ // gives the curve's bottom a proper rounded U instead of a sharp point.
+ const rMin = 55, rMax = 125, curveStretch = 1.15;
  const dotR = Math.max(7, 10 * Math.sqrt(BASE_SEATS / Math.max(total, BASE_SEATS)));
  const benchCapacity = STRAIGHT_RINGS * STRAIGHT_ROWS * 2;
  const curveTotal = Math.max(0, total - benchCapacity);
