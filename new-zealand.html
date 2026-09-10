@@ -157,7 +157,7 @@ body.dark a {
   </div>
 
   <div style="flex-shrink:0; margin-left:auto;">
-    <canvas id="topArchCanvas" width="120" height="150" style="display:block;"></canvas>
+    <canvas id="topArchCanvas" width="120" height="64" style="display:block;"></canvas>
   </div>
 </div>
 </section>
@@ -1142,12 +1142,15 @@ function renderTopArchChart() {
     }
   });
 
-  const rows = hemicycleRows(total, 6, 20, 56);
+  const rows = hemicycleRows(total, 6, 18, 52);
 
   // Standard semicircle: flat baseline with the dome rising above it,
-  // rather than the sideways orientation this used before.
+  // rather than the sideways orientation this used before. The canvas
+  // is now sized to the dome's own footprint (wide, short) instead of
+  // the old tall vertical shape's box, so there's no leftover dead space
+  // above/below pushing it out of line with the header text next to it.
   const centerX = 60;
-  const centerY = 103;
+  const centerY = 58;
   const dotRadius = 2.8;
 
   const points = [];
