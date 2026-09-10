@@ -174,7 +174,6 @@ body.dark a {
     <div class="titlebar"><span data-i18n="titleSeatProjection">SEAT PROJECTION</span></div>
     <div class="window-body">
       <div class="internal-window">
-        <div id="totalSeatsNote" style="text-align:center;font-weight:bold;margin-bottom:10px;font-family:'VCR OSD Mono',monospace;font-size:13px;"></div>
         <div id="parliament" class="parliament"></div>
         <div id="projectionKey" class="projection-key"></div>
         <img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo">
@@ -902,13 +901,6 @@ function renderProjection(){
  $("projectionKey").innerHTML = "";
 
  const total = projection.reduce((s,p)=>s+p.total,0) || BASE_SEATS;
- const overhang = total - BASE_SEATS;
- const noteEl = $("totalSeatsNote");
- if(noteEl){
-  noteEl.textContent = overhang>0
-   ? `House of Representatives — ${locInt(total)} seats (includes ${locInt(overhang)} overhang ${seatsWord(overhang)})`
-   : `House of Representatives — ${locInt(total)} seats`;
- }
 
  const seatColours = [];
  projection.forEach(p => {
@@ -934,20 +926,20 @@ function renderProjection(){
  const xs = positions.map(p=>p[0]), ys = positions.map(p=>p[1]);
  const minX = Math.min(...xs)-pad, maxX = Math.max(...xs)+pad;
  const minY = Math.min(...ys)-pad, maxY = Math.max(...ys)+pad;
- const speakerSpace = 40; // room for the Speaker's mark below the bowl
  const viewW = maxX-minX;
- const viewH = (maxY-minY) + speakerSpace;
+ const viewH = maxY-minY;
+ // Flip vertically only (not a 180° rotation) so the bowl opens upward
+ // (∩) instead of the template's natural (∪) — left stays left, right
+ // stays right, just mirrored top-to-bottom around the shape's own
+ // midline.
+ const flipY = y => minY + maxY - y;
 
  let svg = `<svg viewBox="${minX} ${minY} ${viewW} ${viewH}" width="100%" style="display:block">`;
  positions.forEach((pt, idx) => {
   const p = seatColours[idx];
   if(!p) return;
-  svg += `<circle cx="${pt[0]}" cy="${pt[1]}" r="${dotR}" fill="${esc(p.colour)}" stroke="#000" stroke-width="1.5" stroke-opacity="0.6"><title>${esc(partyLabel(p.name))}: ${esc(locInt(p.total))}</title></circle>`;
+  svg += `<circle cx="${pt[0]}" cy="${flipY(pt[1])}" r="${dotR}" fill="${esc(p.colour)}"><title>${esc(partyLabel(p.name))}: ${esc(locInt(p.total))}</title></circle>`;
  });
- // Speaker's chair, at the foot of the bowl.
- const speakerX = (minX+maxX)/2, speakerY = maxY + 14;
- svg += `<rect x="${(speakerX-6).toFixed(1)}" y="${(speakerY-6).toFixed(1)}" width="12" height="12" fill="#ddd" stroke="#000" stroke-width="1.5"/>`;
- svg += `<text x="${speakerX.toFixed(1)}" y="${(speakerY+22).toFixed(1)}" text-anchor="middle" font-size="12" fill="currentColor">Speaker</text>`;
  svg += `</svg>`;
  $("parliament").innerHTML = svg;
 
@@ -1150,10 +1142,12 @@ function renderTopArchChart() {
     }
   });
 
-  const rows = hemicycleRows(total, 6, 22, 60);
+  const rows = hemicycleRows(total, 6, 20, 56);
 
-  const centerX = 36;
-  const centerY = canvas.height / 2;
+  // Standard semicircle: flat baseline with the dome rising above it,
+  // rather than the sideways orientation this used before.
+  const centerX = 60;
+  const centerY = 103;
   const dotRadius = 2.8;
 
   const points = [];
@@ -1162,8 +1156,8 @@ function renderTopArchChart() {
     const endAngle = Math.PI / 2;
     for (let i = 0; i < row.count; i++) {
       const angle = row.count===1?0:startAngle + (i / (row.count - 1)) * (endAngle - startAngle);
-      const x = centerX + row.radius * Math.cos(angle);
-      const y = centerY - row.radius * Math.sin(angle);
+      const x = centerX - row.radius * Math.sin(angle);
+      const y = centerY - row.radius * Math.cos(angle);
       points.push({ x, y, angle, radius: row.radius });
     }
   });
