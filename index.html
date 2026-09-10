@@ -277,18 +277,12 @@ body.dark a {
 
 <script>
 /* =====================================================================
-   TRANSLATION LAYER (i18n)
-   Everything needed for the Estonian ("et") version of the page lives in
-   this section. The rest of the code calls the helper functions below
-   (t, partyLabel, govtLabel, eventLabel, electionLabel, dtext, locNum,
-   locInt, seatsWord) instead of hard-coding English text, so toggling
-   currentLang and re-running the render* functions is enough to swap
-   the whole page's language.
+   TRANSLATION LAYER 
    ===================================================================== */
 
 let currentLang = (function(){ try{ return localStorage.getItem("eestimateLang")==="et" ? "et" : "en"; }catch(e){ return "en"; } })();
 
-// Fixed UI strings (no data pulled from the sheet involved here).
+
 const UI_STRINGS = {
  en:{
   langBtn:"Eesti keeles",
@@ -433,11 +427,7 @@ function t(key){
  return v!==undefined?v:UI_STRINGS.en[key];
 }
 
-// Party / data-point name translations. These names are pulled live from the
-// Google Sheet (columns EEavg2, GOVTavg2, RKavg) and from Eesti1999.csv, so
-// this is a lookup table rather than text baked into the markup: any key not
-// listed here (e.g. a brand-new party added to the sheet) simply falls back
-// to whatever name the sheet itself uses.
+
 const PARTY_NAME_ET={
  Reform:"Reform",
  EKRE:"EKRE",
@@ -499,15 +489,11 @@ function electionLabel(label){
  return label;
 }
 
-// Estonian uses a comma as the decimal separator and a space as the
-// thousands separator; English keeps the original formatting.
+
 function locNum(str){ return currentLang==="et" ? String(str).replace(".",",") : String(str); }
 function locInt(n){ return Number(n).toLocaleString(currentLang==="et"?"et-EE":"en-GB"); }
 function seatsWord(n){ return Math.round(n)===1 ? t("seatSingular") : t("seatPlural"); }
 
-// Dates: per-project decision, the Estonian version renders dates as plain
-// DD.MM.YYYY numbers (Estonian convention) instead of translating month
-// names, so month abbreviations never need localising.
 const dtext=d=>{
  if(!d) return "—";
  if(currentLang==="et"){
@@ -517,9 +503,7 @@ const dtext=d=>{
  return new Intl.DateTimeFormat("en-GB",{year:"numeric",month:"short",day:"numeric"}).format(d);
 };
 
-// Quarterly x-axis tick labels (Jan/Apr/Jul/Oct). The Estonian version uses
-// month numbers instead of month names, per the same "no month names to
-// translate" approach used for dates above.
+
 function quarterTick(month,year){
  if(currentLang==="et"){
   if(month===0) return [String(1),year];
@@ -535,9 +519,7 @@ function quarterTick(month,year){
  return "";
 }
 
-// Applies every data-i18n / data-i18n-html tagged static element, plus the
-// handful of standalone elements (title, lang attribute, buttons) that
-// need updating whenever the language is toggled.
+
 function applyStaticTranslations(){
  document.documentElement.lang=currentLang;
  document.title=t("pageTitle");
@@ -871,12 +853,13 @@ function findDateIndex(year,month,day){
  smoothedRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-target);if(d<bestDiff){bestDiff=d;best=i}});
  return best;
 }
-function loessSmooth(values, span=LOESS_SPAN){
+function loessSmooth(values, span=LOESS_SPAN, floor=0){
+ const clamp=v=>Number.isFinite(v)&&floor!==null?Math.max(floor,v):v;
  const points=[];
  values.forEach((value,index)=>{
   if(Number.isFinite(value)) points.push({x:index,y:value});
  });
- if(points.length<4) return values.slice();
+ if(points.length<4) return values.map(v=>Number.isFinite(v)?clamp(v):null);
  const k=Math.max(4,Math.min(points.length,Math.ceil(points.length*span)));
  const out=values.slice();
  for(let i=0;i<values.length;i++){
@@ -890,10 +873,10 @@ function loessSmooth(values, span=LOESS_SPAN){
    Sw+=w;Sx+=w*p.x;Sy+=w*p.y;Sxx+=w*p.x*p.x;Sxy+=w*p.x*p.y;
   }
   const denom=Sw*Sxx-Sx*Sx;
-  if(Math.abs(denom)<1e-12){out[i]=Sw?Sy/Sw:values[i];continue}
+  if(Math.abs(denom)<1e-12){out[i]=clamp(Sw?Sy/Sw:values[i]);continue}
   const beta=(Sw*Sxy-Sx*Sy)/denom;
   const alpha=(Sy-beta*Sx)/Sw;
-  out[i]=alpha+beta*i;
+  out[i]=clamp(alpha+beta*i);
  }
  return out;
 }
@@ -933,7 +916,8 @@ function electionAnchoredLoess(rows,key,anchorIndices,span){
   for(let i=0;i<segLen;i++){
    if(segSmoothed[i]===null){out[segStart+i]=null;continue}
    const t=segLen>1?i/(segLen-1):0;
-   out[segStart+i]=segSmoothed[i]+(1-t)*leftCorrection+t*rightCorrection;
+   const value=segSmoothed[i]+(1-t)*leftCorrection+t*rightCorrection;
+   out[segStart+i]=Number.isFinite(value)?Math.max(0,value):null;
   }
  }
  return out;
@@ -981,7 +965,7 @@ function renderLineChart(){
      },
      grid:{display:false}
     },
-    y:{beginAtZero:true,suggestedMax:35,ticks:{callback:v=>`${locNum(v)}%`,color:th.text},grid:{color:th.grid}}
+    y:{beginAtZero:true,min:0,suggestedMax:35,ticks:{callback:v=>`${locNum(v)}%`,color:th.text},grid:{color:th.grid}}
    }
   }
  });
@@ -1474,7 +1458,7 @@ function renderGovtLineChart(){
      },
      grid:{display:false}
     },
-    y:{beginAtZero:true,suggestedMax:60,ticks:{callback:v=>`${locNum(v)}%`,color:th.text},grid:{color:th.grid}}
+    y:{beginAtZero:true,min:0,suggestedMax:60,ticks:{callback:v=>`${locNum(v)}%`,color:th.text},grid:{color:th.grid}}
    }
   }
  });
@@ -1827,7 +1811,7 @@ function renderCustomCoalitionChart(){
    const v2=side2Data[i]||0;
    return v1 - v2;
   });
-  const netSmoothed=loessSmooth(netData);
+  const netSmoothed=loessSmooth(netData,LOESS_SPAN,null);
 
   const netColor="#7c3aed";
   datasets.push({
@@ -1885,6 +1869,7 @@ function renderCustomCoalitionChart(){
     },
     y:{
      beginAtZero: comparisonMode==="separate",
+     min: comparisonMode==="separate" ? 0 : undefined,
      suggestedMax: comparisonMode==="separate" ? 60 : undefined,
      ticks:{callback:v=>`${locNum(v)}%`,color:th.text},
      grid:{color:th.grid}
