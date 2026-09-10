@@ -884,37 +884,18 @@ function hemicycleRows(totalSeats,rowCount,rMin,rMax){
  return radii.map((r,i)=>({radius:r,count:Math.max(1,counts[i])}));
 }
 
-// Returns {angle, radius} for every seat across a set of concentric rows,
-// sweeping angle from +90° (left) through 0 (bottom) to -90° (right).
-// Sorted so the fill order runs left-to-right across the curve, which is
-// what lets each row's straight benches (added by the caller) hand off
-// cleanly at the equator.
-function domePoints(rows){
- const half = Math.PI/2;
- const points = [];
- rows.forEach(row => {
-  for(let i=0;i<row.count;i++){
-   const angle = row.count===1 ? 0 : -half + (i/(row.count-1)) * (2*half);
-   points.push({angle, radius: row.radius});
-  }
- });
- points.sort((a,b) => {
-  if(Math.abs(b.angle-a.angle)>1e-4) return b.angle-a.angle; // left tip first, sweeping toward the right tip
-  return b.radius-a.radius;
- });
- return points;
-}
-
-// NZ's House isn't a plain hemicycle: government and opposition each have
-// a block of straight facing benches running up from the floor, open at
-// the top (no cap — they just end), and it's only the *back* of each
-// block that curves round into a shared bowl at the bottom, where the
-// smaller parties sit closest to the middle. STRAIGHT_RINGS is the
-// outermost (widest) rings — the ones far enough out to be a straight
-// bench rather than curving immediately — each carrying a bench of
-// STRAIGHT_ROWS seats; every other (smaller-radius) ring is pure curve.
-const STRAIGHT_RINGS = 3;
-const STRAIGHT_ROWS = 9;
+// Exact seat layout of a 120-seat NZ House, traced from a real reference
+// chart (coordinates recovered from its rendered SVG, not derived from a
+// formula). In fill order: left bench (innermost column outward, top row
+// first), the curved bowl left-to-right, then the right bench (innermost
+// column outward, bottom row first) — a single continuous sweep from one
+// bench's open top, round the bowl, to the other bench's open top. Using
+// the real seat positions instead of a parametric approximation is what
+// actually gets the shape right — two straight facing benches merging
+// into one properly rounded bowl, at the real relative proportions.
+const NZ_PARLIAMENT_TEMPLATE = [[79,25],[60,25],[41,25],[79,44],[60,44],[41,44],[79,63],[60,63],[41,63],[79,82],[60,82],[41,82],[79,101],[60,101],[41,101],[79,120],[60,120],[41,120],[79,139],[60,139],[41,139],[79,158],[60,158],[41,158],[79,177],[60,177],[41,177],[79,198],[60,197],[41,196],[83,218],[62,216],[42,215],[68,233],[47,232],[55,248],[95,234],[80,248],[68,261],[48,268],[33,280],[61,280],[48,295],[81,272],[76,292],[68,309],[96,259],[96,281],[93,301],[87,319],[112,246],[113,266],[113,286],[111,306],[109,325],[132,249],[132,268],[132,287],[132,307],[132,327],[166,249],[166,268],[166,287],[166,307],[166,327],[186,246],[185,266],[185,286],[187,306],[189,325],[202,259],[202,281],[205,301],[211,319],[230,309],[222,292],[217,272],[250,295],[237,280],[265,280],[250,268],[230,261],[218,248],[203,234],[243,248],[251,232],[230,233],[256,215],[236,216],[215,218],[257,196],[238,197],[219,198],[257,177],[238,177],[219,177],[257,158],[238,158],[219,158],[257,139],[238,139],[219,139],[257,120],[238,120],[219,120],[257,101],[238,101],[219,101],[257,82],[238,82],[219,82],[257,63],[238,63],[219,63],[257,44],[238,44],[219,44],[257,25],[238,25],[219,25]];
+const NZ_TEMPLATE_SEATS = NZ_PARLIAMENT_TEMPLATE.length; // 120, i.e. BASE_SEATS
+const NZ_ROW_PITCH = 19; // vertical gap between bench rows, read off the template itself
 
 function renderProjection(){
  projection = projectSeats(latestPoll);
@@ -934,74 +915,39 @@ function renderProjection(){
   for(let i = 0; i < p.total; i++) seatColours.push(p);
  });
 
- // Base tuning is for a 120-seat House. An overhang seat (or several —
- // TPM's electorate floor can occasionally produce more than one) grows
- // `total` past BASE_SEATS. The two benches stay a fixed size (they're a
- // feature of the chamber, not the seat count) and the extra seats simply
- // grow the curve — its row count and dot size scale gently with the
- // curve's own seat total rather than assuming a fixed capacity. Crucially,
- // the extra rows are all *smaller*-radius than the bench (rMin up to
- // rMax, where rMax is exactly the bench's own outer radius) — they nest
- // inward toward the middle rather than flaring out past the bench, which
- // is what keeps the bench-to-curve handoff smooth instead of stepped.
- // rMin is deliberately not tiny: if the innermost rings shrink too close
- // to a point, a small party landing near the exact centre of the sweep
- // (angle 0, where every ring's x-offset is 0 regardless of its radius)
- // draws as a thin vertical spike rather than a rounded cluster. Keeping
- // rMin a decent fraction of rMax bounds how tall that spike can get, and
- // gives the curve's bottom a proper rounded U instead of a sharp point.
- const rMin = 55, rMax = 125, curveStretch = 1.15;
- const dotR = Math.max(7, 10 * Math.sqrt(BASE_SEATS / Math.max(total, BASE_SEATS)));
- const benchCapacity = STRAIGHT_RINGS * STRAIGHT_ROWS * 2;
- const curveTotal = Math.max(0, total - benchCapacity);
- const baseCurveRings = 4;
- const curveRings = Math.max(baseCurveRings, Math.round(baseCurveRings * Math.sqrt(Math.max(curveTotal,1) / (benchCapacity * 1.5))));
- const ringCount = STRAIGHT_RINGS + curveRings;
+ // The template is exactly BASE_SEATS positions. An overhang seat (or a
+ // few — TPM's electorate floor can occasionally produce more than one)
+ // needs extra positions beyond that. Rather than reshaping the whole
+ // curve, the two benches are open-ended at the top for exactly this
+ // reason: extra seats just extend the first bench column a bit further
+ // up, one more row per overhang seat, ahead of the template's own first
+ // row — so the party that starts the fill order (the one that can
+ // actually produce overhang) is the one whose bench visibly grows.
+ const extra = Math.max(0, total - NZ_TEMPLATE_SEATS);
+ const positions = [];
+ for(let k=extra;k>=1;k--) positions.push([79, 25 - NZ_ROW_PITCH*k]);
+ for(const pt of NZ_PARLIAMENT_TEMPLATE) positions.push(pt);
+ if(total < NZ_TEMPLATE_SEATS) positions.length = total; // defensive fallback, shouldn't occur
 
- const ringRadius = i => ringCount===1 ? rMin : rMin + (rMax-rMin) * (i/(ringCount-1));
- const rowSpacing = dotR * 2.15; // vertical gap between bench seats
- const benchSpan = rowSpacing * STRAIGHT_ROWS;
+ const dotR = 7;
+ const pad = 12;
+ const xs = positions.map(p=>p[0]), ys = positions.map(p=>p[1]);
+ const minX = Math.min(...xs)-pad, maxX = Math.max(...xs)+pad;
+ const minY = Math.min(...ys)-pad, maxY = Math.max(...ys)+pad;
+ const speakerSpace = 40; // room for the Speaker's mark below the bowl
+ const viewW = maxX-minX;
+ const viewH = (maxY-minY) + speakerSpace;
 
- const pad = dotR + 4;
- const centerX = Math.round(rMax + pad);
- const viewW = centerX * 2;
- const centerY = Math.round(benchSpan + pad); // benches run upward from here
- const curveDepth = rMax * curveStretch; // curveStretch pulls the bowl deeper than it is wide, echoing the real chamber's proportions
- const viewH = Math.round(centerY + curveDepth + pad*2 + 20); // +20 leaves room for the Speaker's mark below the curve
-
- const curveRows = hemicycleRows(curveTotal, ringCount, rMin, rMax);
- const dPoints = domePoints(curveRows);
-
- // Fill order: left bench (outermost ring inward, topmost seat — furthest
- // from the floor — first, ending at the row nearest the curve), then the
- // curve left-to-right, then the right bench (outermost ring inward,
- // nearest-the-curve seat first, ending at the topmost row). The bench's
- // row closest to the curve (t=1) sits one rowSpacing above the curve's
- // own equator seat (angle=±90) rather than on top of it, so the two
- // don't draw two seats on the same spot.
- const points = [];
- for(let idx=0; idx<STRAIGHT_RINGS; idx++){
-  const r = ringRadius(ringCount-STRAIGHT_RINGS+idx); // the widest rings
-  for(let t=STRAIGHT_ROWS;t>=1;t--) points.push({x: centerX-r, y: centerY - t*rowSpacing});
- }
- dPoints.forEach(pt => {
-  points.push({x: centerX - pt.radius*Math.sin(pt.angle), y: centerY + pt.radius*Math.cos(pt.angle)*curveStretch});
- });
- for(let idx=0; idx<STRAIGHT_RINGS; idx++){
-  const r = ringRadius(ringCount-STRAIGHT_RINGS+idx);
-  for(let t=1;t<=STRAIGHT_ROWS;t++) points.push({x: centerX+r, y: centerY - t*rowSpacing});
- }
-
- let svg = `<svg viewBox="0 0 ${viewW} ${viewH}" width="100%" style="display:block">`;
- points.forEach((pt, idx) => {
+ let svg = `<svg viewBox="${minX} ${minY} ${viewW} ${viewH}" width="100%" style="display:block">`;
+ positions.forEach((pt, idx) => {
   const p = seatColours[idx];
   if(!p) return;
-  svg += `<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${dotR.toFixed(2)}" fill="${esc(p.colour)}" stroke="#000" stroke-width="1.5" stroke-opacity="0.6"><title>${esc(partyLabel(p.name))}: ${esc(locInt(p.total))}</title></circle>`;
+  svg += `<circle cx="${pt[0]}" cy="${pt[1]}" r="${dotR}" fill="${esc(p.colour)}" stroke="#000" stroke-width="1.5" stroke-opacity="0.6"><title>${esc(partyLabel(p.name))}: ${esc(locInt(p.total))}</title></circle>`;
  });
- // Speaker's chair, at the foot of the curve.
- const speakerY = centerY + curveDepth + pad + 6;
- svg += `<rect x="${(centerX-6).toFixed(1)}" y="${(speakerY-6).toFixed(1)}" width="12" height="12" fill="#ddd" stroke="#000" stroke-width="1.5"/>`;
- svg += `<text x="${centerX.toFixed(1)}" y="${(speakerY+22).toFixed(1)}" text-anchor="middle" font-size="12" fill="currentColor">Speaker</text>`;
+ // Speaker's chair, at the foot of the bowl.
+ const speakerX = (minX+maxX)/2, speakerY = maxY + 14;
+ svg += `<rect x="${(speakerX-6).toFixed(1)}" y="${(speakerY-6).toFixed(1)}" width="12" height="12" fill="#ddd" stroke="#000" stroke-width="1.5"/>`;
+ svg += `<text x="${speakerX.toFixed(1)}" y="${(speakerY+22).toFixed(1)}" text-anchor="middle" font-size="12" fill="currentColor">Speaker</text>`;
  svg += `</svg>`;
  $("parliament").innerHTML = svg;
 
