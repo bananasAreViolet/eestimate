@@ -1142,15 +1142,14 @@ function renderTopArchChart() {
     }
   });
 
-  const rows = hemicycleRows(total, 6, 18, 52);
+  const rows = hemicycleRows(total, 6, 20, 44);
 
-  // Standard semicircle: flat baseline with the dome rising above it,
-  // rather than the sideways orientation this used before. The canvas
-  // is now sized to the dome's own footprint (wide, short) instead of
-  // the old tall vertical shape's box, so there's no leftover dead space
-  // above/below pushing it out of line with the header text next to it.
-  const centerX = 60;
-  const centerY = 58;
+  // Match the working pattern from the Latvia build: centre off the
+  // canvas's own width/height rather than hand-picked pixel constants,
+  // so this always sits right regardless of exactly how the canvas ends
+  // up sized on the page.
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height - 12;
   const dotRadius = 2.8;
 
   const points = [];
@@ -1185,10 +1184,14 @@ function renderTopArchChart() {
   });
 
   ctx.fillStyle = document.body.classList.contains("dark") ? "#fff" : "#000";
-  ctx.font = "bold 14px Tahoma, Arial, sans-serif";
-  ctx.textAlign = "right";
-  ctx.textBaseline = "middle";
-  ctx.fillText(String(total), centerX - 8, centerY);
+  ctx.font = "bold 12px Tahoma, Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  // Sits centred in the empty hole under the dome (that's what rMin above
+  // is leaving room for) rather than the old right-aligned/mid-height
+  // position, which was left over from before this became a flat
+  // semicircle and had drifted onto the bottom row of seats.
+  ctx.fillText(String(total), centerX, centerY - 1);
 }
 
 // Recomputes the 1/3+1 blocking, majority, and 2/3 supermajority lines for
