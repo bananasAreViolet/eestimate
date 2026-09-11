@@ -40,7 +40,7 @@ button,input{font:inherit}.page{width:min(1320px,calc(100% - 24px));margin:12px 
 body.dark .action{background:#c8c8c8}.status{color:var(--muted);font-size:12px}
 .chart-surface{background:var(--surface);padding:6px 6px 32px;border:2px inset var(--inset-border);position:relative}.chart-wrap{height:440px}
 .latest-scroll{overflow-x:auto;padding:8px 8px 32px;background:var(--surface);border:2px inset var(--inset-border);position:relative}
-.latest-chart{min-width:920px;width:max-content;margin:0 auto;height:410px;display:flex;align-items:flex-end;gap:10px;padding:12px 8px 0;}
+.latest-chart{min-width:920px;width:max-content;margin:0 auto;height:410px;display:flex;align-items:flex-end;justify-content:center;gap:10px;padding:12px 8px 0;}
 .latest-col{width:72px;flex:0 0 72px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
 .latest-bar-area{width:100%;height:275px;display:flex;align-items:flex-end;justify-content:center}
 .latest-bar{width:52px;min-height:2px;border-radius:0;position:relative;border:1px solid rgba(0,0,0,.45)}
@@ -398,6 +398,10 @@ const PARTY_COLOURS={
 // Roughly left-to-right ideological ordering, used for parliament-diagram
 // seating order, the coalition-builder button order, and chart end-labels.
 const PREFERRED_ORDER=["TPM","Greens","Labour","TOP","National","ACT","NZF","NCP","Freedom"];
+// Freedom and NCP are excluded from the SUPPORT VS panels (last election/
+// month/year) — at their current near-zero support, gain/loss noise there
+// isn't meaningful and just clutters those lists.
+const SUPPORT_VS_ORDER = PREFERRED_ORDER.filter(k => k!=="Freedom" && k!=="NCP");
 
 const BASE_SEATS=120,PARTY_VOTE_THRESHOLD=5;
 // Te Pāti Māori wins Māori electorates well beyond what its party vote
@@ -972,7 +976,7 @@ function renderSupportChanges() {
 
   const baselineIndex = findDateIndex(2023,9,14);
 
-  const allowedParties = PREFERRED_ORDER;
+  const allowedParties = SUPPORT_VS_ORDER;
 
   let gainers = [];
   let losers = [];
@@ -1052,7 +1056,7 @@ function renderSupportChangeGeneric(gainersId, losersId, baselineIndex) {
   gainersCol.innerHTML = "";
   losersCol.innerHTML = "";
 
-  const allowedParties = PREFERRED_ORDER;
+  const allowedParties = SUPPORT_VS_ORDER;
 
   let gainers = [];
   let losers = [];
