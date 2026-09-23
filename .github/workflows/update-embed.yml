@@ -29,6 +29,6 @@ jobs:
         run: |
           git config user.name "eestimate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add index24.html eestimate-embed.png
+          git add index.html eestimate-embed.png
           git diff --cached --quiet || git commit -m "Update embed [automated]"
           git push
