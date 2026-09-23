@@ -6,6 +6,20 @@
   <title id="pageTitle">Eestimate - Riigikogu projections</title> 
   <link rel="icon" type="image/x-icon" href="/eestimate.png">
 
+
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://bananasareviolet.github.io/eestimate/">
+  <meta property="og:title" content="Eestimate — Riigikogu polling tracker">
+  <meta property="og:description" content="Eestimate is an Estonian party preference polling tracker and aggregator. Isamaa is leading Centre by 0.8 points. There are 165 days or fewer until the next Riigikogu election.">
+  <meta property="og:image" content="https://bananasareviolet.github.io/eestimate/eestimate-embed.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Eestimate — Riigikogu polling tracker">
+  <meta name="twitter:description" content="Eestimate is an Estonian party preference polling tracker and aggregator. Isamaa is leading Centre by 0.8 points. There are 165 days or fewer until the next Riigikogu election.">
+  <meta name="twitter:image" content="https://bananasareviolet.github.io/eestimate/eestimate-embed.png">
+
+
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 
@@ -276,9 +290,7 @@ body.dark a {
 
 
 <script>
-/* =====================================================================
-   TRANSLATION LAYER 
-   ===================================================================== */
+
 
 let currentLang = (function(){ try{ return localStorage.getItem("eestimateLang")==="et" ? "et" : "en"; }catch(e){ return "en"; } })();
 
@@ -451,7 +463,6 @@ function partyLabel(name){
  return name;
 }
 
-// Government/opposition grouping labels (GOVTavg2 sheet column headers).
 const GOVT_LABEL_ET={
  "Government parties (Michal I)":"Valitsuserakonnad (Michal I)",
  "Parliamentary opposition (Michal I)":"Parlamentaarne opositsioon (Michal I)",
@@ -566,7 +577,7 @@ function coalitionSelectPrompt(){
  return `Select parties using the boxes.<br>Reform currently rules out Centre and EKRE. SDE rules out EKRE.`;
 }
 
-/* =================== END TRANSLATION LAYER =================== */
+
 
 const GOOGLE_SHEET_URL="https://docs.google.com/spreadsheets/d/1gGBmEUW5bwp23602WfQF4eciRrZT4M-VrAz1r5M2JHU/edit?usp=sharing";
 const SHEET_NAME="EEavg2",SHEET_RANGE="A:M";
