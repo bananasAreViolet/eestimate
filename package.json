@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "update-embed": "node generate-embed.mjs index24.html"
+    "update-embed": "node generate-embed.mjs index.html"
   },
   "dependencies": {
     "@resvg/resvg-js": "^2.6.2"
