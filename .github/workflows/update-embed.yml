@@ -23,7 +23,7 @@ jobs:
         run: npm install @resvg/resvg-js
 
       - name: Regenerate embed
-        run: node generate-embed.mjs index24.html
+        run: node generate-embed.mjs index.html
 
       - name: Commit changes if anything moved
         run: |
