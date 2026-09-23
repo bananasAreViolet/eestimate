@@ -1,13 +1,5 @@
 #!/usr/bin/env node
-// Regenerates Eestimate's link-preview embed (og:/twitter: meta tags + eestimate-embed.png)
-// from the same live Google Sheet the site itself reads.
-//
-// Usage:  node generate-embed.mjs [path/to/index.html]
-//
-// Run this whenever the poll data changes (or on a schedule — see the
-// included GitHub Actions workflow) so shared links stay current. The
-// day-count changes daily even when the numbers don't, so a daily
-// scheduled run is worth doing even between data updates.
+
 
 import { readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -23,9 +15,7 @@ const OUT_IMAGE_NAME = "eestimate-embed.png";
 const NEXT_ELECTION_DATE = Date.UTC(2027, 2, 7); // 7 March 2027
 const LOESS_SPAN = 0.03;
 
-// Same file the page's own @font-face rule points to (VCR_OSD_MONO.woff2),
-// expected to sit next to index24.html. If it's missing, the title just
-// falls back to the bold sans-serif chain below instead of failing.
+
 const TITLE_FONT_FILENAME = "VCR_OSD_MONO.woff2";
 const TITLE_FONT_FAMILY = "VCR OSD Mono";
 
@@ -37,7 +27,7 @@ const PARTY_COLOURS = {
   "Ind.": "#8a8d91"
 };
 
-// ---- Sheet parsing helpers (ported from index24.html) ------------------
+
 const n = v => { const x = Number(String(v).replace(",", ".")); return Number.isFinite(x) ? x : null; };
 const pct = v => {
   if (v === null || v === undefined || v === "") return null;
@@ -92,7 +82,7 @@ function loessSmooth(values, span = LOESS_SPAN, floor = 0) {
   return out;
 }
 
-// ---- Fetch + compute the latest (smoothed) poll, same as the page ------
+
 async function fetchLatestPoll() {
   const u = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&headers=1&range=${encodeURIComponent(`${SHEET_NAME}!${SHEET_RANGE}`)}`;
   const r = await fetch(u, { cache: "no-store" });
@@ -130,7 +120,7 @@ async function fetchLatestPoll() {
   return { latestPoll, lastDate };
 }
 
-// ---- Text: lead line + days-until-election, matching the page's copy ---
+
 function buildDescription(latestPoll) {
   const sorted = [...latestPoll].sort((a, b) => b.support - a.support);
   const [first, second] = sorted;
@@ -145,7 +135,7 @@ function buildDescription(latestPoll) {
   return `Eestimate is an Estonian party preference polling tracker and aggregator. ${leadLine} ${electionLine}`;
 }
 
-// ---- Image: title + 7 solid bars, coloured by party, no labels ---------
+
 function buildSvg(latestPoll, { titleFontFamily } = {}) {
   const top7 = [...latestPoll].sort((a, b) => b.support - a.support).slice(0, 7);
   const W = 1200, H = 630, BG = "#313d4e";
@@ -202,9 +192,7 @@ export async function buildEmbedAssets(latestPoll, { htmlPath, outDir }) {
   const title = "Eestimate — Riigikogu polling tracker";
   const imageUrl = new URL(OUT_IMAGE_NAME, SITE_URL).toString();
 
-  // Reuse the page's own VCR OSD Mono font file for the title, if it's
-  // sitting next to index24.html (same place the page's @font-face loads
-  // it from). Falls back to a bold sans-serif otherwise.
+
   const fontPath = path.join(path.dirname(htmlPath), TITLE_FONT_FILENAME);
   const fontAvailable = existsSync(fontPath);
   if (!fontAvailable) {
