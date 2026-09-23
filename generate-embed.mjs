@@ -6,7 +6,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { Resvg } from "@resvg/resvg-js";
 
-// ---- Config: mirrors the constants in index24.html --------------------
+
 const GOOGLE_SHEET_ID = "1gGBmEUW5bwp23602WfQF4eciRrZT4M-VrAz1r5M2JHU";
 const SHEET_NAME = "EEavg2";
 const SHEET_RANGE = "A:M";
@@ -213,7 +213,7 @@ export async function buildEmbedAssets(latestPoll, { htmlPath, outDir }) {
 }
 
 async function main() {
-  const htmlPath = process.argv[2] || "index24.html";
+  const htmlPath = process.argv[2] || "index.html";
   console.log("Fetching latest poll data…");
   const { latestPoll, lastDate } = await fetchLatestPoll();
   console.log(`Loaded ${latestPoll.length} parties, latest row: ${lastDate.toISOString().slice(0, 10)}`);
