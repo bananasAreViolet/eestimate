@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 
+
 import { readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -16,7 +17,7 @@ const NEXT_ELECTION_DATE = Date.UTC(2027, 2, 7); // 7 March 2027
 const LOESS_SPAN = 0.03;
 
 
-const TITLE_FONT_FILENAME = "VCR_OSD_MONO.woff2";
+const TITLE_FONT_CANDIDATES = ["VCR_OSD_MONO_1.001.ttf", "VCR_OSD_MONO.woff2"];
 const TITLE_FONT_FAMILY = "VCR OSD Mono";
 
 const PARTY_COLOURS = {
@@ -120,7 +121,6 @@ async function fetchLatestPoll() {
   return { latestPoll, lastDate };
 }
 
-
 function buildDescription(latestPoll) {
   const sorted = [...latestPoll].sort((a, b) => b.support - a.support);
   const [first, second] = sorted;
@@ -193,10 +193,12 @@ export async function buildEmbedAssets(latestPoll, { htmlPath, outDir }) {
   const imageUrl = new URL(OUT_IMAGE_NAME, SITE_URL).toString();
 
 
-  const fontPath = path.join(path.dirname(htmlPath), TITLE_FONT_FILENAME);
-  const fontAvailable = existsSync(fontPath);
+  const htmlDir = path.dirname(htmlPath);
+  const foundFontName = TITLE_FONT_CANDIDATES.find(name => existsSync(path.join(htmlDir, name)));
+  const fontPath = foundFontName ? path.join(htmlDir, foundFontName) : null;
+  const fontAvailable = fontPath !== null;
   if (!fontAvailable) {
-    console.warn(`Note: ${TITLE_FONT_FILENAME} not found next to ${htmlPath} — title will use the sans-serif fallback instead.`);
+    console.warn(`Note: none of [${TITLE_FONT_CANDIDATES.join(", ")}] found next to ${htmlPath} — title will use the sans-serif fallback instead.`);
   }
 
   const svg = buildSvg(latestPoll, { titleFontFamily: fontAvailable ? TITLE_FONT_FAMILY : null });
