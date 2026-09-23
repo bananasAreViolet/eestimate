@@ -1,0 +1,34 @@
+name: Update Eestimate embed
+
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # 06:00 UTC daily
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update-embed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install @resvg/resvg-js
+
+      - name: Regenerate embed
+        run: node generate-embed.mjs index24.html
+
+      - name: Commit changes if anything moved
+        run: |
+          git config user.name "eestimate-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add index24.html eestimate-embed.png
+          git diff --cached --quiet || git commit -m "Update embed [automated]"
+          git push
