@@ -189,7 +189,7 @@ async function updateHtml(htmlPath, metaBlock) {
 
 export async function buildEmbedAssets(latestPoll, { htmlPath, outDir }) {
   const description = buildDescription(latestPoll);
-  const title = "Eestimate — Riigikogu polling tracker";
+  const title = "Eestimate, a Riigikogu polling tracker";
   const imageUrl = new URL(OUT_IMAGE_NAME, SITE_URL).toString();
 
 
