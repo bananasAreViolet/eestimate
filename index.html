@@ -161,7 +161,7 @@ body.dark a {
     <h1>Eestimate</h1>
     <p class="lead-summary" id="leadSummary">Loading current standings…</p>
     <p class="header-note" id="headerNoteText">Eestimate is an Estonian party preference polling tracker by bananasAreViolet.
-<br>Charts based on weighted (by pollster and date) 30-day average, with LOESS smoothing applied to the displayed trend lines.<br><br>
+<br>Charts based on a weighted (by pollster and date) 30-day house effect-adjusted average, with LOESS smoothing applied to the displayed trend lines.<br><br>
 <b><a href="https://reitingud.ee/" target="_blank" rel="noopener">Norstat/ÜI</a></b> polls are given a weight of 0.2 due to their frequency of appearing per week, adding up to a total weight of 0.8 per month.<br>
 <b><a href="https://www.err.ee/reitingud" target="_blank" rel="noopener">Emor/ERR</a></b> polls are given a weight of 1.<br>
 <b><a href="https://turu-uuringute.eu/uudised/" target="_blank" rel="noopener">Turu-uuringute AS</a></b> polls are given a weight of 0.7.<br>
@@ -580,7 +580,7 @@ function coalitionSelectPrompt(){
 
 
 const GOOGLE_SHEET_URL="https://docs.google.com/spreadsheets/d/1gGBmEUW5bwp23602WfQF4eciRrZT4M-VrAz1r5M2JHU/edit?usp=sharing";
-const SHEET_NAME="EEavg2",SHEET_RANGE="A:M";
+const SHEET_NAME="HEavg",SHEET_RANGE="A:M";
 
   
 const HISTORICAL_CSV_URL="Eesti1999.csv";
@@ -725,7 +725,7 @@ const chartTheme=()=>document.body.classList.contains("dark")
 const shade=(hex,amt)=>{const c=hex.replace("#","");const num=parseInt(c,16);let r=(num>>16)+amt,g=((num>>8)&255)+amt,b=(num&255)+amt;r=Math.min(255,Math.max(0,r));g=Math.min(255,Math.max(0,g));b=Math.min(255,Math.max(0,b));return`#${((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1)}`};
 let lineChart=null,latestRows=[],latestPoll=[],projection=[],selectedCoalition=new Set();
 
-const GOVT_SHEET_NAME="GOVTavg2",GOVT_SHEET_RANGE="A:M";
+const GOVT_SHEET_NAME="GOVTavg3",GOVT_SHEET_RANGE="A:M";
 const GOVT_COLOURS={
 "Government parties (Michal I)":"#2e7d32",
 "Parliamentary opposition (Michal I)":"#d32f2f",
