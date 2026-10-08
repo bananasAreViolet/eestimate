@@ -145,17 +145,16 @@ body.dark a {
 /* house effects */
 .he-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:18px 22px;padding:4px 4px 0}
 .he-panel{width:100%;max-width:520px;margin:0 auto}
-.he-panel-title{font-weight:700;font-size:15px;margin:0 0 2px 4px;color:var(--text)}
+.he-panel-title{font-family:"VCR OSD Mono",monospace;font-weight:400;font-size:16px;text-align:center;margin:0 0 4px;color:var(--text)}
 .he-svg{display:block;width:100%;height:auto;overflow:visible}
 .he-gridline{stroke:var(--text);stroke-opacity:.2;stroke-width:1}
 .he-zero{stroke:var(--text);stroke-opacity:.8;stroke-width:1}
 .he-ylabel{fill:var(--muted);font-size:11px;font-family:Tahoma,sans-serif}
-.he-plabel{font-weight:700;font-family:"Archivo Black",Tahoma,sans-serif}
+.he-plabel{font-weight:400;font-family:"Archivo Black",Tahoma,sans-serif}
 .he-bar:hover{filter:brightness(1.12)}
 .mm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px 18px;padding:4px 4px 0}
 .mm-panel{width:100%;max-width:360px;margin:0 auto}
-.sp-axis-title{font-size:12px;fill:var(--text)}
-.mm-panel-title{font-weight:700;font-size:18px;margin:0 0 2px 6px;font-family:"Archivo Black",Tahoma,sans-serif}
+.mm-panel-title{font-family:"VCR OSD Mono",monospace;font-weight:400;font-size:16px;text-align:center;margin:0 0 4px}
 
 @media(max-width:720px){
  .page{width:calc(100% - 10px);margin-top:5px}.window-body{padding:7px}.chart-wrap{height:360px}
@@ -302,22 +301,14 @@ body.dark a {
 <section class="window"><div class="titlebar"><span data-i18n="titleComposition">RIIGIKOGU COMPOSITION CHANGE OVER TIME</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="compositionChart"></canvas></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div><p class="header-note" id="compositionNote" data-i18n="compositionLoading">Loading Riigikogu composition history…</p><p class="header-note" data-i18n="compositionFactionNote">Based on party affiliation, not factions.</p></div></section>
 
 <section class="window"><div class="titlebar"><span data-i18n="titleHouseEffects">POLLSTER HOUSE EFFECTS</span></div><div class="window-body">
-<p class="lead-summary" id="heLead" data-i18n="heLead">Deviation of each pollster from the all-pollster consensus, in percentage points</p>
 <div class="chart-surface"><div class="he-grid" id="heGrid"></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div>
 <p class="header-note" id="heNote" data-i18n="heLoading">Loading pollster house effects…</p>
 <p class="header-note" id="heFoot"></p>
 </div></section>
 
 <section class="window"><div class="titlebar"><span data-i18n="titleMonthly">MONTH-ON-MONTH CHANGE</span></div><div class="window-body">
-<p class="lead-summary" data-i18n="mmLead">Monthly change in the polling average trend (LOESS-smoothed), last 12 months, in percentage points</p>
 <div class="chart-surface"><div class="mm-grid" id="mmGrid"></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div>
 <p class="header-note" id="mmNote" data-i18n="mmLoading">Loading month-on-month changes…</p>
-</div></section>
-
-<section class="window"><div class="titlebar"><span data-i18n="titleSeatProb">SEAT PROBABILITIES</span></div><div class="window-body">
-<p class="lead-summary" data-i18n="spLead">Distribution of likely total seat numbers per party, based on the seat projection</p>
-<div class="chart-surface"><div class="mm-grid" id="spGrid"></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div>
-<p class="header-note" id="spNote" data-i18n="spLoading">Running seat simulations…</p>
 </div></section>
 </div>
 
@@ -385,28 +376,17 @@ const UI_STRINGS = {
   leading:(a,b,diff)=>`${a} is leading ${b} by ${diff} points.`,
   longTermBtn:"1999 to present chart",
   titleHouseEffects:"POLLSTER HOUSE EFFECTS",
-  heLead:"Deviation of each pollster from the all-pollster consensus, in percentage points",
   heLoading:"Loading pollster house effects…",
   heNoData:"No pollster house effects can be calculated for this period yet.",
   heErrTemplate:msg=>`House effect data error: ${msg}`,
-  heNoteTemplate:(asAt,start,end,minPolls)=>`As at ${asAt}. Average over polls from ${start} to ${end}. Each poll is compared with the polling average recomputed without that pollster's own polls, so positive means the pollster reports the party higher than the others do. Parties with fewer than ${minPolls} matched polls from a pollster are left blank.`,
-  heYearlyLink:"Year-by-year breakdown",
+  heNoteTemplate:(asAt,start,end,minPolls)=>`As of ${asAt}. Average over polls from ${start} to ${end}. Each poll is compared with the polling average recomputed without that pollster's own polls, so positive means the pollster reports the party higher than the others do.`,
   heLowTemplate:(pollster,n,parties,minPolls)=>`*${pollster}: ${n} poll${n===1?"":"s"} so far in this period, effects may be unreliable. No house effect shown for ${parties} given fewer than ${minPolls} matched polls.`,
   heBarTitle:(party,val,n)=>`${party}: ${val} points (n=${n})`,
   titleMonthly:"MONTH-ON-MONTH CHANGE",
-  mmLead:"Monthly change in the polling average trend (LOESS-smoothed), last 12 months, in percentage points",
   mmLoading:"Loading month-on-month changes…",
   mmNoData:"Not enough polling data to show month-on-month changes yet.",
-  mmNoteTemplate:asAt=>`As at ${asAt}. Each bar is the change in the LOESS-smoothed polling average (the lines in the Polling Average chart) between the end of the previous month and the end of that month. Only complete months are shown.`,
+  mmNoteTemplate:asAt=>`As of ${asAt}. Each bar is the change in the LOESS-smoothed polling average between the end of the previous month and the end of that month. Only complete months are shown.`,
   mmBarTitle:(month,val)=>`${month}: ${val} points`,
-  titleSeatProb:"SEAT PROBABILITIES",
-  spLead:"Distribution of likely total seat numbers per party, based on the seat projection",
-  spLoading:"Running seat simulations…",
-  spNoData:"Not enough polling data to simulate seat totals yet.",
-  spNoteTemplate:(asAt,n,sd,minChance)=>`As at ${asAt}. ${n} simulated elections: each party's current support is randomly varied (typical relative error about ${sd}%, shrinking as election day nears), then seats are allocated with the same method as the seat projection. Parties with less than a ${minChance}% chance of winning any seat are not shown. This is an illustration of polling uncertainty, not a forecast.`,
-  spXTitle:"Number of seats",
-  spYTitle:"% probability",
-  spBarTitle:(n,word,pct)=>`${n} ${word}: ${pct}%`,
   seatSingular:"seat",
   seatPlural:"seats",
   epGroupBuilder:"EP Group Builder"
@@ -467,28 +447,17 @@ const UI_STRINGS = {
   leading:(a,b,diff)=>`${a} juhib ${b} ees ${diff} punktiga.`,
   longTermBtn:"Graafik 1999. aastast tänaseni",
   titleHouseEffects:"KÜSITLUSFIRMADE MAJAEFEKT",
-  heLead:"Iga küsitlusfirma kõrvalekalle kõigi firmade konsensusest, protsendipunktides",
   heLoading:"Küsitlusfirmade majaefekti laadimine…",
   heNoData:"Selle perioodi kohta ei saa majaefekti veel arvutada.",
   heErrTemplate:msg=>`Majaefekti andmete viga: ${msg}`,
-  heNoteTemplate:(asAt,start,end,minPolls)=>`Seisuga ${asAt}. Keskmine ajavahemiku ${start} – ${end} küsitluste põhjal. Iga küsitlust võrreldakse küsitluste keskmisega, mis on arvutatud ilma selle firma enda küsitlusteta, seega positiivne väärtus tähendab, et firma näitab erakonda kõrgemana kui teised. Erakonnad, mille kohta on firmalt alla ${minPolls} sobitatud küsitluse, on tühjaks jäetud.`,
-  heYearlyLink:"Aastate kaupa jaotus",
+  heNoteTemplate:(asAt,start,end,minPolls)=>`Seisuga ${asAt}. Keskmine ajavahemiku ${start} – ${end} küsitluste põhjal. Iga küsitlust võrreldakse küsitluste keskmisega, mis on arvutatud ilma selle firma enda küsitlusteta, seega positiivne väärtus tähendab, et firma näitab erakonda kõrgemana kui teised.`,
   heLowTemplate:(pollster,n,parties,minPolls)=>`*${pollster}: selles perioodis seni ${n} küsitlus${n===1?"":"t"}, mõjud ei pruugi olla usaldusväärsed. Majaefekti ei näidata: ${parties} (alla ${minPolls} sobitatud küsitluse).`,
   heBarTitle:(party,val,n)=>`${party}: ${val} punkti (n=${n})`,
   titleMonthly:"KUUPÕHINE MUUTUS",
-  mmLead:"Küsitluste keskmise trendi (LOESS-silutud) kuine muutus viimase 12 kuu jooksul, protsendipunktides",
   mmLoading:"Kuupõhiste muutuste laadimine…",
   mmNoData:"Kuupõhiste muutuste näitamiseks pole veel piisavalt andmeid.",
-  mmNoteTemplate:asAt=>`Seisuga ${asAt}. Iga tulp on LOESS-silutud küsitluste keskmise (küsitluste keskmise graafiku jooned) muutus eelmise kuu lõpust selle kuu lõpuni. Näidatud on ainult täielikud kuud.`,
+  mmNoteTemplate:asAt=>`Seisuga ${asAt}. Iga tulp on LOESS-silutud küsitluste keskmise muutus eelmise kuu lõpust selle kuu lõpuni. Näidatud on ainult täielikud kuud.`,
   mmBarTitle:(month,val)=>`${month}: ${val} punkti`,
-  titleSeatProb:"KOHTADE TÕENÄOSUSED",
-  spLead:"Erakondade võimalike kohtade arvude jaotus kohtade prognoosi põhjal",
-  spLoading:"Kohtade simulatsioonide käivitamine…",
-  spNoData:"Kohtade simuleerimiseks pole veel piisavalt küsitlusandmeid.",
-  spNoteTemplate:(asAt,n,sd,minChance)=>`Seisuga ${asAt}. ${n} simuleeritud valimist: iga erakonna praegust toetust muudetakse juhuslikult (tüüpiline suhteline viga umbes ${sd}%, mis valimiste lähenedes väheneb), seejärel jaotatakse kohad sama meetodiga nagu kohtade prognoosis. Erakondi, kelle võimalus saada vähemalt üks koht on alla ${minChance}%, ei näidata. See illustreerib küsitluste ebakindlust, mitte ei ole prognoos.`,
-  spXTitle:"Kohtade arv",
-  spYTitle:"% tõenäosus",
-  spBarTitle:(n,word,pct)=>`${n} ${word}: ${pct}%`,
   seatSingular:"koht",
   seatPlural:"kohta",
   epGroupBuilder:"EP Group Builder"
@@ -861,7 +830,7 @@ async function loadGoogleSheet(){
   const last=latestRows.at(-1);
   const lastSmoothed=smoothedRows.at(-1);
   latestPoll=headers.filter(h=>h!==headers[di]).map(name=>({key:name,name,colour:PARTY_COLOURS[name]||"#777",support:lastSmoothed[name]})).filter(p=>p.support!==null);
-  renderLineChart();renderLatestPolling();renderLeadSummary();renderProjection();renderCoalitionBuilder();renderMonthlyChange();loadSeatProbabilities();
+  renderLineChart();renderLatestPolling();renderLeadSummary();renderProjection();renderCoalitionBuilder();renderMonthlyChange();
   renderCustomCoalitionTool();
   loadGovtSheet();
   loadCompositionSheet();
@@ -1413,7 +1382,6 @@ $("langBtn").onclick=()=>{
  if(compositionRows.length){renderCompositionChart();}
  renderHouseEffects();
  renderMonthlyChange();
- renderSeatProbabilities();
 };
 
 async function loadGovtSheet(){
@@ -1772,7 +1740,7 @@ function renderHouseEffects(){
  const scale=HE_SCALE;
  const view={parties:st.parties,stats:st.stats,scale,step:heNiceStep(scale),low};
  grid.innerHTML=st.pollsters.map(p=>heRenderPanel(p,view)).join("");
- note.innerHTML=esc(t("heNoteTemplate")(heDate(st.asAt),heDate(st.start),heDate(st.endInclusive),HE_MIN_POLLS))+` <a href="pollster-bias-yearly.html">${esc(t("heYearlyLink"))} →</a>`;
+ note.innerHTML=esc(t("heNoteTemplate")(heDate(st.asAt),heDate(st.start),heDate(st.endInclusive),HE_MIN_POLLS));
  foot.innerHTML=st.pollsters.filter(p=>low[p].parties.length).map(p=>
   esc(t("heLowTemplate")(p,low[p].n,low[p].parties.map(partyLabel).join(", "),HE_MIN_POLLS))
  ).join("<br>");
@@ -1865,104 +1833,6 @@ function renderMonthlyChange(){
  const step=scale<=3?0.5:scale<=6?1:2;
  grid.innerHTML=d.parties.map(p=>mmRenderPanel(p,d.months,scale,step)).join("");
  note.textContent=t("mmNoteTemplate")(dtext(d.asAt));
-}
-
-/* =====================================================================
-   SEAT PROBABILITIES
-   Monte Carlo around the SEAT PROJECTION: every party's current (LOESS-smoothed)
-   support is randomly perturbed, the seats are re-allocated with exactly the
-   same projectSeats() used for the projection, and the share of simulations
-   producing each seat total is plotted. The simulation is seeded from the data
-   date, so the picture does not change between reloads.
-   ===================================================================== */
-const SP_SIMULATIONS=20000;
-const SP_BASE_REL_SD=0.07;   // relative sd of a party's support even on election day (e.g. 20% -> ±1.4 points)
-const SP_TIME_REL_SD=0.10;   // extra relative sd per sqrt(year) until the election
-const SP_MIN_CHANCE=1;       // parties with less than this % chance of any seat get no panel
-let spState=null;
-
-function spRng(seed){ // mulberry32
- let a=seed>>>0;
- return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296};
-}
-function spGauss(rng){let u=0,v=0;while(u===0)u=rng();while(v===0)v=rng();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
-
-function spSimulate(){
- if(!latestPoll||!latestPoll.length||!smoothedRows.length)return null;
- const latest=smoothedRows.at(-1).date;
- const days=Math.max(0,(NEXT_ELECTION_DATE-latest.getTime())/86400000);
- const relSd=Math.sqrt(SP_BASE_REL_SD**2+SP_TIME_REL_SD**2*(days/365));
- const base=latestPoll.filter(p=>Number.isFinite(p.support)&&p.support>0);
- const total=base.reduce((a,p)=>a+p.support,0);
- const counts=Object.fromEntries(base.map(p=>[p.key,new Float64Array(RIIGIKOGU_SEATS+1)]));
- const rng=spRng(Math.floor(latest.getTime()/86400000)*2654435761);
- for(let i=0;i<SP_SIMULATIONS;i++){
-  const raw=base.map(p=>p.support*Math.exp(relSd*spGauss(rng)-relSd*relSd/2));
-  const sum=raw.reduce((a,b)=>a+b,0),k=total/sum; // keep the overall total unchanged
-  const seats=projectSeats(base.map((p,j)=>({...p,support:raw[j]*k})));
-  const got={};for(const s of seats)got[s.key]=s.total;
-  for(const p of base)counts[p.key][got[p.key]||0]++;
- }
- const parties=[];
- for(const key of PREFERRED_ORDER.concat(base.map(p=>p.key).filter(k=>!PREFERRED_ORDER.includes(k)))){
-  if(!counts[key])continue;
-  const probs=Array.from(counts[key],c=>c/SP_SIMULATIONS*100);
-  if(100-probs[0]<SP_MIN_CHANCE)continue;
-  parties.push({key,probs});
- }
- return{parties,asAt:latest,relSd,days};
-}
-
-function spNiceStep(max,target=5){
- for(const s of [0.5,1,2,2.5,5,10,20,25,50])if(max/s<=target+0.01)return s;
- return 100;
-}
-
-function spRenderPanel(p){
- const W=320,H=250,m={l:44,r:8,t:8,b:44},pw=W-m.l-m.r,ph=H-m.t-m.b;
- const colour=PARTY_COLOURS[p.key]||"#777";
- let maxSeat=0;p.probs.forEach((v,i)=>{if(v>=0.02)maxSeat=i});
- const xStep=maxSeat<=12?2:maxSeat<=35?5:10;
- const xMax=Math.ceil((maxSeat+1)/xStep)*xStep;
- const pMax=Math.max(...p.probs);
- const yStep=spNiceStep(pMax),yMax=Math.max(yStep,Math.ceil(pMax/yStep-1e-9)*yStep);
- const yOf=v=>m.t+ph*(1-v/yMax),xOf=i=>m.l+pw*i/(xMax+1);
- let g="";
- for(let v=0;v<=yMax+1e-9;v+=yStep){
-  const y=yOf(v);
-  g+=`<line class="${v===0?"he-zero":"he-gridline"}" x1="${m.l}" x2="${W-m.r}" y1="${y}" y2="${y}"/>`;
-  g+=`<text class="he-ylabel" x="${m.l-5}" y="${y}" text-anchor="end" dominant-baseline="central">${Number.isInteger(v)?v:v.toFixed(1)}</text>`;
- }
- const bw=pw/(xMax+1);
- for(let i=0;i<=xMax&&i<p.probs.length;i++){
-  const v=p.probs[i];if(v<=0)continue;
-  const top=yOf(v),h=Math.max(0.5,yOf(0)-top);
-  const tip=t("spBarTitle")(i,seatsWord(i),(v<0.1?v.toFixed(2):v.toFixed(1)));
-  g+=`<rect class="he-bar" x="${(xOf(i)+bw*0.04).toFixed(2)}" y="${top.toFixed(2)}" width="${(bw*0.92).toFixed(2)}" height="${h.toFixed(2)}" fill="${esc(colour)}"><title>${esc(tip)}</title></rect>`;
- }
- for(let i=0;i<=xMax;i+=xStep){
-  g+=`<text class="he-ylabel" x="${(xOf(i)+bw/2).toFixed(2)}" y="${m.t+ph+14}" text-anchor="middle">${i}</text>`;
- }
- g+=`<text class="he-ylabel sp-axis-title" x="${m.l+pw/2}" y="${H-6}" text-anchor="middle">${esc(t("spXTitle"))}</text>`;
- g+=`<text class="he-ylabel sp-axis-title" transform="translate(11 ${m.t+ph/2}) rotate(-90)" text-anchor="middle">${esc(t("spYTitle"))}</text>`;
- return `<div class="mm-panel"><div class="mm-panel-title" style="color:${esc(colour)}">${esc(partyLabel(p.key))}</div>
-  <svg class="he-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(partyLabel(p.key))}">${g}</svg></div>`;
-}
-
-function renderSeatProbabilities(){
- const grid=$("spGrid"),note=$("spNote");
- if(!grid||!note)return;
- if(!spState){grid.innerHTML="";note.textContent=t("spNoData");return}
- grid.innerHTML=spState.parties.map(spRenderPanel).join("");
- note.textContent=t("spNoteTemplate")(dtext(spState.asAt),locInt(SP_SIMULATIONS),locNum((spState.relSd*100).toFixed(0)),SP_MIN_CHANCE);
-}
-
-// Runs after the page has painted, so the 20,000 simulations never block first render.
-function loadSeatProbabilities(){
- setTimeout(()=>{
-  try{spState=spSimulate()}catch(e){spState=null;console.error(e)}
-  renderSeatProbabilities();
- },0);
 }
 
 function renderCustomCoalitionTool(){
