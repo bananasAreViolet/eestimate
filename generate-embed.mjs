@@ -1,13 +1,20 @@
 #!/usr/bin/env node
-
-
+// Regenerates Eestimate's link-preview embed (og:/twitter: meta tags + eestimate-embed.png)
+// from the same live Google Sheet the site itself reads.
+//
+// Usage:  node generate-embed.mjs [path/to/index.html]
+//
+// Run this whenever the poll data changes (or on a schedule — see the
+// included GitHub Actions workflow) so shared links stay current. The
+// day-count changes daily even when the numbers don't, so a daily
+// scheduled run is worth doing even between data updates.
 
 import { readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { Resvg } from "@resvg/resvg-js";
 
-
+// ---- Config: mirrors the constants in index24.html --------------------
 const GOOGLE_SHEET_ID = "1gGBmEUW5bwp23602WfQF4eciRrZT4M-VrAz1r5M2JHU";
 const SHEET_NAME = "EEavg2";
 const SHEET_RANGE = "A:M";
@@ -16,7 +23,11 @@ const OUT_IMAGE_NAME = "eestimate-embed.png";
 const NEXT_ELECTION_DATE = Date.UTC(2027, 2, 7); // 7 March 2027
 const LOESS_SPAN = 0.03;
 
-
+// The actual font file living in the repo (github.com/bananasAreViolet/eestimate,
+// VCR_OSD_MONO_1.001.ttf) — not the "VCR_OSD_MONO.woff2" name the page's own
+// @font-face rule references, which doesn't seem to match any file in the repo.
+// Checked in order; first one found next to index24.html wins. If neither
+// exists, the title falls back to the bold sans-serif chain instead of failing.
 const TITLE_FONT_CANDIDATES = ["VCR_OSD_MONO_1.001.ttf", "VCR_OSD_MONO.woff2"];
 const TITLE_FONT_FAMILY = "VCR OSD Mono";
 
@@ -28,7 +39,7 @@ const PARTY_COLOURS = {
   "Ind.": "#8a8d91"
 };
 
-
+// ---- Sheet parsing helpers (ported from index24.html) ------------------
 const n = v => { const x = Number(String(v).replace(",", ".")); return Number.isFinite(x) ? x : null; };
 const pct = v => {
   if (v === null || v === undefined || v === "") return null;
@@ -57,7 +68,7 @@ function parseGviz(t) {
   if (a < 0 || b <= a) throw new Error("No response from database, hm.");
   return JSON.parse(t.slice(a, b + 1));
 }
-function loessSmooth(values, span = LOESS_SPAN, floor = 0) {
+export function loessSmooth(values, span = LOESS_SPAN, floor = 0) {
   const clamp = v => (Number.isFinite(v) && floor !== null) ? Math.max(floor, v) : v;
   const points = [];
   values.forEach((value, index) => { if (Number.isFinite(value)) points.push({ x: index, y: value }); });
@@ -83,8 +94,11 @@ function loessSmooth(values, span = LOESS_SPAN, floor = 0) {
   return out;
 }
 
-
-async function fetchLatestPoll() {
+// ---- Fetch + compute the full smoothed history, same as the page -------
+// Returns the whole LOESS-smoothed time series per party (not just the
+// latest row), so a caller can draw either the latest snapshot or a trend
+// line over time from the same data.
+async function fetchPollHistory() {
   const u = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&headers=1&range=${encodeURIComponent(`${SHEET_NAME}!${SHEET_RANGE}`)}`;
   const r = await fetch(u, { cache: "no-store" });
   if (!r.ok) throw new Error(`Sheet HTTP ${r.status}`);
@@ -114,13 +128,16 @@ async function fetchLatestPoll() {
   const lastSmoothed = smoothedRows.at(-1);
   const lastDate = latestRows.at(-1).date;
 
+  // Same selection the bar version used: current (latest smoothed) support,
+  // one row per party — this is what decides which 7 parties get a line.
   const latestPoll = keys
     .map(name => ({ name, colour: PARTY_COLOURS[name] || "#777", support: lastSmoothed[name] }))
     .filter(p => p.support !== null && Number.isFinite(p.support));
 
-  return { latestPoll, lastDate };
+  return { smoothedRows, keys, latestPoll, lastDate };
 }
 
+// ---- Text: lead line + days-until-election, matching the page's copy ---
 function buildDescription(latestPoll) {
   const sorted = [...latestPoll].sort((a, b) => b.support - a.support);
   const [first, second] = sorted;
@@ -135,20 +152,49 @@ function buildDescription(latestPoll) {
   return `Eestimate is an Estonian party preference polling tracker and aggregator. ${leadLine} ${electionLine}`;
 }
 
-
-function buildSvg(latestPoll, { titleFontFamily } = {}) {
+// ---- Image: title + 7 polling-average lines, coloured by party, no labels
+// Same party selection as the old bar version (top 7 by latest smoothed
+// support); now each gets its full smoothed history as a line instead of
+// a single end-value bar. Still no axis, gridlines, numbers or names —
+// just the coloured lines.
+function buildSvg({ smoothedRows, latestPoll }, { titleFontFamily } = {}) {
   const top7 = [...latestPoll].sort((a, b) => b.support - a.support).slice(0, 7);
+  const top7Names = new Set(top7.map(p => p.name));
   const W = 1200, H = 630, BG = "#313d4e";
-  const yTop = 210, yBase = 560, areaH = yBase - yTop;
-  const maxSupport = Math.max(...top7.map(p => p.support), 1);
-  const leftMargin = 80, gap = 24;
-  const barW = (W - 2 * leftMargin - gap * (top7.length - 1)) / top7.length;
+  const xLeft = 70, xRight = 1130, yTop = 210, yBase = 560;
+  const areaW = xRight - xLeft, areaH = yBase - yTop;
 
-  const bars = top7.map((p, i) => {
-    const h = Math.max(4, (p.support / maxSupport) * areaH);
-    const x = leftMargin + i * (barW + gap);
-    const y = yBase - h;
-    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${p.colour}"/>`;
+  const t0 = smoothedRows[0].date.getTime();
+  const t1 = smoothedRows.at(-1).date.getTime();
+  const tSpan = Math.max(1, t1 - t0);
+
+  // Shared y-scale across all 7 lines, baseline at 0%, so line position
+  // stays a faithful read of support level the way bar height was before.
+  let maxSupport = 1;
+  for (const row of smoothedRows) {
+    for (const name of top7Names) {
+      const v = row[name];
+      if (Number.isFinite(v)) maxSupport = Math.max(maxSupport, v);
+    }
+  }
+  const yScale = (areaH * 0.92) / maxSupport;
+  const xOf = ms => xLeft + ((ms - t0) / tSpan) * areaW;
+  const yOf = v => yBase - v * yScale;
+
+  // Draw lowest-support line first, leader last, so the leading party's
+  // trend reads as the foreground line where paths cross.
+  const linesInDrawOrder = [...top7].sort((a, b) => a.support - b.support);
+
+  const lines = linesInDrawOrder.map(party => {
+    let d = "", drawing = false;
+    for (const row of smoothedRows) {
+      const v = row[party.name];
+      if (!Number.isFinite(v)) { drawing = false; continue; }
+      const x = xOf(row.date.getTime()).toFixed(1), y = yOf(v).toFixed(1);
+      d += drawing ? ` L${x},${y}` : `${d ? " " : ""}M${x},${y}`;
+      drawing = true;
+    }
+    return `<path d="${d}" fill="none" stroke="${party.colour}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>`;
   }).join("\n");
 
   const fontFamily = `${titleFontFamily ? `"${titleFontFamily}", ` : ""}"Arial Black", Arial, sans-serif`;
@@ -156,7 +202,7 @@ function buildSvg(latestPoll, { titleFontFamily } = {}) {
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
   <rect x="0" y="0" width="${W}" height="${H}" fill="${BG}"/>
   <text x="${W / 2}" y="130" text-anchor="middle" font-family='${fontFamily}' font-weight="900" font-size="72" letter-spacing="6" fill="#ffffff">EESTIMATE</text>
-  ${bars}
+  ${lines}
 </svg>`;
 }
 
@@ -187,12 +233,15 @@ async function updateHtml(htmlPath, metaBlock) {
   await writeFile(htmlPath, html.replace(re, metaBlock), "utf8");
 }
 
-export async function buildEmbedAssets(latestPoll, { htmlPath, outDir }) {
+export async function buildEmbedAssets(history, { htmlPath, outDir }) {
+  const { latestPoll } = history;
   const description = buildDescription(latestPoll);
-  const title = "Eestimate, a Riigikogu polling tracker";
+  const title = "Eestimate — Riigikogu polling tracker";
   const imageUrl = new URL(OUT_IMAGE_NAME, SITE_URL).toString();
 
-
+  // Reuse the repo's VCR OSD Mono font file for the title, if one of the
+  // known filenames is sitting next to index24.html. Falls back to a bold
+  // sans-serif otherwise.
   const htmlDir = path.dirname(htmlPath);
   const foundFontName = TITLE_FONT_CANDIDATES.find(name => existsSync(path.join(htmlDir, name)));
   const fontPath = foundFontName ? path.join(htmlDir, foundFontName) : null;
@@ -201,7 +250,7 @@ export async function buildEmbedAssets(latestPoll, { htmlPath, outDir }) {
     console.warn(`Note: none of [${TITLE_FONT_CANDIDATES.join(", ")}] found next to ${htmlPath} — title will use the sans-serif fallback instead.`);
   }
 
-  const svg = buildSvg(latestPoll, { titleFontFamily: fontAvailable ? TITLE_FONT_FAMILY : null });
+  const svg = buildSvg(history, { titleFontFamily: fontAvailable ? TITLE_FONT_FAMILY : null });
   const resvgOpts = {
     fitTo: { mode: "width", value: 1200 },
     font: fontAvailable
@@ -215,11 +264,11 @@ export async function buildEmbedAssets(latestPoll, { htmlPath, outDir }) {
 }
 
 async function main() {
-  const htmlPath = process.argv[2] || "index.html";
+  const htmlPath = process.argv[2] || "index24.html";
   console.log("Fetching latest poll data…");
-  const { latestPoll, lastDate } = await fetchLatestPoll();
-  console.log(`Loaded ${latestPoll.length} parties, latest row: ${lastDate.toISOString().slice(0, 10)}`);
-  const result = await buildEmbedAssets(latestPoll, { htmlPath, outDir: "." });
+  const history = await fetchPollHistory();
+  console.log(`Loaded ${history.latestPoll.length} parties, ${history.smoothedRows.length} dated rows, latest: ${history.lastDate.toISOString().slice(0, 10)}`);
+  const result = await buildEmbedAssets(history, { htmlPath, outDir: "." });
   console.log("Wrote", OUT_IMAGE_NAME);
   console.log("Description:", result.description);
 }
