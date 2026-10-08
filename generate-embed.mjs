@@ -1,13 +1,5 @@
 #!/usr/bin/env node
-// Regenerates Eestimate's link-preview embed (og:/twitter: meta tags + eestimate-embed.png)
-// from the same live Google Sheet the site itself reads.
 //
-// Usage:  node generate-embed.mjs [path/to/index.html]
-//
-// Run this whenever the poll data changes (or on a schedule — see the
-// included GitHub Actions workflow) so shared links stay current. The
-// day-count changes daily even when the numbers don't, so a daily
-// scheduled run is worth doing even between data updates.
 
 import { readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -23,11 +15,6 @@ const OUT_IMAGE_NAME = "eestimate-embed.png";
 const NEXT_ELECTION_DATE = Date.UTC(2027, 2, 7); // 7 March 2027
 const LOESS_SPAN = 0.03;
 
-// The actual font file living in the repo (github.com/bananasAreViolet/eestimate,
-// VCR_OSD_MONO_1.001.ttf) — not the "VCR_OSD_MONO.woff2" name the page's own
-// @font-face rule references, which doesn't seem to match any file in the repo.
-// Checked in order; first one found next to index24.html wins. If neither
-// exists, the title falls back to the bold sans-serif chain instead of failing.
 const TITLE_FONT_CANDIDATES = ["VCR_OSD_MONO_1.001.ttf", "VCR_OSD_MONO.woff2"];
 const TITLE_FONT_FAMILY = "VCR OSD Mono";
 
@@ -95,9 +82,6 @@ export function loessSmooth(values, span = LOESS_SPAN, floor = 0) {
 }
 
 // ---- Fetch + compute the full smoothed history, same as the page -------
-// Returns the whole LOESS-smoothed time series per party (not just the
-// latest row), so a caller can draw either the latest snapshot or a trend
-// line over time from the same data.
 async function fetchPollHistory() {
   const u = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&headers=1&range=${encodeURIComponent(`${SHEET_NAME}!${SHEET_RANGE}`)}`;
   const r = await fetch(u, { cache: "no-store" });
@@ -153,10 +137,6 @@ function buildDescription(latestPoll) {
 }
 
 // ---- Image: title + 7 polling-average lines, coloured by party, no labels
-// Same party selection as the old bar version (top 7 by latest smoothed
-// support); now each gets its full smoothed history as a line instead of
-// a single end-value bar. Still no axis, gridlines, numbers or names —
-// just the coloured lines.
 function buildSvg({ smoothedRows, latestPoll }, { titleFontFamily } = {}) {
   const top7 = [...latestPoll].sort((a, b) => b.support - a.support).slice(0, 7);
   const top7Names = new Set(top7.map(p => p.name));
@@ -168,8 +148,7 @@ function buildSvg({ smoothedRows, latestPoll }, { titleFontFamily } = {}) {
   const t1 = smoothedRows.at(-1).date.getTime();
   const tSpan = Math.max(1, t1 - t0);
 
-  // Shared y-scale across all 7 lines, baseline at 0%, so line position
-  // stays a faithful read of support level the way bar height was before.
+
   let maxSupport = 1;
   for (const row of smoothedRows) {
     for (const name of top7Names) {
