@@ -306,6 +306,12 @@ body.dark a {
 <p class="header-note" id="heFoot"></p>
 </div></section>
 
+<section class="window"><div class="titlebar"><span data-i18n="titleAdjPolls">LATEST POLLS, HOUSE EFFECT-ADJUSTED</span></div><div class="window-body">
+<div class="chart-surface"><div class="he-grid" id="adjGrid"></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div>
+<p class="header-note" id="adjNote" data-i18n="adjLoading">Loading latest polls…</p>
+<p class="header-note" id="adjFoot"></p>
+</div></section>
+
 <section class="window"><div class="titlebar"><span data-i18n="titleMonthly">MONTH-ON-MONTH CHANGE</span></div><div class="window-body">
 <div class="chart-surface"><div class="mm-grid" id="mmGrid"></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div>
 <p class="header-note" id="mmNote" data-i18n="mmLoading">Loading month-on-month changes…</p>
@@ -376,10 +382,17 @@ const UI_STRINGS = {
   leading:(a,b,diff)=>`${a} is leading ${b} by ${diff} points.`,
   longTermBtn:"1999 to present chart",
   titleHouseEffects:"POLLSTER HOUSE EFFECTS",
+  titleAdjPolls:"LATEST POLLS, HOUSE EFFECT-ADJUSTED",
+  adjLoading:"Loading latest polls…",
+  adjNoData:"No latest polls are available yet.",
+  adjNoteTemplate:(asAt)=>`As of ${asAt}. The most recent poll from each of Norstat, Emor and Turu-uuringute AS, with each party's figure adjusted by that pollster's house effect (poll result minus house effect), so they are directly comparable. Adjusted figures are not re-normalised to 100%.`,
+  adjLowTemplate:(pollster,parties,minPolls)=>`*${pollster}: no adjustment applied to ${parties} given fewer than ${minPolls} matched polls for the house effect.`,
+  adjBarTitle:(party,adj,raw,he)=>`${party}: ${adj}% adjusted (poll ${raw}%, house effect ${he})`,
+  adjBarTitleRaw:(party,raw)=>`${party}: ${raw}% (unadjusted)`,
   heLoading:"Loading pollster house effects…",
   heNoData:"No pollster house effects can be calculated for this period yet.",
   heErrTemplate:msg=>`House effect data error: ${msg}`,
-  heNoteTemplate:(asAt,start,end,minPolls)=>`As of ${asAt}. Average over polls from ${start} to ${end}. Each poll is compared with the polling average recomputed without that pollster's own polls, so positive means the pollster reports the party higher than the others do.`,
+  heNoteTemplate:(asAt,start,end,minPolls)=>`As of ${asAt}. Average over polls from ${start} to ${end}. Each poll is compared with the polling average recomputed without that pollster's own polls, so positive means the pollster reports the party higher than the others do. Note: House effects here are measured as each pollster’s average deviation from the leave-one-out polling average (i.e., relative to other firms over the same recent period), not against actual election results. This captures systematic methodological differences between pollsters but does not measure absolute accuracy or true bias. Shared directional errors across firms would not appear. Comparisons to past election results could prove more unreliable given the significant shifts in the party support since 2023.`,
   heLowTemplate:(pollster,n,parties,minPolls)=>`*${pollster}: ${n} poll${n===1?"":"s"} so far in this period, effects may be unreliable. No house effect shown for ${parties} given fewer than ${minPolls} matched polls.`,
   heBarTitle:(party,val,n)=>`${party}: ${val} points (n=${n})`,
   titleMonthly:"MONTH-ON-MONTH CHANGE",
@@ -447,10 +460,17 @@ const UI_STRINGS = {
   leading:(a,b,diff)=>`${a} juhib ${b} ees ${diff} punktiga.`,
   longTermBtn:"Graafik 1999. aastast tänaseni",
   titleHouseEffects:"KÜSITLUSFIRMADE MAJAEFEKT",
+  titleAdjPolls:"VIIMASED KÜSITLUSED, MAJAEFEKTIGA KORRIGEERITUD",
+  adjLoading:"Viimaste küsitluste laadimine…",
+  adjNoData:"Viimaseid küsitlusi pole veel saadaval.",
+  adjNoteTemplate:(asAt)=>`Seisuga ${asAt}. Iga firma (Norstat, Emor, Turu-uuringute AS) viimane küsitlus, kus iga erakonna näitaja on korrigeeritud selle firma majaefektiga (tulemus miinus majaefekt), et need oleksid omavahel võrreldavad. Korrigeeritud näitajaid ei normaliseerita uuesti 100%-le.`,
+  adjLowTemplate:(pollster,parties,minPolls)=>`*${pollster}: korrigeerimist ei rakendatud erakondadele ${parties} (majaefekti jaoks alla ${minPolls} sobitatud küsitluse).`,
+  adjBarTitle:(party,adj,raw,he)=>`${party}: ${adj}% korrigeeritud (küsitlus ${raw}%, majaefekt ${he})`,
+  adjBarTitleRaw:(party,raw)=>`${party}: ${raw}% (korrigeerimata)`,
   heLoading:"Küsitlusfirmade majaefekti laadimine…",
   heNoData:"Selle perioodi kohta ei saa majaefekti veel arvutada.",
   heErrTemplate:msg=>`Majaefekti andmete viga: ${msg}`,
-  heNoteTemplate:(asAt,start,end,minPolls)=>`Seisuga ${asAt}. Keskmine ajavahemiku ${start} – ${end} küsitluste põhjal. Iga küsitlust võrreldakse küsitluste keskmisega, mis on arvutatud ilma selle firma enda küsitlusteta, seega positiivne väärtus tähendab, et firma näitab erakonda kõrgemana kui teised.`,
+  heNoteTemplate:(asAt,start,end,minPolls)=>`Seisuga ${asAt}. Keskmine ajavahemiku ${start} – ${end} küsitluste põhjal. Iga küsitlust võrreldakse küsitluste keskmisega, mis on arvutatud ilma selle firma enda küsitlusteta, seega positiivne väärtus tähendab, et firma näitab erakonda kõrgemana kui teised. Märkuseks: Küsitlusfirmade majaefekti mõõdetakse siin iga küsitlusfirma keskmise erinevusega kõigi teiste küsitluste jooksvast keskmisest (s.t võrreldes teiste firmadega samal perioodil), mitte tegelike valimistulemuste põhjal. See näitab süstemaatilisi metodoloogilisi erinevusi küsitlusfirmade vahel, kuid ei mõõda absoluutset täpsust ega tegelikku kallutatust. Kõigile firmadele ühised samasuunalised vead siin ei kajastu. Võrdlused varasemate valimistulemustega osutuksid tõenäoliselt ebausaldusväärseks, arvestades erakondade toetuses alates 2023. aastast toimunud märkimisväärseid nihkeid.`,
   heLowTemplate:(pollster,n,parties,minPolls)=>`*${pollster}: selles perioodis seni ${n} küsitlus${n===1?"":"t"}, mõjud ei pruugi olla usaldusväärsed. Majaefekti ei näidata: ${parties} (alla ${minPolls} sobitatud küsitluse).`,
   heBarTitle:(party,val,n)=>`${party}: ${val} punkti (n=${n})`,
   titleMonthly:"KUUPÕHINE MUUTUS",
@@ -540,10 +560,10 @@ const dtext=d=>{
 
 function quarterTick(month,year){
  if(currentLang==="et"){
-  if(month===0) return [String(1),year];
-  if(month===3) return "4";
-  if(month===6) return "7";
-  if(month===9) return "10";
+  if(month===0) return ["Jaan",year];
+  if(month===3) return "Apr";
+  if(month===6) return "Juul";
+  if(month===9) return "Okt";
   return "";
  }
  if(month===0) return ["Jan",year];
@@ -654,6 +674,7 @@ const eventMarkerPlugin={
 const endLineLabelsPlugin = {
  id: "endLineLabels",
  afterDatasetsDraw(chart, args, opts) {
+  if (opts && opts.enabled === false) return;
   const allowedParties = opts && opts.allowedParties ? opts.allowedParties : null;
   const { ctx, chartArea } = chart;
   ctx.save();
@@ -1381,6 +1402,7 @@ $("langBtn").onclick=()=>{
  if(govtRows.length){renderGovtLineChart();}
  if(compositionRows.length){renderCompositionChart();}
  renderHouseEffects();
+ renderAdjustedPolls();
  renderMonthlyChange();
 };
 
@@ -1415,13 +1437,13 @@ function renderGovtLineChart(){
   options:{
    responsive:true,
    maintainAspectRatio:false,
-   layout:{padding:{right:220}},
+   layout:{padding:{right:20}},
    interaction:{mode:"nearest",axis:"xy",intersect:false},
    plugins:{
-    legend:{display:false},
+    legend:{position:"bottom",labels:{usePointStyle:true,pointStyle:"line",boxWidth:26,padding:14,color:th.text,font:{family:'"VCR OSD Mono", monospace', size:12}}},
     tooltip:{enabled:false,external:retroTooltip},
     eventMarkers:{markers,lineColour:th.markerLine,textColour:th.markerText},
-    endLineLabels:{allowedParties:["Government parties (Michal I)","Parliamentary opposition (Michal I)","Extraparliamentary opposition (Michal I)"].map(govtLabel)}
+    endLineLabels:{enabled:false}
    },
    scales:{
     x:{
@@ -1665,11 +1687,20 @@ async function loadHouseEffects(){
    start,endInclusive:new Date(endExclusive.getTime()-86400000),
    asAt:polls.length?polls.at(-1).date:null,
    pollsters:order,parties,pollCount,
+   latest:HE_POLLSTER_ORDER.map(name=>{
+    let best=null;
+    for(const p of rawAll){if(p.pollster===name&&(!best||p.date>=best.date))best=p}
+    return best;
+   }).filter(Boolean),
    stats:Object.fromEntries(order.map(p=>[p,Object.fromEntries(Object.entries(acc[p]).map(([k,c])=>[k,{n:c.n,mean:c.sum/c.n}]))]))
   };
   renderHouseEffects();
+  renderAdjustedPolls();
  }catch(e){
   heState=null;
+  const ag=$("adjGrid");if(ag)ag.innerHTML="";
+  const an=$("adjNote");if(an)an.textContent=t("heErrTemplate")(e.message);
+  const af=$("adjFoot");if(af)af.innerHTML="";
   if(grid)grid.innerHTML="";
   if(note)note.textContent=t("heErrTemplate")(e.message);
   const foot=$("heFoot");if(foot)foot.innerHTML="";
@@ -1740,6 +1771,60 @@ function renderHouseEffects(){
  ).join("<br>");
 }
 
+
+function renderAdjustedPolls(){
+ const grid=$("adjGrid"),note=$("adjNote"),foot=$("adjFoot");
+ if(!grid||!note||!heState)return;
+ const latest=heState.latest||[];
+ if(!latest.length){grid.innerHTML="";note.textContent=t("adjNoData");if(foot)foot.innerHTML="";return}
+ const W=420,H=300,m={l:36,r:8,t:14,b:32},pw=W-m.l-m.r,ph=H-m.t-m.b;
+ const panels=[],lowNotes=[];
+ let maxVal=0;
+ const prepared=latest.map(poll=>{
+  const rows=[],unadj=[];
+  for(const party of Object.keys(poll.values)){
+   const raw=poll.values[party];
+   if(raw===null||raw===undefined||!Number.isFinite(raw))continue;
+   const cell=heState.stats[poll.pollster]&&heState.stats[poll.pollster][party];
+   const ok=cell&&cell.n>=HE_MIN_POLLS;
+   const he=ok?cell.mean:0;
+   const adj=Math.max(0,raw-he);
+   if(!ok)unadj.push(party);
+   rows.push({party,raw,he,adj,ok});
+   maxVal=Math.max(maxVal,adj);
+  }
+  rows.sort((a,b)=>b.adj-a.adj);
+  return {poll,rows,unadj};
+ });
+ const ymax=Math.max(35,Math.ceil((maxVal+2)/5)*5);
+ const yOf=v=>m.t+ph*(1-v/ymax),y0=yOf(0);
+ let asAt=null;
+ for(const {poll,rows,unadj} of prepared){
+  if(!asAt||poll.date>asAt)asAt=poll.date;
+  let g="";
+  for(let v=0;v<=ymax+1e-9;v+=5){
+   const y=yOf(v);
+   g+=`<line class="${v===0?"he-zero":"he-gridline"}" x1="${m.l}" x2="${W-m.r}" y1="${y}" y2="${y}"/>`;
+   g+=`<text class="he-ylabel" x="${m.l-6}" y="${y}" text-anchor="end" dominant-baseline="central">${v}</text>`;
+  }
+  const slot=pw/Math.max(1,rows.length),bw=slot*0.8;
+  const longest=Math.max(1,...rows.map(r=>partyLabel(r.party).length+(r.ok?0:1)));
+  const fs=Math.max(7,Math.min(12,(slot-2)/(longest*0.68)));
+  rows.forEach((r,i)=>{
+   const cx=m.l+slot*(i+0.5),colour=PARTY_COLOURS[r.party]||"#777";
+   const y=yOf(r.adj),h=Math.max(0.75,y0-y);
+   const tip=r.ok?t("adjBarTitle")(partyLabel(r.party),locNum(r.adj.toFixed(1)),locNum(r.raw.toFixed(1)),heSigned(r.he)):t("adjBarTitleRaw")(partyLabel(r.party),locNum(r.raw.toFixed(1)));
+   g+=`<rect class="he-bar" x="${(cx-bw/2).toFixed(2)}" y="${(y0-h).toFixed(2)}" width="${bw.toFixed(2)}" height="${h.toFixed(2)}" fill="${esc(colour)}"><title>${esc(tip)}</title></rect>`;
+   g+=`<text class="he-ylabel" x="${cx.toFixed(2)}" y="${(y0-h-6).toFixed(2)}" text-anchor="middle" font-size="${Math.min(10,fs).toFixed(1)}" style="fill:var(--text)">${locNum(r.adj.toFixed(1))}</text>`;
+   g+=`<text class="he-plabel" x="${cx.toFixed(2)}" y="${H-m.b+18}" text-anchor="middle" font-size="${fs.toFixed(1)}" fill="${esc(colour)}" stroke="var(--surface)" stroke-width="2.5" paint-order="stroke" stroke-linejoin="round">${esc(partyLabel(r.party))}${r.ok?"":"*"}</text>`;
+  });
+  panels.push(`<div class="he-panel"><div class="he-panel-title">${esc(poll.pollster)} – ${esc(heDate(poll.date))}</div><svg class="he-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(poll.pollster)}">${g}</svg></div>`);
+  if(unadj.length)lowNotes.push(esc(t("adjLowTemplate")(poll.pollster,unadj.map(partyLabel).join(", "),HE_MIN_POLLS)));
+ }
+ grid.innerHTML=panels.join("");
+ note.textContent=t("adjNoteTemplate")(heDate(asAt));
+ if(foot)foot.innerHTML=lowNotes.join("<br>");
+}
 
 const MM_MONTHS=12;
 const MM_MIN_SCALE=1.5,MM_MAX_SCALE=10; // axis starts at ±1.5 and widens only if a bar would not fit
@@ -1976,10 +2061,10 @@ function renderCustomCoalitionChart(){
    layout:{padding:{right:20}},
    interaction:{mode:"nearest",axis:"xy",intersect:false},
    plugins:{
-    legend:{display:false},
+    legend:{position:"bottom",labels:{usePointStyle:true,pointStyle:"line",boxWidth:26,padding:14,color:th.text,font:{family:'"VCR OSD Mono", monospace', size:12}}},
     tooltip:{enabled:false,external:retroTooltip},
     eventMarkers:{markers,lineColour:th.markerLine,textColour:th.markerText},
-    endLineLabels:{allowedParties:[]}
+    endLineLabels:{enabled:false}
    },
    scales:{
     x:{
