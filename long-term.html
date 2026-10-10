@@ -175,7 +175,7 @@ const UI_STRINGS = {
   longLoadingInitial:"Loading the long polling history…",
   longLoadingMessage:"Loading the long-run polling history, this can take a moment given the row count…",
   longHistoryNote:"Res Publica ended up merging into Isamaaliit to form IRL, later renamed Isamaa.<br>ERL became EKRE in 2012.<br>Trend lines are LOESS-smoothed separately within each election cycle and tied to the actual result on each election date.",
-  longUpdateTemplate:(start,end,n)=>`Covers ${start} to ${end}, ${n} days of data. End values differ from the normal polling average on the main page due to LOESS.`,
+  longUpdateTemplate:(start,end,n)=>`Covers ${start} to ${end}, ${n} days of data. Up to 4 Mar 2023 the lines come from the 1999 dataset; from then on they match the polling average on the main page.`,
   longErrTemplate:msg=>`Historical polling data error: ${msg}`,
   longErrHttp:(url,status)=>`Could not load ${url} (HTTP ${status}).`,
   longErrEmpty:"Historical polling file is empty.",
@@ -194,7 +194,7 @@ const UI_STRINGS = {
   longLoadingInitial:"Pikaajalise küsitlusajaloo laadimine…",
   longLoadingMessage:"Pikaajalise küsitlusajaloo laadimine võib ridade arvu tõttu hetke aega võtta…",
   longHistoryNote:"Res Publica lõpuks ühines Isamaaliiduga ja moodustas IRLi, mis hiljem nimetati ümber Isamaaks.<br>ERL sai 2012. aastal EKREks.<br>Trendijooned on LOESS-silutud eraldi iga valimistsükli sees ja seotud iga valimispäeva tegeliku tulemusega.",
-  longUpdateTemplate:(start,end,n)=>`Hõlmab ajavahemikku ${start} – ${end}, ${n} päeva andmeid. Lõppväärtused erinevad pealehe tavalisest küsitluste keskmisest LOESS-silumise tõttu.`,
+  longUpdateTemplate:(start,end,n)=>`Hõlmab ajavahemikku ${start} – ${end}, ${n} päeva andmeid. Kuni 4. märtsini 2023 põhinevad jooned 1999. aasta andmestikul, sealt alates vastavad need pealehe küsitluste keskmisele.`,
   longErrTemplate:msg=>`Pikaajaliste andmete viga: ${msg}`,
   longErrHttp:(url,status)=>`Faili ${url} ei õnnestunud laadida (HTTP ${status}).`,
   longErrEmpty:"Pikaajaliste küsitlusandmete fail on tühi.",
@@ -488,15 +488,61 @@ function electionAnchoredLoess(rows,key,anchorIndices,span){
 
 let longLineChart=null,longRows=[];
 
+// Everything up to and including this date comes from the 1999 CSV;
+// everything after it uses the main page's polling average (HEavg sheet).
+const CSV_CUTOFF=Date.UTC(2023,2,4);
+const GOOGLE_SHEET_URL="https://docs.google.com/spreadsheets/d/1gGBmEUW5bwp23602WfQF4eciRrZT4M-VrAz1r5M2JHU/edit?usp=sharing";
+const SHEET_NAME="HEavg",SHEET_RANGE="A:M";
+
+let csvRows=[],mainRows=[],mainSmoothed=[];
 let longSmoothedSeries=null;
+
+// Same loading/smoothing as the main page: raw rows, then LOESS (span 0.03) over the whole sheet.
+async function loadMainAverage(){
+ const id=idOf(GOOGLE_SHEET_URL);
+ const u=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&headers=1&range=${encodeURIComponent(`${SHEET_NAME}!${SHEET_RANGE}`)}`;
+ const r=await fetch(u,{cache:"no-store"});
+ if(!r.ok)throw Error(`Google Sheets returned HTTP ${r.status}.`);
+ const g=parseGviz(await r.text()),cols=g.table?.cols||[],rows=g.table?.rows||[];
+ const headers=cols.map((c,i)=>String(c.label||c.id||"").trim()||`Column ${i+1}`);
+ const di=headers.findIndex(h=>h.toLowerCase()==="date");
+ if(di<0)throw Error("The main polling average is missing a Date column.");
+ const recs=[];
+ for(const row of rows){
+  const c=row.c||[],dc=c[di]||{},d=dt(dc.v!==undefined?dc.v:dc.f);
+  if(!d)continue;
+  const rec={date:d};
+  headers.forEach((h,i)=>{if(i!==di){const x=c[i]||{};rec[h]=pct(x.v!==undefined?x.v:x.f)}});
+  recs.push(rec);
+ }
+ recs.sort((a,b)=>a.date-b.date);
+ if(!recs.length)throw Error("No dated rows found in the main polling average.");
+ const smoothed=recs.map(r=>({date:r.date}));
+ headers.filter((h,i)=>i!==di).forEach(key=>{
+  loessSmooth(recs.map(r=>r[key])).forEach((v,i)=>{smoothed[i][key]=v});
+ });
+ // keep only the days after the CSV cutoff
+ const keepIdx=recs.map((r,i)=>r.date.getTime()>CSV_CUTOFF?i:-1).filter(i=>i>=0);
+ mainRows=keepIdx.map(i=>recs[i]);
+ mainSmoothed=keepIdx.map(i=>smoothed[i]);
+}
+
 function computeLongSmoothedSeries(){
- const partyKeys=longRows.length?Object.keys(longRows[0]).filter(k=>k!=="date"):[];
- const anchorIndices=electionAnchorIndices(longRows,ELECTION_MARKERS);
+ const csvKeys=csvRows.length?Object.keys(csvRows[0]).filter(k=>k!=="date"):[];
+ const mainKeys=mainRows.length?Object.keys(mainRows[0]).filter(k=>k!=="date"):[];
+ const partyKeys=[...new Set([...csvKeys,...mainKeys])];
+ // election anchors only where a CSV row exists on/near the election (2023 falls after the cutoff)
+ const anchorMarkers=ELECTION_MARKERS.filter(m=>m.date<=CSV_CUTOFF);
+ const anchorIndices=electionAnchorIndices(csvRows,anchorMarkers);
  const series={};
  for(const key of partyKeys){
-  const raw=longRows.map(r=>r[key]);
+  const csvRaw=csvRows.map(r=>r[key]===undefined?null:r[key]);
+  const csvSmooth=csvKeys.includes(key)?electionAnchoredLoess(csvRows,key,anchorIndices,LONG_LOESS_SPAN):csvRaw.map(()=>null);
+  const mainRaw=mainRows.map(r=>r[key]===undefined?null:r[key]);
+  const mainSm=mainSmoothed.map(r=>(r[key]===undefined||!Number.isFinite(r[key]))?null:r[key]);
+  const raw=csvRaw.concat(mainRaw);
   if(!raw.some(v=>v!==null&&v!==undefined))continue;
-  series[key]={raw,smoothed:electionAnchoredLoess(longRows,key,anchorIndices,LONG_LOESS_SPAN)};
+  series[key]={raw,smoothed:csvSmooth.concat(mainSm)};
  }
  return series;
 }
@@ -562,6 +608,10 @@ async function loadLongTermData(){
   }
   longRows.sort((a,b)=>a.date-b.date);
   if(!longRows.length)throw Error(t("longErrNoRows"));
+  csvRows=longRows.filter(r=>r.date.getTime()<=CSV_CUTOFF);
+  mainRows=[];mainSmoothed=[];
+  try{await loadMainAverage()}catch(e){console.error(e);if(note)note.textContent=t("longErrTemplate")(e.message)}
+  longRows=csvRows.concat(mainRows);
   longSmoothedSeries=computeLongSmoothedSeries();
   renderLongLineChart();
   const first=longRows[0],last=longRows.at(-1);
