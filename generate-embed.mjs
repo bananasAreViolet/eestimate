@@ -215,7 +215,7 @@ async function updateHtml(htmlPath, metaBlock) {
 export async function buildEmbedAssets(history, { htmlPath, outDir }) {
   const { latestPoll } = history;
   const description = buildDescription(latestPoll);
-  const title = "Eestimate — Riigikogu polling tracker";
+  const title = "Eestimate, a Riigikogu polling tracker";
   const imageUrl = new URL(OUT_IMAGE_NAME, SITE_URL).toString();
 
   // Reuse the repo's VCR OSD Mono font file for the title, if one of the
