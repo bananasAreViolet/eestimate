@@ -200,7 +200,7 @@ const UI_STRINGS = {
   titleRkResults:"RIIGIKOGU ELECTION RESULTS BY PARTY",
   titleTallinn:"TALLINN MUNICIPAL ELECTION RESULTS BY PARTY",
   titleEP:"EUROPEAN PARLIAMENT ELECTION RESULTS BY PARTY",
-  rkCompNote:"Greens in 1992 include a green movement-affiliated MP, the official party was formed in 2006.<br>ERL (-2012) is counted towards EKRE due to remaining the same legal entity.",
+  rkCompNote:"Greens in 1992 include a green movement-affiliated MP, the official party was formed in 2006.<br>EKRE and ERL (-2012) are the same legal entity.<br>Ribbons connect each party to its seats at the next election. Isamaa and ERSP (1992) flow together into Isamaa (1995), and Res Publica and Isamaa (2003) into Isamaa (2007).<br>The 1995 Coalition list (41 seats, upper half of the bar) is shown in its participating parties in the lower half: Coalition (18) and ERL (23). ERL in 1995 was composed of Rural Union (Maaliit, 9), Country People's Party (Maarahva Erakond, 8) and Pensioners' and Families' Union (Pensionäride ja Perede Liit, 6).",
   rkResultsNote:"EKRE and its legal predecessor ERL are counted together.<br>Isamaa and the preceding Isamaaliit and affiliated alliances are counted together, but Res Publica is not.<br>The results for VL include the preceding Left party, and EÜRP whenever the lists ran together.<br>The results for the Free party include the original Free party as a predecessor.<br>The dashed 2027 bar is the current LOESS polling average, not a result.",
   tallinnNote:"EKRE and its legal predecessor ERL are counted together.<br>Isamaa and the preceding Isamaaliit and affiliated alliances are counted together, but Res Publica is not. Isamaa and SDE ran on a joint list in 1996, results displayed for Isamaa.<br>The results for VL include the preceding Left party, and EÜRP whenever the lists ran together.<br>The results for the Free party include the original Free party as a predecessor.",
   epNote:"EKRE and its legal predecessor ERL are counted together.<br>Isamaa and the preceding Isamaaliit are counted together, but Res Publica is not.<br>The results for VL include the preceding Left party.",
@@ -236,9 +236,9 @@ const UI_STRINGS = {
   titleRkResults:"RIIGIKOGU VALIMISTULEMUSED ERAKONNITI",
   titleTallinn:"TALLINNA KOHALIKE VALIMISTE TULEMUSED ERAKONNITI",
   titleEP:"EUROOPA PARLAMENDI VALIMISTE TULEMUSED ERAKONNITI",
-  rkCompNote:"1992. aasta Rohelised hõlmavad rohelise liikumisega seotud saadikut, ametlik erakond loodi 2006. aastal.<br>ERL (-2012) loetakse EKRE alla, kuna tegemist on sama juriidilise isikuga.",
+  rkCompNote:"1992. aasta Rohelised hõlmavad rohelise liikumisega seotud saadikut, ametlik erakond loodi 2006. aastal.<br>EKRE ja ERL (-2012) on sama juriidiline isik.<br>Lindid ühendavad iga erakonna kohad järgmiste valimiste kohtadega. Isamaa ja ERSP (1992) liituvad Isamaaks (1995) ning Res Publica ja Isamaa (2003) Isamaaks (2007).<br>1995. aasta Koonderakonna nimekiri (41 kohta, tulba ülemine pool) on alumises pooles jaotatud osalenud erakondadeks: Koonderakond (18) ja ERL (23). ERL koosnes 1995. aastal Maaliidust (9), Maarahva Erakonnast (8) ning Pensionäride ja Perede Liidust (6).",
   rkResultsNote:"EKRE ja tema juriidiline eelkäija ERL on koos arvestatud.<br>Isamaa ja eelnenud Isamaaliit ning sellega seotud liidud on koos arvestatud, kuid Res Publica mitte.<br>Vasaku tulemused hõlmavad eelnenud Vasakpartei tulemusi ning EÜRP-d, kui nimekirjad kandideerisid koos.<br>Vaba tulemused hõlmavad eelkäijana algset Vabaerakonda.<br>Katkendjooneline 2027. aasta tulp on praegune LOESS-silutud küsitluste keskmine, mitte tulemus.",
-  tallinnNote:"EKRE ja tema juriidiline eelkäija ERL on koos arvestatud.<br>Isamaa ja eelnenud Isamaaliit ning sellega seotud liidud on koos arvestatud, kuid Res Publica mitte. Isamaa ja SDE kandideerisid 1996. aastal ühisnimekirjas, tulemus on kuvatud Isamaa all.<br>Vasaku tulemused hõlmavad eelnenud Vasakpartei tulemusi ning EÜRP-d, kui nimekirjad kandideerisid koos.<br>Vaba Erakonna tulemused hõlmavad eelkäijana algset Vaba Erakonda.",
+  tallinnNote:"EKRE ja tema juriidiline eelkäija ERL on koos arvestatud.<br>Isamaa ja eelnenud Isamaaliit ning sellega seotud liidud on koos arvestatud, kuid Res Publica mitte. Isamaa ja SDE kandideerisid 1996. aastal ühisnimekirjas, tulemus on kuvatud Isamaa all.<br>Vasaku tulemused hõlmavad eelnenud Vasakpartei tulemusi ning EÜRP-d, kui nimekirjad kandideerisid koos.<br>Vaba tulemused hõlmavad eelkäijana algset Vabaerakonda.",
   epNote:"EKRE ja tema juriidiline eelkäija ERL on koos arvestatud.<br>Isamaa ja eelnenud Isamaaliit on koos arvestatud, kuid Res Publica mitte.<br>Vasaku tulemused hõlmavad eelnenud Vasakpartei tulemusi.",
   pollWord:"küsit.",
   seatsWord:"kohta",
@@ -829,15 +829,15 @@ window.addEventListener("resize",()=>{clearTimeout(govtResizeTimer);govtResizeTi
 // ===== History charts: composition, Riigikogu / Tallinn / EP results =====
 const HIST_COLOURS=Object.assign({},PARTY_COLOURS,{
  "EÜRP":"#fbd592",Coalition:"#2e67a6",Royalists:"#b062c4",Republicans:"#5b709d",Entrepreneurs:"#a6e8b0",
- ERSP:"#1f2a8c",Citizen:"#6b7a7d","Elec. alliances":"#b7c4c9",Independents:"#b7c4c9"
+ ERSP:"#1f2a8c",Citizen:"#6b7a7d",ERL:"#f8b158","Elec. alliances":"#b7c4c9",Independents:"#b7c4c9"
 });
-const COMP_PARTIES=["EÜRP","Greens","SDE","Centre","Royalists","Coalition","E200","Republicans","Entrepreneurs","Reform","Free","Res Publica","Isamaa","ERSP","Citizen","EKRE"];
+const COMP_PARTIES=["EÜRP","Greens","SDE","Centre","Royalists","Coalition","E200","Republicans","Entrepreneurs","Reform","Free","Res Publica","Isamaa","ERSP","Citizen","ERL","EKRE"];
 const RK_COMP={
  1992:{Greens:1,SDE:12,Centre:15,Royalists:8,Coalition:17,Entrepreneurs:1,Isamaa:29,ERSP:10,Citizen:8},
  1995:{"EÜRP":6,SDE:6,Centre:16,Coalition:41,Republicans:5,Reform:19,Isamaa:8},
- 1999:{"EÜRP":6,SDE:17,Centre:28,Coalition:7,Reform:18,Isamaa:18,EKRE:7},
- 2003:{SDE:6,Centre:28,Reform:19,"Res Publica":28,Isamaa:7,EKRE:13},
- 2007:{Greens:6,SDE:10,Centre:29,Reform:31,Isamaa:19,EKRE:6},
+ 1999:{"EÜRP":6,SDE:17,Centre:28,Coalition:7,Reform:18,Isamaa:18,ERL:7},
+ 2003:{SDE:6,Centre:28,Reform:19,"Res Publica":28,Isamaa:7,ERL:13},
+ 2007:{Greens:6,SDE:10,Centre:29,Reform:31,Isamaa:19,ERL:6},
  2011:{SDE:19,Centre:26,Reform:33,Isamaa:23},
  2015:{SDE:15,Centre:27,Reform:30,Free:8,Isamaa:14,EKRE:7},
  2019:{SDE:10,Centre:26,Reform:34,Isamaa:12,EKRE:19},
@@ -894,26 +894,66 @@ const EP_RES={
 
 const lumOf=hex=>{const c=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255);return .2126*c[0]+.7152*c[1]+.0722*c[2]};
 
+// parties whose seats flow into a differently-named party at the next election
+const COMP_FLOW_MAP={1992:{ERSP:"Isamaa"},2003:{"Res Publica":"Isamaa"}};
+// a list whose seats are shown split into its participating parties (lower half of the bar)
+const COMP_SPLIT={1995:{key:"Coalition",parts:[["Coalition",18],["ERL",23]]}};
 function renderCompositionChart(){
  const host=$("rkCompChart"),keyEl=$("rkCompKey");if(!host)return;
  const th=chartTheme(),dark=document.body.classList.contains("dark"),surface=dark?"#313d4e":"#ffffff";
  const years=Object.keys(RK_COMP).map(Number);
  const used=COMP_PARTIES.filter(k=>years.some(y=>RK_COMP[y][k]));
  if(keyEl)keyEl.innerHTML=used.map(k=>`<span class="key-item"><span class="key-swatch" style="background:${HIST_COLOURS[k]}"></span>${esc(partyLabel(k))}</span>`).join("");
- const W=Math.max(420,host.clientWidth||900),labelW=48,rightPad=4,rowH=30,gap=4,H=years.length*(rowH+gap);
- const total=101,sx=(W-labelW-rightPad)/total,out=[];
- years.forEach((y,i)=>{
-  const top=i*(rowH+gap);let acc=0;
-  out.push(`<text x="2" y="${top+rowH/2+5}" font-size="13" font-family='"VCR OSD Mono", monospace' fill="${th.text}">${y}</text>`);
-  COMP_PARTIES.forEach(k=>{
-   const n=RK_COMP[y][k];if(!n)return;
-   const x=labelW+acc*sx,w=n*sx,col=HIST_COLOURS[k];acc+=n;
-   const txt=lumOf(col)>.6?"#1a1a1a":"#ffffff";
-   out.push(`<g><title>${y} – ${esc(partyLabel(k))}: ${n} ${esc(t("seatsWord"))}</title><rect x="${x}" y="${top}" width="${w}" height="${rowH}" fill="${col}" stroke="${surface}" stroke-width="1"/>`+
-    (w>=14?`<text x="${x+w/2}" y="${top+rowH/2+5}" text-anchor="middle" font-size="13" font-family="Tahoma, Arial, sans-serif" fill="${txt}">${n}</text>`:"")+`</g>`);
+ const W=Math.max(420,host.clientWidth||900),labelW=48,rightPad=4,gap=26,total=101,sx=(W-labelW-rightPad)/total;
+ let topAcc=0;
+ const rows=years.map(y=>{
+  const split=COMP_SPLIT[y],h=split?40:28,top=topAcc;topAcc+=h+gap;
+  let acc=0;const segs={};
+  COMP_PARTIES.forEach(k=>{const n=RK_COMP[y][k];if(!n)return;segs[k]={key:k,n,x:labelW+acc*sx,w:n*sx};acc+=n});
+  if(split&&segs[split.key]){
+   const sg=segs[split.key];let px=sg.x;
+   sg.parts=split.parts.map(([k,n])=>{const o={key:k,n,x:px,w:n*sx};px+=o.w;return o});
+  }
+  return {y,top,h,segs};
+ });
+ const H=topAcc-gap;
+ const defs=[],ribbons=[],bars=[],labels=[];
+ for(let i=0;i<rows.length-1;i++){
+  const A=rows[i],B=rows[i+1],map=COMP_FLOW_MAP[A.y]||{};
+  const incoming={};
+  Object.values(A.segs).flatMap(sg=>sg.parts?sg.parts:[sg]).forEach(sg=>{
+   const tk=map[sg.key]||sg.key;
+   if(B.segs[tk])(incoming[tk]=incoming[tk]||[]).push(sg);
+  });
+  const ys=A.top+A.h,yt=B.top,ym=(ys+yt)/2;
+  Object.entries(incoming).forEach(([tk,srcs])=>{
+   const tgt=B.segs[tk],sum=srcs.reduce((q,v)=>q+v.n,0);let tx=tgt.x;
+   srcs.sort((p,q)=>p.x-q.x).forEach(sg=>{
+    const tw=tgt.w*sg.n/sum,id=`rb${i}_${sg.key.replace(/\W/g,"")}`;
+    const c1=HIST_COLOURS[sg.key],c2=HIST_COLOURS[tk];
+    defs.push(`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="${ys}" x2="0" y2="${yt}"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>`);
+    const x0=sg.x,x1=sg.x+sg.w,u0=tx,u1=tx+tw;
+    ribbons.push(`<path d="M${x0},${ys} C${x0},${ym} ${u0},${ym} ${u0},${yt} L${u1},${yt} C${u1},${ym} ${x1},${ym} ${x1},${ys} Z" fill="url(#${id})" fill-opacity="${dark?.62:.42}"><title>${esc(partyLabel(sg.key))} ${A.y} → ${esc(partyLabel(tk))} ${B.y}: ${sg.n} → ${tgt.n} ${esc(t("seatsWord"))}</title></path>`);
+    tx+=tw;
+   });
+  });
+ }
+ const box=(r,sg,y,h,fs)=>{
+  const col=HIST_COLOURS[sg.key],txt=lumOf(col)>.6?"#1a1a1a":"#ffffff";
+  return `<g><title>${r.y} – ${esc(partyLabel(sg.key))}: ${sg.n} ${esc(t("seatsWord"))}</title><rect x="${sg.x}" y="${y}" width="${sg.w}" height="${h}" fill="${col}" stroke="${surface}" stroke-width="1"/>`+
+   (sg.w>=14?`<text x="${sg.x+sg.w/2}" y="${y+h/2+fs*.36}" text-anchor="middle" font-size="${fs}" font-family="Tahoma, Arial, sans-serif" fill="${txt}">${sg.n}</text>`:"")+`</g>`;
+ };
+ rows.forEach(r=>{
+  labels.push(`<text x="2" y="${r.top+r.h/2+5}" font-size="13" font-family='"VCR OSD Mono", monospace' fill="${th.text}">${r.y}</text>`);
+  Object.values(r.segs).forEach(sg=>{
+   if(sg.parts){
+    const half=r.h/2;
+    bars.push(box(r,sg,r.top,half,12));
+    sg.parts.forEach(pt=>bars.push(box(r,pt,r.top+half,half,12)));
+   }else bars.push(box(r,sg,r.top,r.h,13));
   });
  });
- host.innerHTML=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(t("titleRkComp"))}">${out.join("")}</svg>`;
+ host.innerHTML=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(t("titleRkComp"))}"><defs>${defs.join("")}</defs>${ribbons.join("")}${labels.join("")}${bars.join("")}</svg>`;
 }
 
 function renderSmallMultiples(hostId,set,pollRow){
@@ -945,7 +985,7 @@ function renderSmallMultiples(hostId,set,pollRow){
     const tip=`${partyLabel(sr.key)} ${years[i]}: ${locNum(v.toFixed(1))}%`;
     out.push(`<g><title>${esc(tip)}</title>`+(isPoll
      ?`<rect x="${cx-bw/2}" y="${y}" width="${bw}" height="${h}" fill="${col}" fill-opacity=".3" stroke="${col}" stroke-width="1.5" stroke-dasharray="3 2"/>`
-     :`<rect x="${cx-bw/2}" y="${y}" width="${bw}" height="${h}" fill="${col}"/>`)+
+     :`<rect x="${cx-bw/2}" y="${y}" width="${bw}" height="${h}" fill="${(sr.key==="EKRE"&&parseInt(years[i],10)<2012)?HIST_COLOURS.ERL:col}"/>`)+
      `<text x="${cx}" y="${y-3}" text-anchor="middle" font-size="10" font-weight="700" font-family="Tahoma, Arial, sans-serif" fill="${th.text}">${Math.round(v)}</text></g>`);
    }
    out.push(`<text transform="translate(${cx+3},${base+6}) rotate(-90)" text-anchor="end" font-size="9" font-family='${mono}' fill="${th.text}"${isPoll?' font-style="italic"':''}>${esc(years[i])}</text>`);
