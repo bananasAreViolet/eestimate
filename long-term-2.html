@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=720">
-  <title id="pageTitle">Eestimate - 1999 to present day polling average</title>
+  <title id="pageTitle">Eestimate - History</title>
   <link rel="icon" type="image/x-icon" href="/eestimate.png">
 
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
@@ -145,7 +145,7 @@ body.dark a {
   <div class="titlebar"><span></span></div>
   <div class="window-body">
     <h1>Eestimate</h1>
-    <p class="lead-summary" data-i18n="leadSummary">Estonian party polling averages from 1999 to the present day.</p>
+    <p class="lead-summary" data-i18n="leadSummary">History: Estonian party polling averages and election comparisons, 1999 to the present day.</p>
     <div class="toolbar">
       <button class="action" id="backBtn">← Back to Eestimate</button>
       <button class="action" id="reloadBtn">Refresh page</button>
@@ -167,12 +167,12 @@ let currentLang = (function(){ try{ return localStorage.getItem("eestimateLang")
 const UI_STRINGS = {
  en:{
   langBtn:"Eesti keeles",
-  pageTitle:"Eestimate - 1999 to present day polling average",
+  pageTitle:"Eestimate - History",
   darkMode:"Dark mode",
   lightMode:"Light mode",
   refreshPage:"Refresh page",
   backBtn:"← Back to Eestimate",
-  leadSummary:"Estonian party polling averages from 1999 to the present day.",
+  leadSummary:"History: Estonian party polling averages and election comparisons, 1999 to the present day.",
   titleLongTerm:"1999 TO PRESENT DAY POLLING AVERAGE",
   longLoadingInitial:"Loading the long polling history…",
   longLoadingMessage:"Loading the long-run polling history, this can take a moment given the row count…",
@@ -185,7 +185,7 @@ const UI_STRINGS = {
   longErrNoRows:"No dated rows found in the historical polling file.",
   titleGovtChange:"GOVERNMENT PARTIES: POLLING BEFORE ELECTION VS RESULT",
   govtChangeStabNote:"2003 has been often noted as the beginning of the stabilization of the Estonian party landscape, therefore it was chosen as the first datapoint.",
-  govtChangeNoteTemplate:n=>`Combined support of the parties in government going into each election: the polling average ${n} days before election day (the same distance as today is from the 2027 election, so this updates every day) against the combined result they actually received. The 2027 bar is simply the current polling average for the planned government parties. Polling figures come from the 1999 dataset.`,
+  govtChangeNoteTemplate:n=>`Combined support of the parties in government going into each election: the polling average ${n} days before election day (the same distance as today is from the 2027 election, so this updates every day) against the combined result they actually received. The 2027 bar is simply the current polling average for the planned government parties. Polling figures are the LOESS-smoothed values from the 1999 dataset.`,
   pollBeforeTemplate:n=>`Polling average ${n} days before`,
   resultLabel:"Election result",
   currentLabel:"Current polling average",
@@ -194,12 +194,12 @@ const UI_STRINGS = {
  },
  et:{
   langBtn:"In English",
-  pageTitle:"Eestimate - küsitluste keskmine 1999. aastast tänapäevani",
+  pageTitle:"Eestimate - Ajalugu",
   darkMode:"Tume režiim",
   lightMode:"Hele režiim",
   refreshPage:"Laadi andmed uuesti",
   backBtn:"← Tagasi Eestimate'i",
-  leadSummary:"Eesti erakondade küsitluste keskmine 1999. aastast tänapäevani.",
+  leadSummary:"Ajalugu: Eesti erakondade küsitluste keskmine ja valimiste võrdlused alates 1999. aastast.",
   titleLongTerm:"KÜSITLUSTE KESKMINE 1999. AASTAST TÄNAPÄEVANI",
   longLoadingInitial:"Pikaajalise küsitlusajaloo laadimine…",
   longLoadingMessage:"Pikaajalise küsitlusajaloo laadimine võib ridade arvu tõttu hetke aega võtta…",
@@ -211,8 +211,8 @@ const UI_STRINGS = {
   longErrNoDateColumn:"Pikaajaliste küsitlusandmete failil puudub kuupäevaveerg.",
   longErrNoRows:"Pikaajaliste küsitlusandmete failist ei leitud ühtegi kuupäevaga rida.",
   titleGovtChange:"VALITSUSERAKONDADE KÜSITLUSED ENNE VALIMISI VS TULEMUS",
-  govtChangeStabNote:"2003. aastat on sageli peetud Eesti erakonnamaastiku stabiliseerumise alguseks, mistõttu valiti see esimeseks andmepunktiks.",
-  govtChangeNoteTemplate:n=>`Igale valimisele eelnenud valitsuserakondade ühine toetus: küsitluste keskmine ${n} päeva enne valimispäeva (sama kaugus, mis on praegu 2027. aasta valimisteni, seega uueneb see iga päev) võrreldes nende tegeliku ühise tulemusega. 2027. aasta tulp on lihtsalt kavandatavate valitsuserakondade praegune küsitluste keskmine. Küsitlusandmed pärinevad 1999. aasta andmestikust.`,
+  govtChangeStabNote:"2003. aastat on sageli nimetatud Eesti erakonnamaastiku stabiliseerumise alguseks, mistõttu valiti see esimeseks andmepunktiks.",
+  govtChangeNoteTemplate:n=>`Igale valimisele eelnenud valitsuserakondade ühine toetus: küsitluste keskmine ${n} päeva enne valimispäeva (sama kaugus, mis on praegu 2027. aasta valimisteni, seega uueneb see iga päev) võrreldes nende tegeliku ühise tulemusega. 2027. aasta tulp on lihtsalt kavandatavate valitsuserakondade praegune küsitluste keskmine. Küsitlusandmed on 1999. aasta andmestiku LOESS-silutud väärtused.`,
   pollBeforeTemplate:n=>`Küsitluste keskmine ${n} päeva enne`,
   resultLabel:"Valimistulemus",
   currentLabel:"Praegune küsitluste keskmine",
@@ -719,6 +719,7 @@ function computeGovtChange(){
    let best=-1,bestDiff=Infinity;
    csvRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-target);if(d<bestDiff){bestDiff=d;best=i}});
    if(best>=0&&bestDiff<=GOVT_POLL_TOLERANCE_DAYS*86400000){
+    // LOESS-smoothed values, same as the lines in the long-term chart above
     poll=sumOf(k=>{const s=longSmoothedSeries&&longSmoothedSeries[k];return s?s.smoothed[best]:null},el.parties);
    }
   }else if(mainSmoothed.length){
