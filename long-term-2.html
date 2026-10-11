@@ -113,7 +113,6 @@ body.dark .party-select.selected .party-box{box-shadow:0 0 0 2px #fff inset}
 #rkCompKey .key-item{font-family:"VCR OSD Mono",monospace}
 .corner-logo{position:absolute;left:6px;bottom:6px;width:18px;height:18px;object-fit:contain;opacity:.9;pointer-events:none;z-index:5}
 
-/* coalition stuffs */
 .comparison-container{display:flex;gap:16px;justify-content:center;margin-top:15px;align-items:flex-start}
 .comparison-column{flex:1;max-width:480px;background:var(--surface);border:2px inset var(--inset-border);padding:10px}
 .column-title{font-weight:bold;text-align:center;margin-bottom:8px;font-size:13px;text-transform:uppercase;letter-spacing:0.5px}
@@ -226,7 +225,7 @@ const UI_STRINGS = {
   longLoadingInitial:"Pikaajalise küsitlusajaloo laadimine…",
   longLoadingMessage:"Pikaajalise küsitlusajaloo laadimine võib ridade arvu tõttu hetke aega võtta…",
   longHistoryNote:"Res Publica lõpuks ühines Isamaaliiduga ja moodustas IRLi, mis hiljem nimetati ümber Isamaaks.<br>ERL sai 2012. aastal EKREks.<br>Trendijooned on LOESS-silutud eraldi iga valimistsükli sees ja seotud iga valimispäeva tegeliku tulemusega.",
-  longUpdateTemplate:(start,end,n)=>`Hõlmab ajavahemikku ${start} – ${end}, ${n} päeva andmeid. Kuni 4. märtsini 2023 põhinevad jooned 1999. aasta andmestikul, sealt alates vastavad need pealehe küsitluste keskmisele.`,
+  longUpdateTemplate:(start,end,n)=>`Hõlmab ajavahemikku ${start} - ${end}, ${n} päeva andmeid. Kuni 4. märtsini 2023 põhinevad jooned 1999. aasta andmestikul, sealt alates vastavad need pealehe küsitluste keskmisele.`,
   longErrTemplate:msg=>`Pikaajaliste andmete viga: ${msg}`,
   longErrHttp:(url,status)=>`Faili ${url} ei õnnestunud laadida (HTTP ${status}).`,
   longErrEmpty:"Pikaajaliste küsitlusandmete fail on tühi.",
@@ -299,7 +298,7 @@ function locNum(str){ return currentLang==="et" ? String(str).replace(".",",") :
 function locInt(n){ return Number(n).toLocaleString(currentLang==="et"?"et-EE":"en-GB"); }
 
 const dtext=d=>{
- if(!d) return "—";
+ if(!d) return "-";
  if(currentLang==="et"){
   const dd=String(d.getUTCDate()).padStart(2,"0"),mm=String(d.getUTCMonth()+1).padStart(2,"0"),yyyy=d.getUTCFullYear();
   return `${dd}.${mm}.${yyyy}`;
@@ -399,7 +398,7 @@ const endLineLabelsPlugin = {
 
   labelsToDraw.sort((a, b) => a.y - b.y);
 
-  const minSpacing = 14; // pixels between labels
+  const minSpacing = 14;
 
   for (let i = 1; i < labelsToDraw.length; i++) {
    if (labelsToDraw[i].y - labelsToDraw[i - 1].y < minSpacing) {
@@ -464,7 +463,7 @@ function retroTooltip(context){
    const colour=dp.dataset.borderColor||"#888";
    const name=dp.dataset.label||"";
    const displayValue=dp.parsed.y;
-   const val=displayValue===null?"—":`${locNum(Number(displayValue).toFixed(1))}%`;
+   const val=displayValue===null?"-":`${locNum(Number(displayValue).toFixed(1))}%`;
    html+=`<div class="chartjs-tooltip-row"><span class="party-box" style="background:${esc(colour)}">${esc(name)}</span><span class="chartjs-tooltip-value">${val}</span></div>`;
   });
   el.innerHTML=html;
@@ -544,8 +543,6 @@ function electionAnchoredLoess(rows,key,anchorIndices,span){
 
 let longLineChart=null,longRows=[];
 
-// Everything up to and including this date comes from the 1999 CSV;
-// everything after it uses the main page's polling average (HEavg sheet).
 const CSV_CUTOFF=Date.UTC(2023,2,4);
 const GOOGLE_SHEET_URL="https://docs.google.com/spreadsheets/d/1gGBmEUW5bwp23602WfQF4eciRrZT4M-VrAz1r5M2JHU/edit?usp=sharing";
 const SHEET_NAME="HEavg",SHEET_RANGE="A:M";
@@ -553,7 +550,6 @@ const SHEET_NAME="HEavg",SHEET_RANGE="A:M";
 let csvRows=[],mainRows=[],mainSmoothed=[];
 let longSmoothedSeries=null;
 
-// Same loading/smoothing as the main page: raw rows, then LOESS (span 0.03) over the whole sheet.
 async function loadMainAverage(){
  const id=idOf(GOOGLE_SHEET_URL);
  const u=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&headers=1&range=${encodeURIComponent(`${SHEET_NAME}!${SHEET_RANGE}`)}`;
@@ -577,7 +573,6 @@ async function loadMainAverage(){
  headers.filter((h,i)=>i!==di).forEach(key=>{
   loessSmooth(recs.map(r=>r[key])).forEach((v,i)=>{smoothed[i][key]=v});
  });
- // keep only the days after the CSV cutoff
  const keepIdx=recs.map((r,i)=>r.date.getTime()>CSV_CUTOFF?i:-1).filter(i=>i>=0);
  mainRows=keepIdx.map(i=>recs[i]);
  mainSmoothed=keepIdx.map(i=>smoothed[i]);
@@ -587,7 +582,6 @@ function computeLongSmoothedSeries(){
  const csvKeys=csvRows.length?Object.keys(csvRows[0]).filter(k=>k!=="date"):[];
  const mainKeys=mainRows.length?Object.keys(mainRows[0]).filter(k=>k!=="date"):[];
  const partyKeys=[...new Set([...csvKeys,...mainKeys])];
- // election anchors only where a CSV row exists on/near the election (2023 falls after the cutoff)
  const anchorMarkers=ELECTION_MARKERS.filter(m=>m.date<=CSV_CUTOFF);
  const anchorIndices=electionAnchorIndices(csvRows,anchorMarkers);
  const series={};
@@ -613,7 +607,7 @@ function parseCSV(text){
   }else{
    if(c==='"')inQuotes=true;
    else if(c===','){row.push(field);field=""}
-   else if(c==='\r'){/*skip, \n handles the break*/}
+   else if(c==='\r'){}
    else if(c==='\n'){row.push(field);rows.push(row);row=[];field=""}
    else field+=c;
   }
@@ -756,7 +750,6 @@ function computeGovtChange(){
    let best=-1,bestDiff=Infinity;
    csvRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-target);if(d<bestDiff){bestDiff=d;best=i}});
    if(best>=0&&bestDiff<=GOVT_POLL_TOLERANCE_DAYS*86400000){
-    // LOESS-smoothed values, same as the lines in the long-term chart above
     poll=sumOf(k=>{const s=longSmoothedSeries&&longSmoothedSeries[k];return s?s.smoothed[best]:null},el.parties);
    }
   }else if(mainSmoothed.length){
@@ -787,7 +780,6 @@ function renderGovtChangeChart(){
  const d=computeGovtChange(),items=d.items,th=chartTheme(),dark=document.body.classList.contains("dark");
  const note=$("govtChangeNote");if(note)note.textContent=t("govtChangeNoteTemplate")(locInt(d.daysLeft));
 
- // colour shift: losses run amber -> red with size, gains are green
  const lossA=dark?"#f5d547":"#c99700",lossB=dark?"#ff6f4d":"#c8381f",gain=dark?"#6fcf7f":"#2a9548",nowCol=dark?"#a99af0":PARTY_COLOURS.E200;
  const colourFor=c=>c<0?hexMix(lossA,lossB,Math.min(1,Math.abs(c)/12)):gain;
  const sg=v=>{const r=Math.round(v*10)/10;return r===0?"0.0":(r>0?"+":"−")+locNum(Math.abs(r).toFixed(1))};
@@ -810,13 +802,13 @@ function renderGovtChangeChart(){
   let tip=`${it.year} (${gov})`,mark="";
   if(it.change!==null){
    const x1=px(it.poll),x2=px(it.result),dir=x2<x1?-1:1,col=colourFor(it.change),hs=6;
-   tip+=` – ${t("govtTipPoll")} ${locNum(it.poll.toFixed(1))}%, ${t("govtTipResult")} ${locNum(it.result.toFixed(1))}%, ${t("govtTipChange")} ${sg(it.change)}`;
+   tip+=` - ${t("govtTipPoll")} ${locNum(it.poll.toFixed(1))}%, ${t("govtTipResult")} ${locNum(it.result.toFixed(1))}%, ${t("govtTipChange")} ${sg(it.change)}`;
    mark+=`<line x1="${x1}" x2="${x2}" y1="${cy}" y2="${cy}" stroke="${col}" stroke-width="2.4" stroke-linecap="round"/>`;
    mark+=`<polyline points="${x2-dir*hs},${cy-hs} ${x2},${cy} ${x2-dir*hs},${cy+hs}" fill="none" stroke="${col}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`;
    mark+=`<text x="${x2+dir*10}" y="${cy+4}" text-anchor="${dir<0?"end":"start"}" font-size="12" font-weight="700" font-family="Tahoma, Arial, sans-serif" fill="${col}">${sg(it.change)}</text>`;
   }else if(it.current!==null){
    const x=px(it.current);
-   tip+=` – ${locNum(it.current.toFixed(1))}% (${t("govtNowTip")})`;
+   tip+=` - ${locNum(it.current.toFixed(1))}% (${t("govtNowTip")})`;
    mark+=`<line x1="${x}" x2="${x}" y1="${cy-8}" y2="${cy+8}" stroke="${nowCol}" stroke-width="3.5" stroke-linecap="round"/>`;
    mark+=`<text x="${x+9}" y="${cy+4}" font-size="12" font-weight="700" font-family="Tahoma, Arial, sans-serif" fill="${nowCol}">${locNum(it.current.toFixed(1))}%</text>`;
   }
@@ -827,7 +819,6 @@ function renderGovtChangeChart(){
 let govtResizeTimer=null;
 window.addEventListener("resize",()=>{clearTimeout(govtResizeTimer);govtResizeTimer=setTimeout(()=>{if(csvRows.length)renderGovtChangeChart()},120)});
 
-// ===== History charts: composition, Riigikogu / Tallinn / EP results =====
 const HIST_COLOURS=Object.assign({},PARTY_COLOURS,{
  "EÜRP":"#fbd592",Coalition:"#2e67a6",Royalists:"#b062c4",Republicans:"#5b709d",Entrepreneurs:"#a6e8b0",
  ERSP:"#1f2a8c",Citizen:"#6b7a7d",ERL:"#f8b158","Elec. alliances":"#b7c4c9",Independents:"#b7c4c9"
@@ -895,9 +886,7 @@ const EP_RES={
 
 const lumOf=hex=>{const c=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255);return .2126*c[0]+.7152*c[1]+.0722*c[2]};
 
-// parties whose seats flow into a differently-named party at the next election
 const COMP_FLOW_MAP={1992:{ERSP:"Isamaa"},2003:{"Res Publica":"Isamaa"}};
-// a list whose seats are shown split into its participating parties (lower half of the bar)
 const COMP_SPLIT={1995:{key:"Coalition",parts:[["Coalition",18],["ERL",23]]}};
 function renderCompositionChart(){
  const host=$("rkCompChart"),keyEl=$("rkCompKey");if(!host)return;
@@ -941,7 +930,7 @@ function renderCompositionChart(){
  }
  const box=(r,sg,y,h,fs)=>{
   const col=HIST_COLOURS[sg.key],txt=lumOf(col)>.6?"#1a1a1a":"#ffffff";
-  return `<g><title>${r.y} – ${esc(partyLabel(sg.key))}: ${sg.n} ${esc(t("seatsWord"))}</title><rect x="${sg.x}" y="${y}" width="${sg.w}" height="${h}" fill="${col}" stroke="${surface}" stroke-width="1"/>`+
+  return `<g><title>${r.y} - ${esc(partyLabel(sg.key))}: ${sg.n} ${esc(t("seatsWord"))}</title><rect x="${sg.x}" y="${y}" width="${sg.w}" height="${h}" fill="${col}" stroke="${surface}" stroke-width="1"/>`+
    (sg.w>=14?`<text x="${sg.x+sg.w/2}" y="${y+h/2+fs*.36}" text-anchor="middle" font-size="${fs}" font-family="Tahoma, Arial, sans-serif" fill="${txt}">${sg.n}</text>`:"")+`</g>`;
  };
  rows.forEach(r=>{
