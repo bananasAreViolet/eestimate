@@ -203,7 +203,7 @@ const UI_STRINGS = {
   titleEP:"EUROPEAN PARLIAMENT ELECTION RESULTS BY PARTY",
   rkCompNote:"Greens in 1992 include a green movement-affiliated MP, the official party was formed in 2006.<br>EKRE and ERL (-2012) are the same legal entity.<br>Ribbons connect each party to its seats at the next election. Isamaa and ERSP (1992) flow together into Isamaa (1995), and Res Publica and Isamaa (2003) into Isamaa (2007).<br>The 1995 Coalition list (41 seats, upper half of the bar) is shown in its participating parties in the lower half: Coalition (18) and ERL (23). ERL in 1995 was composed of Rural Union (Maaliit, 9), Country People's Party (Maarahva Erakond, 8) and Pensioners' and Families' Union (Pensionäride ja Perede Liit, 6).",
   rkResultsNote:"EKRE and its legal predecessor ERL are counted together.<br>Isamaa and the preceding Isamaaliit and affiliated alliances are counted together, but Res Publica is not.<br>The results for VL include the preceding Left party, and EÜRP whenever the lists ran together.<br>The results for the Free party include the original Free party as a predecessor.<br>The dashed 2027 bar is the current LOESS polling average, not a result.",
-  tallinnNote:"EKRE and its legal predecessor ERL are counted together.<br>Isamaa and the preceding Isamaaliit and affiliated alliances are counted together, but Res Publica is not. Isamaa and SDE ran on a joint list in 1996, results displayed for Isamaa.<br>The results for VL include the preceding Left party, and EÜRP whenever the lists ran together.<br>The results for the Free party include the original Free party as a predecessor.",
+  tallinnNote:"EKRE and its legal predecessor ERL are counted together.<br>Isamaa and the preceding Isamaaliit and affiliated alliances are counted together, but Res Publica is not. Isamaa and SDE ran on a joint list in 1996, the result is displayed for both (split bar).<br>The results for VL include the preceding Left party, and EÜRP whenever the lists ran together.<br>The results for the Free party include the original Free party as a predecessor.",
   epNote:"EKRE and its legal predecessor ERL are counted together.<br>Isamaa and the preceding Isamaaliit are counted together, but Res Publica is not.<br>The results for VL include the preceding Left party.",
   pollWord:"poll",
   seatsWord:"seats",
@@ -239,7 +239,7 @@ const UI_STRINGS = {
   titleEP:"EUROOPA PARLAMENDI VALIMISTE TULEMUSED ERAKONNITI",
   rkCompNote:"1992. aasta Rohelised hõlmavad rohelise liikumisega seotud saadikut, ametlik erakond loodi 2006. aastal.<br>EKRE ja ERL (-2012) on sama juriidiline isik.<br>Lindid ühendavad iga erakonna kohad järgmiste valimiste kohtadega. Isamaa ja ERSP (1992) liituvad Isamaaks (1995) ning Res Publica ja Isamaa (2003) Isamaaks (2007).<br>1995. aasta Koonderakonna nimekiri (41 kohta, tulba ülemine pool) on alumises pooles jaotatud osalenud erakondadeks: Koonderakond (18) ja ERL (23). ERL koosnes 1995. aastal Maaliidust (9), Maarahva Erakonnast (8) ning Pensionäride ja Perede Liidust (6).",
   rkResultsNote:"EKRE ja tema juriidiline eelkäija ERL on koos arvestatud.<br>Isamaa ja eelnenud Isamaaliit ning sellega seotud liidud on koos arvestatud, kuid Res Publica mitte.<br>Vasaku tulemused hõlmavad eelnenud Vasakpartei tulemusi ning EÜRP-d, kui nimekirjad kandideerisid koos.<br>Vaba tulemused hõlmavad eelkäijana algset Vabaerakonda.<br>Katkendjooneline 2027. aasta tulp on praegune LOESS-silutud küsitluste keskmine, mitte tulemus.",
-  tallinnNote:"EKRE ja tema juriidiline eelkäija ERL on koos arvestatud.<br>Isamaa ja eelnenud Isamaaliit ning sellega seotud liidud on koos arvestatud, kuid Res Publica mitte. Isamaa ja SDE kandideerisid 1996. aastal ühisnimekirjas, tulemus on kuvatud Isamaa all.<br>Vasaku tulemused hõlmavad eelnenud Vasakpartei tulemusi ning EÜRP-d, kui nimekirjad kandideerisid koos.<br>Vaba tulemused hõlmavad eelkäijana algset Vabaerakonda.",
+  tallinnNote:"EKRE ja tema juriidiline eelkäija ERL on koos arvestatud.<br>Isamaa ja eelnenud Isamaaliit ning sellega seotud liidud on koos arvestatud, kuid Res Publica mitte. Isamaa ja SDE kandideerisid 1996. aastal ühisnimekirjas, tulemus on kuvatud mõlema erakonna all (jagatud tulp).<br>Vasaku tulemused hõlmavad eelnenud Vasakpartei tulemusi ning EÜRP-d, kui nimekirjad kandideerisid koos.<br>Vaba tulemused hõlmavad eelkäijana algset Vabaerakonda.",
   epNote:"EKRE ja tema juriidiline eelkäija ERL on koos arvestatud.<br>Isamaa ja eelnenud Isamaaliit on koos arvestatud, kuid Res Publica mitte.<br>Vasaku tulemused hõlmavad eelnenud Vasakpartei tulemusi.",
   pollWord:"küsit.",
   seatsWord:"kohta",
@@ -864,8 +864,8 @@ const TALLINN_RES={
  years:[1993,1996,1999,2002,2005,2009,2013,2017,2021,2025],
  series:[
   {key:"Centre",vals:[9.0,18.0,23.7,38.5,41.1,53.6,52.7,44.4,45.4,41.7]},
-  {key:"SDE",vals:[2.8,N,8.3,4.9,11.1,9.8,9.9,11.0,7.5,18.8]},
-  {key:"Isamaa",vals:[6.8,13.2,17.2,6.8,12.2,15.5,19.2,6.6,7.1,12.8]},
+  {key:"SDE",vals:[2.8,13.2,8.3,4.9,11.1,9.8,9.9,11.0,7.5,18.8],joint:[1]},
+  {key:"Isamaa",vals:[6.8,13.2,17.2,6.8,12.2,15.5,19.2,6.6,7.1,12.8],joint:[1]},
   {key:"Reform",vals:[N,17.1,12.7,15.2,20.7,16.7,10.6,20.5,17.8,9.5]},
   {key:"PP",vals:right(10,7.6)},
   {key:"EKRE",vals:[N,2.2,N,3.4,N,N,2.7,7.0,9.6,4.5]},
@@ -986,7 +986,9 @@ function renderSmallMultiples(hostId,set,pollRow){
     const tip=`${partyLabel(sr.key)} ${years[i]}: ${locNum(v.toFixed(1))}%`;
     out.push(`<g><title>${esc(tip)}</title>`+(isPoll
      ?`<rect x="${cx-bw/2}" y="${y}" width="${bw}" height="${h}" fill="${col}" fill-opacity=".3" stroke="${col}" stroke-width="1.5" stroke-dasharray="3 2"/>`
-     :`<rect x="${cx-bw/2}" y="${y}" width="${bw}" height="${h}" fill="${(sr.key==="EKRE"&&parseInt(years[i],10)<2012)?HIST_COLOURS.ERL:col}"/>`)+
+     :(sr.joint&&sr.joint.includes(i)
+       ?`<rect x="${cx-bw/2}" y="${y}" width="${bw/2}" height="${h}" fill="${HIST_COLOURS.SDE}"/><rect x="${cx}" y="${y}" width="${bw/2}" height="${h}" fill="${HIST_COLOURS.Isamaa}"/>`
+       :`<rect x="${cx-bw/2}" y="${y}" width="${bw}" height="${h}" fill="${(sr.key==="EKRE"&&parseInt(years[i],10)<2012)?HIST_COLOURS.ERL:col}"/>`))+
      `<text x="${cx}" y="${y-3}" text-anchor="middle" font-size="10" font-weight="700" font-family="Tahoma, Arial, sans-serif" fill="${th.text}">${Math.round(v)}</text></g>`);
    }
    out.push(`<text transform="translate(${cx+3},${base+6}) rotate(-90)" text-anchor="end" font-size="9" font-family='${mono}' fill="${th.text}"${isPoll?' font-style="italic"':''}>${esc(years[i])}</text>`);
