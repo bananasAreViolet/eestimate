@@ -110,6 +110,7 @@ body.dark .party-select.selected .party-box{box-shadow:0 0 0 2px #fff inset}
 .sm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px 8px;padding:4px 2px}
 .sm-grid svg{display:block;width:100%;max-width:260px;height:auto;margin:0 auto}
 #rkCompChart svg{display:block}
+#rkCompKey .key-item{font-family:"VCR OSD Mono",monospace}
 .corner-logo{position:absolute;left:6px;bottom:6px;width:18px;height:18px;object-fit:contain;opacity:.9;pointer-events:none;z-index:5}
 
 /* coalition stuffs */
@@ -972,7 +973,7 @@ function renderSmallMultiples(hostId,set,pollRow){
  const mono='"VCR OSD Mono", monospace';
  host.innerHTML=series.map(sr=>{
   const col=HIST_COLOURS[sr.key]||"#888",out=[];
-  out.push(`<text x="${padL-20}" y="16" font-size="13" font-weight="700" font-family="Tahoma, Arial, sans-serif" fill="${titleCol(sr.key)}">${esc(partyLabel(sr.key))}</text>`);
+  out.push(`<text x="${PW/2}" y="16" text-anchor="middle" font-size="14" font-family='${mono}' fill="${titleCol(sr.key)}">${esc(partyLabel(sr.key))}</text>`);
   for(let g=10;g<=yMax;g+=10){
    out.push(`<line x1="${padL}" x2="${PW-padR}" y1="${yOf(g)}" y2="${yOf(g)}" stroke="${th.grid}" stroke-width="1"/>`);
    out.push(`<text x="${padL-4}" y="${yOf(g)+3}" text-anchor="end" font-size="9" fill="${th.text}" opacity=".7">${g}%</text>`);
