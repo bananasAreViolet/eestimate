@@ -367,9 +367,7 @@ function retroTooltip(context){
 }
 
 /* =====================================================================
-   LOESS
-   Smooths across gaps (null cells) strictly between the series' first and
-   last real observation to avoid extreme boundary inflation/extrapolation.
+   LOESS (Robust fixed weighting and strict bounding)
    ===================================================================== */
 function loessSmooth(values, span=LOESS_SPAN){
  const points=[];
@@ -473,13 +471,23 @@ function renderPollsterChart(canvasId,pollsterKey){
 
  const datasets=[];
  for(const key of partyKeys){
-  if(!rows.some(r=>Number.isFinite(r[key])))continue;
+  if(!rows.some(r=>Number.isFinite(r[key])) && ELECTION_RESULTS[key]===undefined)continue;
   const smooth=loessSmooth(latestRows.map(r=>r[key]));
-  // Map smooth array values back to the filtered rows subset
-  const dataPoints=rows.map(r=>{
+  const dataPoints=[];
+  
+  // Explicitly inject the election result value at the start date if available
+  if(ELECTION_RESULTS[key]!==undefined){
+   dataPoints.push({x:START_DATE_FILTER, y:ELECTION_RESULTS[key]});
+  }
+
+  rows.forEach(r=>{
+   // Avoid duplicating the exact start timestamp if a row already sits on it
+   if(r.date.getTime()===START_DATE_FILTER) return;
    const fullIdx=latestRows.indexOf(r);
-   return {x:r.date.getTime(), y:fullIdx>=0?smooth[fullIdx]:null};
+   dataPoints.push({x:r.date.getTime(), y:fullIdx>=0?smooth[fullIdx]:null});
   });
+
+  dataPoints.sort((a,b)=>a.x-b.x);
   const colour=PARTY_COLOURS[key]||"#777";
   datasets.push({label:key,data:dataPoints,borderColor:colour,backgroundColor:colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,spanGaps:true});
  }
@@ -487,7 +495,7 @@ function renderPollsterChart(canvasId,pollsterKey){
  const lastVal=d=>{for(let i=d.data.length-1;i>=0;i--){if(Number.isFinite(d.data[i].y))return d.data[i].y}return -1};
  const labelled=[...datasets].sort((a,b)=>lastVal(b)-lastVal(a)).slice(0,6).map(d=>d.label);
 
- const minTs=START_DATE_FILTER,maxTs=rows.at(-1).date.getTime();
+ const minTs=START_DATE_FILTER,maxTs=Math.max(rows.at(-1).date.getTime(),START_DATE_FILTER);
  const markers=EVENT_MARKERS.filter(m=>m.date>=minTs&&m.date<=maxTs).map(m=>({value:m.date,label:m.label}));
 
  pollsterCharts[pollsterKey]=new Chart(canvas.getContext("2d"),{
