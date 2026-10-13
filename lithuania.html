@@ -199,7 +199,7 @@ const PARTY_COLOURS={
  "TS-LKD":"#2f7fd1",
  "NA":"#8e44ad",
  "PPNA":"#8e44ad",
- "DSVL":"#672548",
+ "DSVL":"#27ae60",
  "LS":"#f39c12",
  "LVŽS":"#16a085",
  "LP":"#d35400",
@@ -365,33 +365,52 @@ function retroTooltip(context){
 }
 
 /* =====================================================================
-   STABLE ROBUST LOESS (Safe Weighted Least Squares)
+   SEGMENT-CONFINED LOESS SMOOTHER (Prevents missing-data gap explosions)
    ===================================================================== */
 function loessSmooth(values, span=LOESS_SPAN){
- const points=[];
- values.forEach((value,index)=>{ if(Number.isFinite(value)) points.push({x:index,y:value}); });
- if(points.length<2) return values.slice();
- const firstIdx=points[0].x, lastIdx=points.at(-1).x;
- const k=Math.max(3,Math.min(points.length,Math.ceil(points.length*span)));
  const out=new Array(values.length).fill(null);
- 
- for(let i=firstIdx;i<=lastIdx;i++){
-  let nearest=points.map(p=>({p,dist:Math.abs(p.x-i)})).sort((a,b)=>a.dist-b.dist).slice(0,k);
-  const maxDist=nearest.at(-1).dist||1;
-  let Sw=0,Sx=0,Sy=0,Sxx=0,Sxy=0;
-  for(const {p,dist} of nearest){
-   const u=Math.min(1,dist/maxDist);
-   const w=Math.max(0,Math.pow(1-Math.pow(u,3),3));
-   Sw+=w;Sx+=w*p.x;Sy+=w*p.y;Sxx+=w*p.x*p.x;Sxy+=w*p.x*p.y;
+ // Find continuous segments of non-null points
+ let segStart=null;
+ for(let i=0;i<=values.length;i++){
+  const isVal=(i<values.length && Number.isFinite(values[i]));
+  if(isVal && segStart===null){
+   segStart=i;
+  } else if(!isVal && segStart!==null){
+   smoothSegment(segStart, i-1);
+   segStart=null;
   }
-  const denom=Sw*Sxx-Sx*Sx;
-  if(Math.abs(denom)<1e-9){
-   out[i]=Sw>0?Sy/Sw:null;
-  } else {
-   const beta=(Sw*Sxy-Sx*Sy)/denom;
-   const alpha=(Sy-beta*Sx)/Sw;
-   let val=alpha+beta*i;
-   // Clamp output within realistic bounds (0% to 100%) to completely eliminate runaway values
+ }
+ if(segStart!==null) smoothSegment(segStart, values.length-1);
+
+ function smoothSegment(start, end){
+  const points=[];
+  for(let i=start;i<=end;i++){
+   if(Number.isFinite(values[i])) points.push({x:i, y:values[i]});
+  }
+  if(points.length===0) return;
+  if(points.length<3){
+   for(let i=start;i<=end;i++) out[i]=values[i];
+   return;
+  }
+  const k=Math.max(3,Math.min(points.length,Math.ceil(points.length*span)));
+  for(let i=start;i<=end;i++){
+   let nearest=points.map(p=>({p,dist:Math.abs(p.x-i)})).sort((a,b)=>a.dist-b.dist).slice(0,k);
+   const maxDist=nearest.at(-1).dist||1;
+   let Sw=0,Sx=0,Sy=0,Sxx=0,Sxy=0;
+   for(const {p,dist} of nearest){
+    const u=Math.min(1,dist/maxDist);
+    const w=Math.max(0,Math.pow(1-Math.pow(u,3),3));
+    Sw+=w;Sx+=w*p.x;Sy+=w*p.y;Sxx+=w*p.x*p.x;Sxy+=w*p.x*p.y;
+   }
+   const denom=Sw*Sxx-Sx*Sx;
+   let val;
+   if(Math.abs(denom)<1e-9){
+    val=Sw>0?Sy/Sw:values[i];
+   } else {
+    const beta=(Sw*Sxy-Sx*Sy)/denom;
+    const alpha=(Sy-beta*Sx)/Sw;
+    val=alpha+beta*i;
+   }
    out[i]=Math.max(0,Math.min(100,val));
   }
  }
