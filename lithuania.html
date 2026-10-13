@@ -152,22 +152,6 @@ body.dark a { color: #00f7f7; text-decoration: none; }
     </div>
   </section>
 
-  <section class="window support-window">
-    <div class="titlebar"><span>SUPPORT VS LAST MONTH</span></div>
-    <div class="window-body support-body">
-      <div class="internal-window" style="width:100%;height:100%;">
-        <div class="support-change-container">
-          <div id="gainersColMonth" class="support-col"></div>
-          <div class="divider"></div>
-          <div id="losersColMonth" class="support-col"></div>
-        </div>
-        <img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo">
-      </div>
-    </div>
-  </section>
-</div>
-
-<div class="projection-row">
   <section class="window projection-window">
     <div class="titlebar"><span>SUPPORT VS LAST YEAR</span></div>
     <div class="window-body support-body">
@@ -384,19 +368,17 @@ function retroTooltip(context){
 
 /* =====================================================================
    LOESS
-   Smooths across gaps (null cells) but only between a series' first and
-   last real observation, so sparsely polled parties don't get
-   extrapolated beyond their data.
+   Smooths across gaps (null cells) strictly between the series' first and
+   last real observation to avoid extreme boundary inflation/extrapolation.
    ===================================================================== */
 function loessSmooth(values, span=LOESS_SPAN){
  const points=[];
  values.forEach((value,index)=>{ if(Number.isFinite(value)) points.push({x:index,y:value}); });
  if(points.length<4) return values.slice();
- const firstIdx=points[0].x,lastIdx=points.at(-1).x;
+ const firstIdx=points[0].x, lastIdx=points.at(-1).x;
  const k=Math.max(4,Math.min(points.length,Math.ceil(points.length*span)));
- const out=values.slice();
- for(let i=0;i<values.length;i++){
-  if(i<firstIdx||i>lastIdx){out[i]=null;continue;}
+ const out=new Array(values.length).fill(null);
+ for(let i=firstIdx;i<=lastIdx;i++){
   let nearest=points.map(p=>({p,dist:Math.abs(p.x-i)})).sort((a,b)=>a.dist-b.dist).slice(0,k);
   const maxDist=nearest.at(-1).dist||1;
   let Sw=0,Sx=0,Sy=0,Sxx=0,Sxy=0;
@@ -420,6 +402,8 @@ function loessSmooth(values, span=LOESS_SPAN){
 let latestRows=[],smoothedRows=[],latestPoll=[],partyKeys=[];
 const pollsterCharts={spinter:null,baltijos:null};
 let side1Coalition=new Set(),side2Coalition=new Set(),comparisonMode="separate",customCoalitionChart=null;
+
+const START_DATE_FILTER = Date.UTC(2024, 9, 13); // 13 Oct 2024
 
 function buildSmoothedRows(keys){
  smoothedRows=latestRows.map(r=>({date:r.date}));
@@ -483,22 +467,27 @@ async function loadGoogleSheet(){
 function renderPollsterChart(canvasId,pollsterKey){
  const canvas=$(canvasId);if(!canvas)return;
  if(pollsterCharts[pollsterKey])pollsterCharts[pollsterKey].destroy();
- const rows=latestRows.filter(r=>pollsterOf(r)===pollsterKey);
+ const rows=latestRows.filter(r=>pollsterOf(r)===pollsterKey && r.date.getTime()>=START_DATE_FILTER);
  const th=chartTheme();
  if(!rows.length){pollsterCharts[pollsterKey]=null;return}
 
  const datasets=[];
  for(const key of partyKeys){
   if(!rows.some(r=>Number.isFinite(r[key])))continue;
-  const smooth=loessSmooth(rows.map(r=>r[key]));
+  const smooth=loessSmooth(latestRows.map(r=>r[key]));
+  // Map smooth array values back to the filtered rows subset
+  const dataPoints=rows.map(r=>{
+   const fullIdx=latestRows.indexOf(r);
+   return {x:r.date.getTime(), y:fullIdx>=0?smooth[fullIdx]:null};
+  });
   const colour=PARTY_COLOURS[key]||"#777";
-  datasets.push({label:key,data:rows.map((r,i)=>({x:r.date.getTime(),y:smooth[i]})),borderColor:colour,backgroundColor:colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,spanGaps:true});
+  datasets.push({label:key,data:dataPoints,borderColor:colour,backgroundColor:colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,spanGaps:true});
  }
  // label only the six strongest parties at the line ends
  const lastVal=d=>{for(let i=d.data.length-1;i>=0;i--){if(Number.isFinite(d.data[i].y))return d.data[i].y}return -1};
  const labelled=[...datasets].sort((a,b)=>lastVal(b)-lastVal(a)).slice(0,6).map(d=>d.label);
 
- const minTs=rows[0].date.getTime(),maxTs=rows.at(-1).date.getTime();
+ const minTs=START_DATE_FILTER,maxTs=rows.at(-1).date.getTime();
  const markers=EVENT_MARKERS.filter(m=>m.date>=minTs&&m.date<=maxTs).map(m=>({value:m.date,label:m.label}));
 
  pollsterCharts[pollsterKey]=new Chart(canvas.getContext("2d"),{
@@ -592,7 +581,6 @@ function renderLatestPolling(){
  }
  renderChangeCols("gainersCol","losersCol",p=>ELECTION_RESULTS[p.key]!==undefined?ELECTION_RESULTS[p.key]:null);
  const lastTs=latestRows.at(-1).date.getTime();
- renderChangeCols("gainersColMonth","losersColMonth",p=>smoothedAt(p.key,lastTs-30*86400000));
  renderChangeCols("gainersColYear","losersColYear",p=>smoothedAt(p.key,lastTs-365*86400000));
 }
 
