@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=720">
+  <title id="pageTitle">Eestimate - Lithuania edition</title>
+  <link rel="icon" type="image/x-icon" href="/eestimate.png">
+
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+  @font-face{
+  font-family:"VCR OSD Mono";
+  src:url("VCR_OSD_MONO.woff2") format("woff2");
+}
+:root{--bg:linear-gradient(180deg,#7c1f3f 0%,#a92d3e 9%,#d14a34 20%,#e97a2e 30%,#f2a13f 39%,#f6c665 47%,#f8e39e 53%,#eb96a0 58%,#dd6a9c 64%,#c94e9a 71%,#ab3f92 79%,#833a80 88%,#583468 100%);--panel:#d4d0c8;--text:#000;--muted:#404040;--light:#fff;--dark:#808080;--title:#000080;--surface:#fff;--projection-bg:#e8e8e8;--select-bg:#d4d0c8;--inset-border:#d4d0c8}
+body.dark{--bg: linear-gradient(
+    180deg,
+    #0d0414 0%,
+    #1b072b 22%,
+    #3b0e4e 45%,
+    #7a1d77 62%,
+    #b248a3 74%,
+    #c483be 83%,
+    #5c7b93 90%,
+    #344b5c 100%
+  );--panel:#333438;--text:#f4f4f4;--muted:#c9c9c9;--light:#5e5f63;--dark:#111214;--title:#b21233;--surface:#313d4e;--projection-bg:#313d4e;--select-bg:#3e4045;--inset-border:#111214}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:Tahoma,sans-serif;font-size:13px;background:var(--bg);color:var(--text)}
+button,input{font:inherit}.page{width:min(1320px,calc(100% - 24px));margin:12px auto 28px}
+.window{border:2px solid var(--dark);border-right-color:var(--light);border-bottom-color:var(--light);background:var(--panel);padding:3px;margin-top:10px}
+.titlebar{background:var(--title);color:#fff;padding:3px 6px;font-weight:bold;display:flex;justify-content:space-between;font-family:"VCR OSD Mono",monospace}
+.window-body{padding:10px}h1{font-size:18px;margin:0 0 4px;font-family:"VCR OSD Mono",monospace}.header-note{margin:0;color:var(--muted);font-size:12px}
+.lead-summary{margin:0 0 6px;color:var(--text);font-size:14px}
+.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.action{background:#d4d0c8;color:#000;border:2px solid var(--light);border-right-color:var(--dark);border-bottom-color:var(--dark);padding:3px 10px;cursor:pointer;border-radius:0}
+.action:active{border:2px solid var(--dark);border-right-color:var(--light);border-bottom-color:var(--light)}
+body.dark .action{background:#c8c8c8}.status{color:var(--muted);font-size:12px}
+.chart-surface{background:var(--surface);padding:6px 6px 32px;border:2px inset var(--inset-border);position:relative}.chart-wrap{height:440px}
+.latest-scroll{overflow-x:auto;padding:8px 8px 32px;background:var(--surface);border:2px inset var(--inset-border);position:relative}
+.latest-chart{min-width:920px;width:max-content;margin:0 auto;height:410px;display:flex;align-items:flex-end;gap:10px;padding:12px 8px 0;}
+.latest-col{width:72px;flex:0 0 72px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.latest-bar-area{width:100%;height:275px;display:flex;align-items:flex-end;justify-content:center}
+.latest-bar{width:52px;min-height:2px;border-radius:0;position:relative}
+.latest-bar-label{position:absolute;z-index: 2;left:50%;top:-20px;transform:translateX(-50%);font-size:14px;font-weight:700;white-space:nowrap;color:var(--text)}
+.latest-bar-gain{position:absolute;top:0;left:0;width:100%;background:rgba(0,0,0,.25);border-bottom:1px dashed rgba(0,0,0,.5);border-radius:0}
+body.dark .latest-bar-gain{background:rgba(255,255,255,.45);border-bottom:1px dashed rgba(0,0,0,.4)}
+.latest-bar-lost{position:absolute;bottom:100%;left:0;width:100%;opacity:.75;border-top:1px dashed rgba(0,0,0,.4);border-radius:0}
+.party-box{margin-top:5px;width:66px;min-height:34px;border-radius:2px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:14px;padding:5px 3px;font-family:"Archivo Black",sans-serif;text-align:center}
+.chartjs-tooltip{position:absolute;pointer-events:none;z-index:50;background:var(--panel);border:2px solid var(--light);border-right-color:var(--dark);border-bottom-color:var(--dark);padding:6px 8px;font-family:"Roboto",sans-serif;font-size:12px;color:var(--text);transform:translate(-50%,-115%);transition:opacity .08s linear;box-shadow:2px 2px 0 rgba(0,0,0,.3);white-space:nowrap}
+.chartjs-tooltip-date{font-weight:700;margin:0 0 4px;padding-bottom:3px;border-bottom:1px solid var(--dark);text-transform:uppercase;font-size:11px;letter-spacing:.3px}
+.chartjs-tooltip-row{display:flex;align-items:center;gap:8px;margin-top:4px}
+.chartjs-tooltip-row .party-box{width:auto;min-width:40px;min-height:20px;font-size:11px;padding:2px 6px;border-radius:0;margin:0}
+.chartjs-tooltip-value{font-weight:700;margin-left:auto;padding-left:6px}
+.party-selector{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:12px}.party-select{border:2px solid var(--light);border-right-color:var(--dark);border-bottom-color:var(--dark);padding:0;background:var(--select-bg);cursor:pointer;border-radius:0}.party-select .party-box{margin:0;width:auto;min-width:72px;padding:6px 9px}.party-select:not(.selected) .party-box{opacity:.42;filter:grayscale(.55)}.party-select.selected .party-box{opacity:1;box-shadow:0 0 0 2px #222 inset}
+body.dark .party-select.selected .party-box{box-shadow:0 0 0 2px #fff inset}
+.error{background:#f6dddd}.error .window-body{color:#000}
+
+.projection-row{display:flex;flex-wrap:wrap;gap:16px;width:100%}
+.projection-window{flex:1 1 320px}
+.support-window{flex:1 1 320px;display:flex;flex-direction:column;}
+.support-body{flex:1;display:flex;align-items:center;justify-content:center;}
+
+.support-change-container{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.support-col{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 0 1 auto;
+  justify-content: center;
+}
+
+.divider{width:3px;align-self:stretch;background:currentColor;opacity:.8;border-radius:2px}
+
+.internal-window {
+  background: var(--surface);
+  border: 2px inset var(--inset-border);
+  padding: 10px 10px 34px;
+  position: relative;
+}
+
+.corner-logo{position:absolute;left:6px;bottom:6px;width:18px;height:18px;object-fit:contain;opacity:.9;pointer-events:none;z-index:5}
+
+/* coalition comparison */
+.comparison-container{display:flex;gap:16px;justify-content:center;margin-top:15px;align-items:flex-start}
+.comparison-column{flex:1;max-width:480px;background:var(--surface);border:2px inset var(--inset-border);padding:10px}
+.column-title{font-weight:bold;text-align:center;margin-bottom:8px;font-size:13px;text-transform:uppercase;letter-spacing:0.5px}
+.mode-toggle-bar{display:flex;justify-content:center;gap:10px;margin-bottom:12px}
+.mode-btn{font-weight:bold}
+.mode-btn.active{background:var(--title);color:#fff;border-color:var(--dark) var(--light) var(--light) var(--dark)}
+body.dark .mode-btn{background:#313d4e;color:#fff}
+body.dark .mode-btn.active{background:#b11333;color:#fff}
+
+a { color: #0066cc; text-decoration: none; }
+body.dark a { color: #00f7f7; text-decoration: none; }
+
+@media(max-width:720px){
+ .page{width:calc(100% - 10px);margin-top:5px}.window-body{padding:7px}.chart-wrap{height:360px}
+ .comparison-container{flex-direction:column;align-items:stretch}
+ .comparison-column{max-width:100%}
+}
+</style>
+</head>
+
+<body>
+<script>(function(){try{if(localStorage.getItem("eestimateTheme")==="dark"){document.body.classList.add("dark")}}catch(e){}})();</script>
+<div class="page">
+
+<section class="window">
+  <div class="titlebar"><span></span></div>
+  <div class="window-body">
+    <h1>Eestimate - Lithuania edition</h1>
+    <p class="lead-summary" id="leadSummary">Loading current standings…</p>
+    <p class="header-note">This is a Lithuanian party preference polling tracker by bananasAreViolet, covering Spinter and Baltijos polls.
+<br>Charts based on LOESS smoothing applied to the polling.<br>
+<br>Updates will be sporadic but for now, here they are. We shall all pray that I do not suffer from burnout 🙃</p>
+    <div class="toolbar">
+      <button class="action" id="reloadBtn">Refresh page</button>
+      <button class="action" id="themeBtn">Dark mode</button>
+      <button class="action" onclick="window.open('https://bananasareviolet.github.io/epgroupbuilder/')">EP Group Builder</button>
+      <span class="status" id="status">Data needs a moment to load in, thanks for the patience…</span>
+    </div>
+  </div>
+</section>
+
+<section class="window"><div class="titlebar"><span>POLLING AVERAGE - SPINTER</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="spinterChart"></canvas></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div></div></section>
+
+<section class="window"><div class="titlebar"><span>POLLING AVERAGE - BALTIJOS</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="baltijosChart"></canvas></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div></div></section>
+
+<section class="window"><div class="titlebar"><span>LATEST NUMBERS</span></div><div class="window-body"><p class="header-note" id="latestNote">If this text lasts for a readable length and several seconds beyond that, there may possibly be a data error involved</p><div style="position:relative;"><div class="latest-scroll"><div class="latest-chart" id="latestChart"></div></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div></div></section>
+
+<div class="projection-row">
+  <section class="window projection-window">
+    <div class="titlebar"><span>SUPPORT VS LAST ELECTION</span></div>
+    <div class="window-body support-body">
+      <div class="internal-window" style="width:100%;height:100%;">
+        <div class="support-change-container">
+          <div id="gainersCol" class="support-col"></div>
+          <div class="divider"></div>
+          <div id="losersCol" class="support-col"></div>
+        </div>
+        <img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo">
+      </div>
+    </div>
+  </section>
+
+  <section class="window support-window">
+    <div class="titlebar"><span>SUPPORT VS LAST MONTH</span></div>
+    <div class="window-body support-body">
+      <div class="internal-window" style="width:100%;height:100%;">
+        <div class="support-change-container">
+          <div id="gainersColMonth" class="support-col"></div>
+          <div class="divider"></div>
+          <div id="losersColMonth" class="support-col"></div>
+        </div>
+        <img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo">
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="projection-row">
+  <section class="window projection-window">
+    <div class="titlebar"><span>SUPPORT VS LAST YEAR</span></div>
+    <div class="window-body support-body">
+      <div class="internal-window" style="width:100%;height:100%;">
+        <div class="support-change-container">
+          <div id="gainersColYear" class="support-col"></div>
+          <div class="divider"></div>
+          <div id="losersColYear" class="support-col"></div>
+        </div>
+        <img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo">
+      </div>
+    </div>
+  </section>
+</div>
+
+<section class="window"><div class="titlebar"><span>CUSTOM COALITION COMPARISON</span></div><div class="window-body">
+<div class="mode-toggle-bar">
+ <button class="action mode-btn active" id="modeSeparateBtn">Separate lines</button>
+ <button class="action mode-btn" id="modeNetBtn">Net support (Side 1 minus Side 2)</button>
+</div>
+<div class="chart-surface"><div class="chart-wrap"><canvas id="customCoalitionChart"></canvas></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div>
+<div class="comparison-container">
+ <div class="comparison-column">
+  <div class="column-title" style="color:#2563eb">Side 1</div>
+  <div class="party-selector" id="side1Selector"></div>
+ </div>
+ <div class="comparison-column">
+  <div class="column-title" style="color:#dc2626">Side 2</div>
+  <div class="party-selector" id="side2Selector"></div>
+ </div>
+</div>
+</div></section>
+
+</div>
+
+<script>
+/* =====================================================================
+   CONFIG
+   ===================================================================== */
+const GOOGLE_SHEET_URL="https://docs.google.com/spreadsheets/d/10Uq9yOtAXJyzTFZtpdOJGCIAg217N-727PclTCxSPEg/edit?usp=sharing";
+const SHEET_NAME="Lithuania",SHEET_RANGE="A:Q"; // date, pollster, 15 parties
+
+// Placeholder colours - swap in your own.
+const PARTY_COLOURS={
+ "LSDP":"#e03b4f",
+ "TS-LKD":"#2f7fd1",
+ "NA":"#8e44ad",
+ "DSVL":"#27ae60",
+ "LS":"#f39c12",
+ "LVŽS":"#16a085",
+ "LP":"#d35400",
+ "LLRA-KŠS":"#7f8c8d",
+ "NS":"#c0392b",
+ "DP":"#2c3e50",
+ "LRP":"#e84393",
+ "LŽP":"#6ab04c",
+ "TTS":"#d4ac0d",
+ "CDS":"#00a8cc",
+ "LV":"#a29bfe"
+};
+const PREFERRED_ORDER=["LSDP","TS-LKD","NA","DSVL","LS","LVŽS","LP","LLRA-KŠS","NS","DP","LRP","LŽP","TTS","CDS","LV"];
+
+// Last election results (%). LV did not contest / has no baseline, so it is skipped in the comparison.
+const ELECTION_RESULTS={
+ "LSDP":19.70,"TS-LKD":18.35,"NA":15.26,"DSVL":9.4,"LS":7.85,"LVŽS":7.16,"LP":4.62,
+ "LLRA-KŠS":3.96,"NS":2.93,"DP":2.24,"LRP":1.93,"LŽP":1.72,"TTS":1.41,"CDS":0.77
+};
+
+// Dashed vertical markers on the charts. Edit/add as you like.
+const EVENT_MARKERS=[
+ {date:Date.UTC(2024,9,13),label:"2024 election"},
+ {date:Date.UTC(2024,11,12),label:"Paluckas' cabinet"},
+ {date:Date.UTC(2025,8,25),label:"Ruginienė's cabinet"},
+ {date:Date.UTC(2026,6,14),label:"Sinkevičius' cabinet"}
+];
+
+const LOESS_SPAN=0.14;
+
+/* =====================================================================
+   HELPERS
+   ===================================================================== */
+const $=id=>document.getElementById(id);
+const esc=v=>String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+const idOf=url=>((String(url||"").match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)||[])[1]||"");
+const MONTH_ABBR={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+const n=v=>{if(v===null||v===undefined||v==="")return null;const x=Number(String(v).trim().replace(",",".").replace(/%\s*$/,""));return Number.isFinite(x)?x:null};
+const pct=v=>{if(v===null||v===undefined||v==="")return null;const hasPercentSign=/%\s*$/.test(String(v).trim());const x=n(v);return x===null?null:(!hasPercentSign&&Math.abs(x)<=1.5)?x*100:x};
+const dt=v=>{if(v===null||v===undefined||v==="")return null;if(typeof v==="number")return new Date(Date.UTC(1899,11,30)+v*86400000);const s=String(v).trim();const gviz=s.match(/^Date\((\d{4}),(\d{1,2}),(\d{1,2})/);if(gviz)return new Date(Date.UTC(+gviz[1],+gviz[2],+gviz[3]));const dmy=s.match(/^(\d{1,2})[-\/ ]([A-Za-z]{3,})[-\/ ](\d{2,4})$/);if(dmy){const day=+dmy[1],mon=MONTH_ABBR[dmy[2].slice(0,3).toLowerCase()];let year=+dmy[3];if(dmy[3].length<=2)year=year<30?2000+year:1900+year;if(mon!==undefined)return new Date(Date.UTC(year,mon,day))}const d=new Date(s);return Number.isNaN(d.getTime())?null:d};
+function parseGviz(t){const a=t.indexOf("{"),b=t.lastIndexOf("}");if(a<0||b<=a)throw Error("No response from database, hm.");return JSON.parse(t.slice(a,b+1))}
+
+const locNum=s=>String(s);
+const locInt=x=>Number(x).toLocaleString("en-GB");
+const dtext=d=>{
+ if(!d) return "—";
+ return new Intl.DateTimeFormat("en-GB",{year:"numeric",month:"short",day:"numeric"}).format(d);
+};
+function quarterTick(month,year){
+ if(month===0) return ["Jan",year];
+ if(month===3) return "Apr";
+ if(month===6) return "Jul";
+ if(month===9) return "Oct";
+ return "";
+}
+const shade=(hex,amt)=>{const c=hex.replace("#","");const num=parseInt(c,16);let r=(num>>16)+amt,g=((num>>8)&255)+amt,b=(num&255)+amt;r=Math.min(255,Math.max(0,r));g=Math.min(255,Math.max(0,g));b=Math.min(255,Math.max(0,b));return`#${((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1)}`};
+const chartTheme=()=>document.body.classList.contains("dark")
+ ?{grid:"rgba(255,255,255,.14)",text:"#e8e8e8",markerLine:"rgba(255,255,255,.5)",markerText:"rgba(255,255,255,.85)"}
+ :{grid:"#ededed",text:"#000",markerLine:"rgba(0,0,0,.55)",markerText:"rgba(0,0,0,.8)"};
+
+function pollsterOf(row){
+ const s=String(row.pollster||"").toLowerCase();
+ if(s.includes("spinter")) return "spinter";
+ if(s.includes("baltij")) return "baltijos";
+ return null;
+}
+
+/* =====================================================================
+   CHART PLUGINS
+   ===================================================================== */
+const eventMarkerPlugin={
+ id:"eventMarkers",
+ afterDraw(chart,args,opts){
+  const markers=opts&&opts.markers;if(!markers||!markers.length)return;
+  const lineColour=(opts&&opts.lineColour)||"rgba(0,0,0,.55)",textColour=(opts&&opts.textColour)||"rgba(0,0,0,.8)";
+  const{ctx,chartArea:{top,bottom},scales:{x}}=chart;
+  ctx.save();
+  markers.forEach((m,i)=>{
+   const xVal=(m.value!==undefined&&m.value!==null)?m.value:m.idx;
+   const px=x.getPixelForValue(xVal);if(px==null||Number.isNaN(px))return;
+   ctx.beginPath();ctx.setLineDash([4,3]);ctx.strokeStyle=lineColour;ctx.lineWidth=1;
+   ctx.moveTo(px,top);ctx.lineTo(px,bottom);ctx.stroke();ctx.setLineDash([]);
+   ctx.font="10px Tahoma,Arial,sans-serif";ctx.fillStyle=textColour;ctx.textBaseline="top";ctx.textAlign="left";
+   ctx.fillText(m.label,px+4,top+3+(i%2)*13)
+  });
+  ctx.restore()
+ }
+};
+
+const endLineLabelsPlugin = {
+ id: "endLineLabels",
+ afterDatasetsDraw(chart, args, opts) {
+  const allowedParties = opts && opts.allowedParties ? opts.allowedParties : null;
+  const { ctx, chartArea } = chart;
+  ctx.save();
+
+  const labelsToDraw = [];
+  const pointValue = v => (v && typeof v === "object") ? v.y : v;
+  chart.data.datasets.forEach((dataset, i) => {
+   if (allowedParties && allowedParties.length && !allowedParties.includes(dataset.label)) return;
+   const meta = chart.getDatasetMeta(i);
+   if (!meta.hidden && meta.data && meta.data.length > 0) {
+    let lastIdx = dataset.data.length - 1;
+    while (lastIdx >= 0 && (pointValue(dataset.data[lastIdx]) === null || pointValue(dataset.data[lastIdx]) === undefined)) lastIdx--;
+    if (lastIdx >= 0) {
+     const point = meta.data[lastIdx];
+     const val = pointValue(dataset.data[lastIdx]);
+     if (point && !isNaN(point.x) && !isNaN(point.y)) {
+      const sign = (val > 0 && opts.showPlusSign) ? "+" : "";
+      const valueText = opts.valueFormatter ? opts.valueFormatter(val) : `${sign}${locNum(val.toFixed(1))}%`;
+      labelsToDraw.push({ text: ` ${dataset.label} ${valueText}`, color: dataset.borderColor, x: point.x + 6, y: point.y });
+     }
+    }
+   }
+  });
+
+  if (labelsToDraw.length === 0) { ctx.restore(); return; }
+
+  labelsToDraw.sort((a, b) => a.y - b.y);
+  const minSpacing = 14;
+  for (let i = 1; i < labelsToDraw.length; i++) {
+   if (labelsToDraw[i].y - labelsToDraw[i - 1].y < minSpacing) labelsToDraw[i].y = labelsToDraw[i - 1].y + minSpacing;
+  }
+  if (chartArea) {
+   const maxY = chartArea.bottom - 4;
+   if (labelsToDraw[labelsToDraw.length - 1].y > maxY) {
+    labelsToDraw[labelsToDraw.length - 1].y = maxY;
+    for (let i = labelsToDraw.length - 2; i >= 0; i--) {
+     if (labelsToDraw[i + 1].y - labelsToDraw[i].y < minSpacing) labelsToDraw[i].y = labelsToDraw[i + 1].y - minSpacing;
+    }
+   }
+  }
+
+  ctx.font = "bold 11px Tahoma, Arial, sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  labelsToDraw.forEach(lbl => { ctx.fillStyle = lbl.color; ctx.fillText(lbl.text, lbl.x, lbl.y); });
+  ctx.restore();
+ }
+};
+Chart.register(eventMarkerPlugin, endLineLabelsPlugin);
+
+function retroTooltip(context){
+ const {chart,tooltip}=context;
+ let el=document.getElementById("chartjs-tooltip");
+ if(!el){el=document.createElement("div");el.id="chartjs-tooltip";el.className="chartjs-tooltip";document.body.appendChild(el)}
+ if(tooltip.opacity===0){el.style.opacity=0;return}
+ if(tooltip.body){
+  const dataPoints=tooltip.dataPoints||[];
+  let html="";
+  if(tooltip.title&&tooltip.title.length) html+=`<div class="chartjs-tooltip-date">${esc(tooltip.title[0])}</div>`;
+  dataPoints.forEach(dp=>{
+   const colour=dp.dataset.borderColor||"#888";
+   const name=dp.dataset.label||"";
+   const displayValue=dp.parsed.y;
+   const val=displayValue===null?"—":`${locNum(Number(displayValue).toFixed(1))}%`;
+   html+=`<div class="chartjs-tooltip-row"><span class="party-box" style="background:${esc(colour)}">${esc(name)}</span><span class="chartjs-tooltip-value">${val}</span></div>`;
+  });
+  el.innerHTML=html;
+ }
+ const rect=chart.canvas.getBoundingClientRect();
+ el.style.opacity=1;
+ el.style.left=(rect.left+window.scrollX+tooltip.caretX)+"px";
+ el.style.top=(rect.top+window.scrollY+tooltip.caretY)+"px";
+}
+
+/* =====================================================================
+   LOESS
+   Smooths across gaps (null cells) but only between a series' first and
+   last real observation, so sparsely polled parties don't get
+   extrapolated beyond their data.
+   ===================================================================== */
+function loessSmooth(values, span=LOESS_SPAN){
+ const points=[];
+ values.forEach((value,index)=>{ if(Number.isFinite(value)) points.push({x:index,y:value}); });
+ if(points.length<4) return values.slice();
+ const firstIdx=points[0].x,lastIdx=points.at(-1).x;
+ const k=Math.max(4,Math.min(points.length,Math.ceil(points.length*span)));
+ const out=values.slice();
+ for(let i=0;i<values.length;i++){
+  if(i<firstIdx||i>lastIdx){out[i]=null;continue;}
+  let nearest=points.map(p=>({p,dist:Math.abs(p.x-i)})).sort((a,b)=>a.dist-b.dist).slice(0,k);
+  const maxDist=nearest.at(-1).dist||1;
+  let Sw=0,Sx=0,Sy=0,Sxx=0,Sxy=0;
+  for(const {p,dist} of nearest){
+   const u=Math.min(1,dist/maxDist);
+   const w=Math.pow(1-Math.pow(u,3),3);
+   Sw+=w;Sx+=w*p.x;Sy+=w*p.y;Sxx+=w*p.x*p.x;Sxy+=w*p.x*p.y;
+  }
+  const denom=Sw*Sxx-Sx*Sx;
+  if(Math.abs(denom)<1e-12){out[i]=Sw?Sy/Sw:values[i];continue}
+  const beta=(Sw*Sxy-Sx*Sy)/denom;
+  const alpha=(Sy-beta*Sx)/Sw;
+  out[i]=alpha+beta*i;
+ }
+ return out;
+}
+
+/* =====================================================================
+   STATE + DATA
+   ===================================================================== */
+let latestRows=[],smoothedRows=[],latestPoll=[],partyKeys=[];
+const pollsterCharts={spinter:null,baltijos:null};
+let side1Coalition=new Set(),side2Coalition=new Set(),comparisonMode="separate",customCoalitionChart=null;
+
+function buildSmoothedRows(keys){
+ smoothedRows=latestRows.map(r=>({date:r.date}));
+ for(const key of keys){
+  const smooth=loessSmooth(latestRows.map(r=>r[key]));
+  smooth.forEach((value,i)=>{smoothedRows[i][key]=value});
+ }
+}
+// Smoothed value for a party at the row nearest to a timestamp (skipping nulls).
+function smoothedAt(key,ts){
+ let best=null,bestDiff=Infinity;
+ smoothedRows.forEach(r=>{
+  const v=r[key];if(!Number.isFinite(v))return;
+  const d=Math.abs(r.date.getTime()-ts);
+  if(d<bestDiff){bestDiff=d;best=v}
+ });
+ return best;
+}
+function lastSmoothed(key){
+ for(let i=smoothedRows.length-1;i>=0;i--){const v=smoothedRows[i][key];if(Number.isFinite(v))return v}
+ return null;
+}
+
+async function loadGoogleSheet(){
+ const id=idOf(GOOGLE_SHEET_URL);
+ $("status").textContent="Loading the data, just a moment of patience…";
+ try{
+  const u=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&headers=1&range=${encodeURIComponent(`${SHEET_NAME}!${SHEET_RANGE}`)}`;
+  const r=await fetch(u,{cache:"no-store"});if(!r.ok)throw Error(`Google Sheets returned HTTP ${r.status}.`);
+  const g=parseGviz(await r.text()),cols=g.table?.cols||[],rows=g.table?.rows||[];
+  const headers=cols.map((c,i)=>String(c.label||c.id||"").trim()||`Column ${i+1}`);
+  const di=headers.findIndex(h=>h.toLowerCase()==="date");
+  const pi=headers.findIndex(h=>h.toLowerCase()==="pollster");
+  if(di<0)throw Error("Error with database missing a defined date column, it seems.");
+  if(pi<0)throw Error("Error with database missing a Pollster column, it seems.");
+  partyKeys=headers.filter((h,i)=>i!==di&&i!==pi);
+  latestRows=[];
+  for(const row of rows){
+   const c=row.c||[],dc=c[di]||{},d=dt(dc.v!==undefined?dc.v:dc.f);if(!d)continue;
+   const pc=c[pi]||{};
+   const rec={date:d,pollster:String(pc.v!==undefined&&pc.v!==null?pc.v:(pc.f||"")).trim()};
+   headers.forEach((h,i)=>{if(i!==di&&i!==pi){const x=c[i]||{};rec[h]=pct(x.v!==undefined?x.v:x.f)}});
+   latestRows.push(rec);
+  }
+  latestRows.sort((a,b)=>a.date-b.date);
+  if(!latestRows.length)throw Error("Error with database missing dates, it seems.");
+  buildSmoothedRows(partyKeys);
+  latestPoll=partyKeys.map(name=>({key:name,name,colour:PARTY_COLOURS[name]||"#777",support:lastSmoothed(name)})).filter(p=>p.support!==null);
+  renderPollsterChart("spinterChart","spinter");
+  renderPollsterChart("baltijosChart","baltijos");
+  renderLatestPolling();renderLeadSummary();renderCustomCoalitionTool();
+  $("status").textContent="";
+ }catch(e){
+  $("status").innerHTML=`<strong>Connection error:</strong> ${esc(e.message)}`;
+ }
+}
+
+/* =====================================================================
+   POLLING AVERAGE (per pollster)
+   ===================================================================== */
+function renderPollsterChart(canvasId,pollsterKey){
+ const canvas=$(canvasId);if(!canvas)return;
+ if(pollsterCharts[pollsterKey])pollsterCharts[pollsterKey].destroy();
+ const rows=latestRows.filter(r=>pollsterOf(r)===pollsterKey);
+ const th=chartTheme();
+ if(!rows.length){pollsterCharts[pollsterKey]=null;return}
+
+ const datasets=[];
+ for(const key of partyKeys){
+  if(!rows.some(r=>Number.isFinite(r[key])))continue;
+  const smooth=loessSmooth(rows.map(r=>r[key]));
+  const colour=PARTY_COLOURS[key]||"#777";
+  datasets.push({label:key,data:rows.map((r,i)=>({x:r.date.getTime(),y:smooth[i]})),borderColor:colour,backgroundColor:colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,spanGaps:true});
+ }
+ // label only the six strongest parties at the line ends
+ const lastVal=d=>{for(let i=d.data.length-1;i>=0;i--){if(Number.isFinite(d.data[i].y))return d.data[i].y}return -1};
+ const labelled=[...datasets].sort((a,b)=>lastVal(b)-lastVal(a)).slice(0,6).map(d=>d.label);
+
+ const minTs=rows[0].date.getTime(),maxTs=rows.at(-1).date.getTime();
+ const markers=EVENT_MARKERS.filter(m=>m.date>=minTs&&m.date<=maxTs).map(m=>({value:m.date,label:m.label}));
+
+ pollsterCharts[pollsterKey]=new Chart(canvas.getContext("2d"),{
+  type:"line",
+  data:{datasets},
+  options:{
+   responsive:true,
+   maintainAspectRatio:false,
+   layout:{padding:{right:110}},
+   interaction:{mode:"nearest",axis:"xy",intersect:false},
+   plugins:{
+    legend:{position:"bottom",labels:{usePointStyle:true,pointStyle:"line",boxWidth:26,padding:14,color:th.text,font:{family:'"VCR OSD Mono", monospace', size:12}}},
+    tooltip:{enabled:false,external:retroTooltip,callbacks:{title:items=>items.length?dtext(new Date(items[0].parsed.x)):""}},
+    eventMarkers:{markers,lineColour:th.markerLine,textColour:th.markerText},
+    endLineLabels:{allowedParties:labelled}
+   },
+   scales:{
+    x:{
+     type:"linear",
+     min:minTs,
+     max:maxTs,
+     afterBuildTicks: axis => {
+      const ticks=[];
+      const lo=axis.min,hi=axis.max;
+      if(!Number.isFinite(lo)||!Number.isFinite(hi)) { axis.ticks=ticks; return; }
+      const start=new Date(lo);
+      let cursor=Date.UTC(start.getUTCFullYear(), Math.floor(start.getUTCMonth()/3)*3, 1);
+      while(cursor<=hi){
+       if(cursor>=lo) ticks.push({value:cursor});
+       const d=new Date(cursor);
+       cursor=Date.UTC(d.getUTCFullYear(), d.getUTCMonth()+3, 1);
+      }
+      axis.ticks=ticks;
+     },
+     ticks:{
+      color:th.text,
+      font:{family:'"VCR OSD Mono", monospace', size:14},
+      autoSkip:false,maxRotation:0,minRotation:0,
+      callback:function(value){const d=new Date(value);return quarterTick(d.getUTCMonth(),d.getUTCFullYear())}
+     },
+     grid:{display:false}
+    },
+    y:{beginAtZero:true,suggestedMax:30,ticks:{callback:v=>`${locNum(v)}%`,color:th.text},grid:{color:th.grid}}
+   }
+  }
+ });
+}
+
+/* =====================================================================
+   LEAD SUMMARY + LATEST NUMBERS
+   (combined LOESS average across both pollsters)
+   ===================================================================== */
+function renderLeadSummary(){
+ const el=$("leadSummary");if(!el)return;
+ if(!latestPoll.length){el.textContent="";return}
+ const sorted=[...latestPoll].sort((a,b)=>b.support-a.support);
+ const [first,second]=sorted;
+ const tag=p=>`<b style="color:${esc(p.colour)}">${esc(p.name)}</b>`;
+ const r1=Math.round(first.support*10)/10,r2=Math.round(second.support*10)/10;
+ el.innerHTML=r1===r2
+  ?`${tag(first)} and ${tag(second)} are tied.`
+  :`${tag(first)} is leading ${tag(second)} by ${locNum((r1-r2).toFixed(1))} points.`;
+}
+
+function renderLatestPolling(){
+ const c=$("latestChart"),note=$("latestNote");c.innerHTML="";
+ if(!latestPoll.length){note.textContent="No current party observations.";return}
+ const sorted=[...latestPoll].sort((a,b)=>b.support-a.support);
+ const oldOf=p=>ELECTION_RESULTS[p.key]!==undefined?ELECTION_RESULTS[p.key]:null;
+ const max=Math.max(...sorted.map(p=>p.support),...sorted.map(oldOf).filter(v=>v!==null),1);
+ note.textContent=`Latest update: ${dtext(latestRows.at(-1).date)}. Combined Spinter and Baltijos average. Support differences shaded vs previous election: stripy bars indicate lost support while lighter (light mode)/darker (dark mode) bars indicate gains.`;
+ const isDark=document.body.classList.contains("dark");
+ for(const p of sorted){
+  const old=oldOf(p);
+  const barPx=Math.max(2,p.support/max*245),oldPx=old===null?null:Math.max(0,old/max*245);
+  const col=document.createElement("div");col.className="latest-col";
+  const a=document.createElement("div");a.className="latest-bar-area";
+  const bar=document.createElement("div");bar.className="latest-bar";bar.style.height=`${barPx}px`;bar.style.background=p.colour;
+  const label=document.createElement("div");label.className="latest-bar-label";label.textContent=`${locNum(p.support.toFixed(1))}%`;bar.appendChild(label);
+  if(oldPx!==null){
+   if(oldPx<=barPx){
+    const gain=document.createElement("div");gain.className="latest-bar-gain";gain.style.height=`${barPx-oldPx}px`;gain.title=`Up from ${locNum(old.toFixed(1))}% at the last election`;bar.appendChild(gain)
+   }else{
+    const lost=document.createElement("div");lost.className="latest-bar-lost";lost.style.height=`${oldPx-barPx}px`;
+    const diagonalColor=isDark?shade(p.colour,-55):shade(p.colour,55);
+    lost.style.background=`repeating-linear-gradient(45deg, ${diagonalColor} 0 6px, ${p.colour} 6px 12px)`;lost.title=`Down from ${locNum(old.toFixed(1))}% at the last election`;bar.appendChild(lost)
+   }
+  }
+  a.appendChild(bar);
+  const box=document.createElement("div");box.className="party-box";box.style.background=p.colour;box.textContent=p.name;col.append(a,box);c.appendChild(col)
+ }
+ renderChangeCols("gainersCol","losersCol",p=>ELECTION_RESULTS[p.key]!==undefined?ELECTION_RESULTS[p.key]:null);
+ const lastTs=latestRows.at(-1).date.getTime();
+ renderChangeCols("gainersColMonth","losersColMonth",p=>smoothedAt(p.key,lastTs-30*86400000));
+ renderChangeCols("gainersColYear","losersColYear",p=>smoothedAt(p.key,lastTs-365*86400000));
+}
+
+/* =====================================================================
+   SUPPORT CHANGES
+   ===================================================================== */
+function renderChangeCols(gainersId,losersId,baselineFn){
+ const gCol=$(gainersId),lCol=$(losersId);
+ if(!gCol||!lCol)return;
+ gCol.innerHTML="";lCol.innerHTML="";
+ const gainers=[],losers=[];
+ latestPoll.forEach(p=>{
+  const base=baselineFn(p);
+  if(base===null||base===undefined)return;
+  const diff=p.support-base;
+  (diff>=0?gainers:losers).push({...p,diff,absDiff:Math.abs(diff)});
+ });
+ gainers.sort((a,b)=>b.absDiff-a.absDiff);
+ losers.sort((a,b)=>b.absDiff-a.absDiff);
+
+ const makeRow=(party,isGain)=>{
+  const row=document.createElement("div");
+  row.style.cssText=`display:flex;align-items:center;gap:12px;font-weight:bold;font-size:15px;width:100%;justify-content:${isGain?"flex-end":"flex-start"};`;
+  const box=document.createElement("div");
+  box.className="party-box";
+  box.style.background=party.colour||"#888";
+  box.style.cssText+="width:80px;min-height:38px;margin:0;font-size:15px;";
+  box.textContent=party.name;
+  const val=document.createElement("span");
+  val.style.cssText=`color:${isGain?"#00873e":"#e50000"};width:50px;text-align:${isGain?"left":"right"};`;
+  val.textContent=(isGain?"+":"")+locNum(party.diff.toFixed(1));
+  if(isGain)row.append(box,val);else row.append(val,box);
+  return row;
+ };
+ gainers.forEach(p=>gCol.appendChild(makeRow(p,true)));
+ losers.forEach(p=>lCol.appendChild(makeRow(p,false)));
+}
+
+/* =====================================================================
+   CUSTOM COALITION COMPARISON
+   ===================================================================== */
+function renderCustomCoalitionTool(){
+ const availableParties=PREFERRED_ORDER.filter(pKey=>latestPoll.some(p=>p.key===pKey));
+
+ const renderSelector=(containerId,targetSet)=>{
+  const container=$(containerId);
+  if(!container)return;
+  container.innerHTML="";
+  availableParties.forEach(pKey=>{
+   const partyInfo=latestPoll.find(p=>p.key===pKey);
+   const colour=partyInfo?partyInfo.colour:(PARTY_COLOURS[pKey]||"#777");
+   const b=document.createElement("button");
+   b.type="button";b.className="party-select";
+   const box=document.createElement("span");
+   box.className="party-box";box.style.background=colour;box.textContent=pKey;
+   b.appendChild(box);
+   if(targetSet.has(pKey))b.classList.add("selected");
+   b.onclick=()=>{targetSet.has(pKey)?targetSet.delete(pKey):targetSet.add(pKey);renderCustomCoalitionTool()};
+   container.appendChild(b);
+  });
+ };
+ renderSelector("side1Selector",side1Coalition);
+ renderSelector("side2Selector",side2Coalition);
+
+ $("modeSeparateBtn").onclick=()=>{comparisonMode="separate";$("modeSeparateBtn").classList.add("active");$("modeNetBtn").classList.remove("active");renderCustomCoalitionChart()};
+ $("modeNetBtn").onclick=()=>{comparisonMode="net";$("modeNetBtn").classList.add("active");$("modeSeparateBtn").classList.remove("active");renderCustomCoalitionChart()};
+ renderCustomCoalitionChart();
+}
+
+function renderCustomCoalitionChart(){
+ const canvas=$("customCoalitionChart");
+ if(!canvas)return;
+ const ctx=canvas.getContext("2d");
+ if(customCoalitionChart)customCoalitionChart.destroy();
+
+ const labels=latestRows.map(r=>dtext(r.date));
+ const side1Array=Array.from(side1Coalition),side2Array=Array.from(side2Coalition);
+ const side1Name=side1Array.length?side1Array.join("+"):"Side 1 (None)";
+ const side2Name=side2Array.length?side2Array.join("+"):"Side 2 (None)";
+
+ // Sum the combined (already gap-filled) smoothed series so rows from
+ // different pollsters line up regardless of which parties each one asks about.
+ const getCoalitionData=set=>smoothedRows.map(row=>{
+  let sum=0,has=false;
+  set.forEach(k=>{if(Number.isFinite(row[k])){sum+=row[k];has=true}});
+  return has?sum:null;
+ });
+ const side1Data=getCoalitionData(side1Coalition),side2Data=getCoalitionData(side2Coalition);
+
+ const mk=(label,data,colour)=>({label,data,borderColor:colour,backgroundColor:colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,spanGaps:true});
+ let datasets=[];
+ if(comparisonMode==="separate"){
+  datasets.push(mk(side1Name,side1Data,"#2563eb"));
+  datasets.push(mk(side2Name,side2Data,"#dc2626"));
+ }else{
+  const netData=side1Data.map((v,i)=>(v||0)-(side2Data[i]||0));
+  datasets.push(mk(`Net: (${side1Name}) - (${side2Name})`,netData,"#7c3aed"));
+ }
+
+ const markers=latestRows.length?EVENT_MARKERS.map(m=>{
+  const cnt=latestRows.length;
+  let fracIdx;
+  if(m.date<=latestRows[0].date.getTime())fracIdx=0;
+  else if(m.date>=latestRows[cnt-1].date.getTime())fracIdx=cnt-1;
+  else{
+   let i=0;
+   while(i<cnt-1&&latestRows[i+1].date.getTime()<m.date)i++;
+   const t0=latestRows[i].date.getTime(),t1=latestRows[i+1].date.getTime();
+   fracIdx=i+(t1>t0?(m.date-t0)/(t1-t0):0);
+  }
+  return{value:fracIdx,label:m.label};
+ }):[];
+ const th=chartTheme();
+
+ customCoalitionChart=new Chart(ctx,{
+  type:"line",
+  data:{labels,datasets},
+  options:{
+   responsive:true,
+   maintainAspectRatio:false,
+   layout:{padding:{right:20}},
+   interaction:{mode:"nearest",axis:"xy",intersect:false},
+   plugins:{
+    legend:{display:false},
+    tooltip:{enabled:false,external:retroTooltip},
+    eventMarkers:{markers,lineColour:th.markerLine,textColour:th.markerText},
+    endLineLabels:{allowedParties:[]}
+   },
+   scales:{
+    x:{
+     ticks:{
+      color:th.text,
+      font:{family:'"VCR OSD Mono", monospace', size:14},
+      autoSkip:false,maxRotation:0,minRotation:0,
+      callback:function(val,index){
+       const row=latestRows[index];
+       if(!row)return "";
+       const prevRow=latestRows[index-1];
+       if(prevRow&&row.date.getUTCMonth()===prevRow.date.getUTCMonth()&&row.date.getUTCFullYear()===prevRow.date.getUTCFullYear())return "";
+       return quarterTick(row.date.getUTCMonth(),row.date.getUTCFullYear());
+      }
+     },
+     grid:{display:false}
+    },
+    y:{
+     beginAtZero:comparisonMode==="separate",
+     suggestedMax:comparisonMode==="separate"?60:undefined,
+     ticks:{callback:v=>`${locNum(v)}%`,color:th.text},
+     grid:{color:th.grid}
+    }
+   }
+  }
+ });
+}
+
+/* =====================================================================
+   WIRING
+   ===================================================================== */
+$("reloadBtn").onclick=()=>{loadGoogleSheet()};
+$("themeBtn").textContent=document.body.classList.contains("dark")?"Light mode":"Dark mode";
+$("themeBtn").onclick=()=>{
+ document.body.classList.toggle("dark");
+ const isDarkNow=document.body.classList.contains("dark");
+ $("themeBtn").textContent=isDarkNow?"Light mode":"Dark mode";
+ try{localStorage.setItem("eestimateTheme",isDarkNow?"dark":"light")}catch(e){}
+ if(latestRows.length){
+  renderPollsterChart("spinterChart","spinter");
+  renderPollsterChart("baltijosChart","baltijos");
+  renderLatestPolling();
+  renderCustomCoalitionChart();
+ }
+};
+
+loadGoogleSheet();
+</script>
+</body>
+</html>
