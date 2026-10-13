@@ -119,8 +119,8 @@ body.dark a { color: #00f7f7; text-decoration: none; }
   <div class="window-body">
     <h1>Eestimate - Lithuania edition</h1>
     <p class="lead-summary" id="leadSummary">Loading current standings…</p>
-    <p class="header-note">This is a Lithuanian party preference polling tracker by bananasAreViolet, covering Spinter and Baltijos polls.
-<br>Charts based on LOESS smoothing applied to the polling.<br>
+    <p class="header-note">This is a Lithuanian party preference polling tracker by bananasAreViolet, covering Spinter and Baltijos polls[cite: 1].
+<br>Charts based on LOESS smoothing applied to the polling[cite: 1].<br>
 <br>Updates will be sporadic but for now, here they are. We shall all pray that I do not suffer from burnout 🙃</p>
     <div class="toolbar">
       <button class="action" id="reloadBtn">Refresh page</button>
@@ -214,7 +214,8 @@ const PARTY_COLOURS={
 const PREFERRED_ORDER=["LSDP","TS-LKD","PPNA","DSVL","LS","LVŽS","LP","LLRA","NS","DP","LRP","LŽP","TTS","CDS","LV"];
 
 const ELECTION_RESULTS={
- "LSDP":19.70,"TS-LKD":18.35,"PPNA":15.26,"DSVL":9.4,"LS":7.85,"LVŽS":7.16,"LP":4.62,"LLRA":3.96,"NS":2.93,"DP":2.24,"LRP":1.93,"LŽP":1.72,"TTS":1.41,"CDS":0.77
+ "LSDP":19.70,"TS-LKD":18.35,"PPNA":15.26,"DSVL":9.4,"LS":7.85,"LVŽS":7.16,"LP":4.62,
+ "LLRA":3.96,"NS":2.93,"DP":2.24,"LRP":1.93,"LŽP":1.72,"TTS":1.41,"CDS":0.77
 };
 
 const EVENT_MARKERS=[
@@ -362,11 +363,10 @@ function retroTooltip(context){
 }
 
 /* =====================================================================
-   SEGMENT-CONFINED LOESS SMOOTHER (Prevents missing-data gap explosions)
+   SEGMENT-CONFINED LOESS SMOOTHER
    ===================================================================== */
 function loessSmooth(values, span=LOESS_SPAN){
  const out=new Array(values.length).fill(null);
- // Find continuous segments of non-null points
  let segStart=null;
  for(let i=0;i<=values.length;i++){
   const isVal=(i<values.length && Number.isFinite(values[i]));
@@ -423,6 +423,13 @@ let side1Coalition=new Set(),side2Coalition=new Set(),comparisonMode="separate",
 
 const START_DATE_FILTER = Date.UTC(2024, 9, 13); // 13 Oct 2024
 
+function normalizePartyName(name){
+ const clean = String(name || "").trim();
+ if(clean === "NA" || clean === "PPNA") return "PPNA";
+ if(clean === "LLRA-KŠS" || clean === "LLRA−KŠS" || clean === "LLRA") return "LLRA";
+ return clean;
+}
+
 function buildSmoothedRows(keys){
  smoothedRows=latestRows.map(r=>({date:r.date}));
  for(const key of keys){
@@ -457,13 +464,30 @@ async function loadGoogleSheet(){
   const pi=headers.findIndex(h=>h.toLowerCase()==="pollster");
   if(di<0)throw Error("Error with database missing a defined date column, it seems.");
   if(pi<0)throw Error("Error with database missing a Pollster column, it seems.");
-  partyKeys=headers.filter((h,i)=>i!==di&&i!==pi);
+  
+  const rawPartyKeys=headers.filter((h,i)=>i!==di&&i!==pi);
+  const normalizedKeysSet=new Set(rawPartyKeys.map(normalizePartyName));
+  partyKeys=Array.from(normalizedKeysSet);
+
   latestRows=[];
   for(const row of rows){
    const c=row.c||[],dc=c[di]||{},d=dt(dc.v!==undefined?dc.v:dc.f);if(!d)continue;
    const pc=c[pi]||{};
    const rec={date:d,pollster:String(pc.v!==undefined&&pc.v!==null?pc.v:(pc.f||"")).trim()};
-   headers.forEach((h,i)=>{if(i!==di&&i!==pi){const x=c[i]||{};rec[h]=pct(x.v!==undefined?x.v:x.f)}});
+   
+   // Initialize normalized party entries for this row
+   partyKeys.forEach(pk=>{ rec[pk]=null; });
+
+   headers.forEach((h,i)=>{
+    if(i!==di&&i!==pi){
+     const normKey=normalizePartyName(h);
+     const x=c[i]||{};
+     const val=pct(x.v!==undefined?x.v:x.f);
+     if(val!==null){
+      rec[normKey]=val;
+     }
+    }
+   });
    latestRows.push(rec);
   }
   latestRows.sort((a,b)=>a.date-b.date);
@@ -480,30 +504,32 @@ async function loadGoogleSheet(){
 }
 
 /* =====================================================================
-   POLLING AVERAGE (per pollster)
+   POLLING AVERAGE (per pollster - fully independent smoothing)
    ===================================================================== */
 function renderPollsterChart(canvasId,pollsterKey){
  const canvas=$(canvasId);if(!canvas)return;
  if(pollsterCharts[pollsterKey])pollsterCharts[pollsterKey].destroy();
- const rows=latestRows.filter(r=>pollsterOf(r)===pollsterKey && r.date.getTime()>=START_DATE_FILTER);
+
+ const pollsterRows=latestRows.filter(r=>pollsterOf(r)===pollsterKey && r.date.getTime()>=START_DATE_FILTER);
  const th=chartTheme();
- if(!rows.length){pollsterCharts[pollsterKey]=null;return}
+ if(!pollsterRows.length){pollsterCharts[pollsterKey]=null;return}
 
  const datasets=[];
  for(const key of partyKeys){
-  if(!rows.some(r=>Number.isFinite(r[key])) && ELECTION_RESULTS[key]===undefined)continue;
-  const smooth=loessSmooth(latestRows.map(r=>r[key]));
-  const dataPoints=[];
+  if(!pollsterRows.some(r=>Number.isFinite(r[key])) && ELECTION_RESULTS[key]===undefined)continue;
   
+  const rawSeries=pollsterRows.map(r=>r[key]);
+  const smooth=loessSmooth(rawSeries);
+  const dataPoints=[];
+
   if(ELECTION_RESULTS[key]!==undefined){
    dataPoints.push({x:START_DATE_FILTER, y:ELECTION_RESULTS[key]});
   }
 
-  rows.forEach(r=>{
+  pollsterRows.forEach((r, idx)=>{
    if(r.date.getTime()===START_DATE_FILTER) return;
-   const fullIdx=latestRows.indexOf(r);
-   const val = fullIdx>=0?smooth[fullIdx]:null;
-   if(Number.isFinite(val)) {
+   const val=smooth[idx];
+   if(Number.isFinite(val)){
     dataPoints.push({x:r.date.getTime(), y:val});
    }
   });
@@ -517,7 +543,7 @@ function renderPollsterChart(canvasId,pollsterKey){
  const lastVal=d=>{for(let i=d.data.length-1;i>=0;i--){if(Number.isFinite(d.data[i].y))return d.data[i].y}return -1};
  const labelled=[...datasets].sort((a,b)=>lastVal(b)-lastVal(a)).slice(0,6).map(d=>d.label);
 
- const minTs=START_DATE_FILTER,maxTs=Math.max(rows.at(-1).date.getTime(),START_DATE_FILTER);
+ const minTs=START_DATE_FILTER,maxTs=Math.max(pollsterRows.at(-1).date.getTime(),START_DATE_FILTER);
  const markers=EVENT_MARKERS.filter(m=>m.date>=minTs&&m.date<=maxTs).map(m=>({value:m.date,label:m.label}));
 
  pollsterCharts[pollsterKey]=new Chart(canvas.getContext("2d"),{
