@@ -192,18 +192,19 @@ body.dark a { color: #00f7f7; text-decoration: none; }
    CONFIG
    ===================================================================== */
 const GOOGLE_SHEET_URL="https://docs.google.com/spreadsheets/d/10Uq9yOtAXJyzTFZtpdOJGCIAg217N-727PclTCxSPEg/edit?usp=sharing";
-const SHEET_NAME="Lithuania",SHEET_RANGE="A:Q"; // date, pollster, 15 parties
+const SHEET_NAME="Lithuania",SHEET_RANGE="A:Q"; // date, pollster, parties
 
-// Placeholder colours - swap in your own.
 const PARTY_COLOURS={
  "LSDP":"#e03b4f",
  "TS-LKD":"#2f7fd1",
  "NA":"#8e44ad",
- "DSVL":"#2f2a95",
+ "PPNA":"#8e44ad",
+ "DSVL":"#672548",
  "LS":"#f39c12",
  "LVŽS":"#16a085",
  "LP":"#d35400",
  "LLRA-KŠS":"#7f8c8d",
+ "LLRA−KŠS":"#7f8c8d",
  "NS":"#c0392b",
  "DP":"#2c3e50",
  "LRP":"#e84393",
@@ -212,15 +213,13 @@ const PARTY_COLOURS={
  "CDS":"#00a8cc",
  "LV":"#a29bfe"
 };
-const PREFERRED_ORDER=["LSDP","TS-LKD","NA","DSVL","LS","LVŽS","LP","LLRA-KŠS","NS","DP","LRP","LŽP","TTS","CDS","LV"];
+const PREFERRED_ORDER=["LSDP","TS-LKD","NA","PPNA","DSVL","LS","LVŽS","LP","LLRA-KŠS","LLRA−KŠS","NS","DP","LRP","LŽP","TTS","CDS","LV"];
 
-// Last election results (%).
 const ELECTION_RESULTS={
- "LSDP":19.70,"TS-LKD":18.35,"NA":15.26,"DSVL":9.4,"LS":7.85,"LVŽS":7.16,"LP":4.62,
- "LLRA-KŠS":3.96,"NS":2.93,"DP":2.24,"LRP":1.93,"LŽP":1.72,"TTS":1.41,"CDS":0.77
+ "LSDP":19.70,"TS-LKD":18.35,"NA":15.26,"PPNA":15.26,"DSVL":9.4,"LS":7.85,"LVŽS":7.16,"LP":4.62,
+ "LLRA-KŠS":3.96,"LLRA−KŠS":3.96,"NS":2.93,"DP":2.24,"LRP":1.93,"LŽP":1.72,"TTS":1.41,"CDS":0.77
 };
 
-// Dashed vertical markers on the charts.
 const EVENT_MARKERS=[
  {date:Date.UTC(2024,9,13),label:"2024 election"},
  {date:Date.UTC(2024,11,12),label:"Paluckas' cabinet"},
@@ -243,7 +242,6 @@ const dt=v=>{if(v===null||v===undefined||v==="")return null;if(typeof v==="numbe
 function parseGviz(t){const a=t.indexOf("{"),b=t.lastIndexOf("}");if(a<0||b<=a)throw Error("No response from database, hm.");return JSON.parse(t.slice(a,b+1))}
 
 const locNum=s=>String(s);
-const locInt=x=>Number(x).toLocaleString("en-GB");
 const dtext=d=>{
  if(!d) return "—";
  return new Intl.DateTimeFormat("en-GB",{year:"numeric",month:"short",day:"numeric"}).format(d);
@@ -367,28 +365,37 @@ function retroTooltip(context){
 }
 
 /* =====================================================================
-   LOESS / LOCAL SMOOTHING (Guaranteed range-bound via Nadaraya-Watson)
+   STABLE ROBUST LOESS (Safe Weighted Least Squares)
    ===================================================================== */
-function loessSmoothPoints(points, span = LOESS_SPAN) {
- if (points.length === 0) return [];
- if (points.length < 3) return points.map(p => ({ x: p.x, y: p.y }));
-
- const k = Math.max(2, Math.ceil(points.length * span));
- return points.map(target => {
-  const sorted = points.map(p => ({ p, dist: Math.abs(p.x - target.x) })).sort((a, b) => a.dist - b.dist);
-  const nearest = sorted.slice(0, k);
-  const maxDist = nearest.at(-1).dist || 1;
-
-  let Sw = 0, Sy = 0;
-  for (const { p, dist } of nearest) {
-   const u = Math.min(1, dist / maxDist);
-   const w = Math.pow(1 - Math.pow(u, 3), 3); // Tricube weighting
-   Sw += w;
-   Sy += w * p.y;
+function loessSmooth(values, span=LOESS_SPAN){
+ const points=[];
+ values.forEach((value,index)=>{ if(Number.isFinite(value)) points.push({x:index,y:value}); });
+ if(points.length<2) return values.slice();
+ const firstIdx=points[0].x, lastIdx=points.at(-1).x;
+ const k=Math.max(3,Math.min(points.length,Math.ceil(points.length*span)));
+ const out=new Array(values.length).fill(null);
+ 
+ for(let i=firstIdx;i<=lastIdx;i++){
+  let nearest=points.map(p=>({p,dist:Math.abs(p.x-i)})).sort((a,b)=>a.dist-b.dist).slice(0,k);
+  const maxDist=nearest.at(-1).dist||1;
+  let Sw=0,Sx=0,Sy=0,Sxx=0,Sxy=0;
+  for(const {p,dist} of nearest){
+   const u=Math.min(1,dist/maxDist);
+   const w=Math.max(0,Math.pow(1-Math.pow(u,3),3));
+   Sw+=w;Sx+=w*p.x;Sy+=w*p.y;Sxx+=w*p.x*p.x;Sxy+=w*p.x*p.y;
   }
-  const smoothedVal = Sw > 0 ? Sy / Sw : target.y;
-  return { x: target.x, y: Math.min(100, Math.max(0, smoothedVal)) };
- });
+  const denom=Sw*Sxx-Sx*Sx;
+  if(Math.abs(denom)<1e-9){
+   out[i]=Sw>0?Sy/Sw:null;
+  } else {
+   const beta=(Sw*Sxy-Sx*Sy)/denom;
+   const alpha=(Sy-beta*Sx)/Sw;
+   let val=alpha+beta*i;
+   // Clamp output within realistic bounds (0% to 100%) to completely eliminate runaway values
+   out[i]=Math.max(0,Math.min(100,val));
+  }
+ }
+ return out;
 }
 
 /* =====================================================================
@@ -403,16 +410,8 @@ const START_DATE_FILTER = Date.UTC(2024, 9, 13); // 13 Oct 2024
 function buildSmoothedRows(keys){
  smoothedRows=latestRows.map(r=>({date:r.date}));
  for(const key of keys){
-  const validPoints = [];
-  latestRows.forEach((r, idx) => {
-   if (Number.isFinite(r[key])) {
-    validPoints.push({ x: idx, y: r[key] });
-   }
-  });
-  const smoothed = loessSmoothPoints(validPoints);
-  smoothed.forEach(pt => {
-   if (smoothedRows[pt.x]) smoothedRows[pt.x][key] = pt.y;
-  });
+  const smooth=loessSmooth(latestRows.map(r=>r[key]));
+  smooth.forEach((value,i)=>{smoothedRows[i][key]=value});
  }
 }
 
@@ -476,31 +475,27 @@ function renderPollsterChart(canvasId,pollsterKey){
 
  const datasets=[];
  for(const key of partyKeys){
-  const obsPoints = [];
-  if (ELECTION_RESULTS[key] !== undefined) {
-   obsPoints.push({ x: START_DATE_FILTER, y: ELECTION_RESULTS[key] });
+  if(!rows.some(r=>Number.isFinite(r[key])) && ELECTION_RESULTS[key]===undefined)continue;
+  const smooth=loessSmooth(latestRows.map(r=>r[key]));
+  const dataPoints=[];
+  
+  if(ELECTION_RESULTS[key]!==undefined){
+   dataPoints.push({x:START_DATE_FILTER, y:ELECTION_RESULTS[key]});
   }
-  rows.forEach(r => {
-   if (r.date.getTime() !== START_DATE_FILTER && Number.isFinite(r[key])) {
-    obsPoints.push({ x: r.date.getTime(), y: r[key] });
+
+  rows.forEach(r=>{
+   if(r.date.getTime()===START_DATE_FILTER) return;
+   const fullIdx=latestRows.indexOf(r);
+   const val = fullIdx>=0?smooth[fullIdx]:null;
+   if(Number.isFinite(val)) {
+    dataPoints.push({x:r.date.getTime(), y:val});
    }
   });
 
-  if (obsPoints.length === 0) continue;
-
-  const smoothed = loessSmoothPoints(obsPoints);
-  const colour = PARTY_COLOURS[key] || "#777";
-  datasets.push({
-   label: key,
-   data: smoothed,
-   borderColor: colour,
-   backgroundColor: colour,
-   borderWidth: 2,
-   pointRadius: 0,
-   pointHoverRadius: 4,
-   tension: 0,
-   spanGaps: true
-  });
+  dataPoints.sort((a,b)=>a.x-b.x);
+  if(!dataPoints.length) continue;
+  const colour=PARTY_COLOURS[key]||"#777";
+  datasets.push({label:key,data:dataPoints,borderColor:colour,backgroundColor:colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,spanGaps:true});
  }
 
  const lastVal=d=>{for(let i=d.data.length-1;i>=0;i--){if(Number.isFinite(d.data[i].y))return d.data[i].y}return -1};
@@ -581,4 +576,196 @@ function renderLatestPolling(){
  for(const p of sorted){
   const old=oldOf(p);
   const barPx=Math.max(2,p.support/max*245),oldPx=old===null?null:Math.max(0,old/max*245);
-  const col=document
+  const col=document.createElement("div");col.className="latest-col";
+  const a=document.createElement("div");a.className="latest-bar-area";
+  const bar=document.createElement("div");bar.className="latest-bar";bar.style.height=`${barPx}px`;bar.style.background=p.colour;
+  const label=document.createElement("div");label.className="latest-bar-label";label.textContent=`${locNum(p.support.toFixed(1))}%`;bar.appendChild(label);
+  if(oldPx!==null){
+   if(oldPx<=barPx){
+    const gain=document.createElement("div");gain.className="latest-bar-gain";gain.style.height=`${barPx-oldPx}px`;gain.title=`Up from ${locNum(old.toFixed(1))}% at the last election`;bar.appendChild(gain)
+   }else{
+    const lost=document.createElement("div");lost.className="latest-bar-lost";lost.style.height=`${oldPx-barPx}px`;
+    const diagonalColor=isDark?shade(p.colour,-55):shade(p.colour,55);
+    lost.style.background=`repeating-linear-gradient(45deg, ${diagonalColor} 0 6px, ${p.colour} 6px 12px)`;lost.title=`Down from ${locNum(old.toFixed(1))}% at the last election`;bar.appendChild(lost)
+   }
+  }
+  a.appendChild(bar);
+  const box=document.createElement("div");box.className="party-box";box.style.background=p.colour;box.textContent=p.name;col.append(a,box);c.appendChild(col)
+ }
+ renderChangeCols("gainersCol","losersCol",p=>ELECTION_RESULTS[p.key]!==undefined?ELECTION_RESULTS[p.key]:null);
+ const lastTs=latestRows.at(-1).date.getTime();
+ renderChangeCols("gainersColYear","losersColYear",p=>smoothedAt(p.key,lastTs-365*86400000));
+}
+
+/* =====================================================================
+   SUPPORT CHANGES
+   ===================================================================== */
+function renderChangeCols(gainersId,losersId,baselineFn){
+ const gCol=$(gainersId),lCol=$(losersId);
+ if(!gCol||!lCol)return;
+ gCol.innerHTML="";lCol.innerHTML="";
+ const gainers=[],losers=[];
+ latestPoll.forEach(p=>{
+  const base=baselineFn(p);
+  if(base===null||base===undefined)return;
+  const diff=p.support-base;
+  (diff>=0?gainers:losers).push({...p,diff,absDiff:Math.abs(diff)});
+ });
+ gainers.sort((a,b)=>b.absDiff-a.absDiff);
+ losers.sort((a,b)=>b.absDiff-a.absDiff);
+
+ const makeRow=(party,isGain)=>{
+  const row=document.createElement("div");
+  row.style.cssText=`display:flex;align-items:center;gap:12px;font-weight:bold;font-size:15px;width:100%;justify-content:${isGain?"flex-end":"flex-start"};`;
+  const box=document.createElement("div");
+  box.className="party-box";
+  box.style.background=party.colour||"#888";
+  box.style.cssText+="width:80px;min-height:38px;margin:0;font-size:15px;";
+  box.textContent=party.name;
+  const val=document.createElement("span");
+  val.style.cssText=`color:${isGain?"#00873e":"#e50000"};width:50px;text-align:${isGain?"left":"right"};`;
+  val.textContent=(isGain?"+":"")+locNum(party.diff.toFixed(1));
+  if(isGain)row.append(box,val);else row.append(val,box);
+  return row;
+ };
+ gainers.forEach(p=>gCol.appendChild(makeRow(p,true)));
+ losers.forEach(p=>lCol.appendChild(makeRow(p,false)));
+}
+
+/* =====================================================================
+   CUSTOM COALITION COMPARISON
+   ===================================================================== */
+function renderCustomCoalitionTool(){
+ const availableParties=PREFERRED_ORDER.filter(pKey=>latestPoll.some(p=>p.key===pKey));
+
+ const renderSelector=(containerId,targetSet)=>{
+  const container=$(containerId);
+  if(!container)return;
+  container.innerHTML="";
+  availableParties.forEach(pKey=>{
+   const partyInfo=latestPoll.find(p=>p.key===pKey);
+   const colour=partyInfo?partyInfo.colour:(PARTY_COLOURS[pKey]||"#777");
+   const b=document.createElement("button");
+   b.type="button";b.className="party-select";
+   const box=document.createElement("span");
+   box.className="party-box";box.style.background=colour;box.textContent=pKey;
+   b.appendChild(box);
+   if(targetSet.has(pKey))b.classList.add("selected");
+   b.onclick=()=>{targetSet.has(pKey)?targetSet.delete(pKey):targetSet.add(pKey);renderCustomCoalitionTool()};
+   container.appendChild(b);
+  });
+ };
+ renderSelector("side1Selector",side1Coalition);
+ renderSelector("side2Selector",side2Coalition);
+
+ $("modeSeparateBtn").onclick=()=>{comparisonMode="separate";$("modeSeparateBtn").classList.add("active");$("modeNetBtn").classList.remove("active");renderCustomCoalitionChart()};
+ $("modeNetBtn").onclick=()=>{comparisonMode="net";$("modeNetBtn").classList.add("active");$("modeSeparateBtn").classList.remove("active");renderCustomCoalitionChart()};
+ renderCustomCoalitionChart();
+}
+
+function renderCustomCoalitionChart(){
+ const canvas=$("customCoalitionChart");
+ if(!canvas)return;
+ const ctx=canvas.getContext("2d");
+ if(customCoalitionChart)customCoalitionChart.destroy();
+
+ const labels=latestRows.map(r=>dtext(r.date));
+ const side1Array=Array.from(side1Coalition),side2Array=Array.from(side2Coalition);
+ const side1Name=side1Array.length?side1Array.join("+"):"Side 1 (None)";
+ const side2Name=side2Array.length?side2Array.join("+"):"Side 2 (None)";
+
+ const getCoalitionData=set=>smoothedRows.map(row=>{
+  let sum=0,has=false;
+  set.forEach(k=>{if(Number.isFinite(row[k])){sum+=row[k];has=true}});
+  return has?sum:null;
+ });
+ const side1Data=getCoalitionData(side1Coalition),side2Data=getCoalitionData(side2Coalition);
+
+ const mk=(label,data,colour)=>({label,data,borderColor:colour,backgroundColor:colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,spanGaps:true});
+ let datasets=[];
+ if(comparisonMode==="separate"){
+  datasets.push(mk(side1Name,side1Data,"#2563eb"));
+  datasets.push(mk(side2Name,side2Data,"#dc2626"));
+ }else{
+  const netData=side1Data.map((v,i)=>(v||0)-(side2Data[i]||0));
+  datasets.push(mk(`Net: (${side1Name}) - (${side2Name})`,netData,"#7c3aed"));
+ }
+
+ const markers=latestRows.length?EVENT_MARKERS.map(m=>{
+  const cnt=latestRows.length;
+  let fracIdx;
+  if(m.date<=latestRows[0].date.getTime())fracIdx=0;
+  else if(m.date>=latestRows[cnt-1].date.getTime())fracIdx=cnt-1;
+  else{
+   let i=0;
+   while(i<cnt-1&&latestRows[i+1].date.getTime()<m.date)i++;
+   const t0=latestRows[i].date.getTime(),t1=latestRows[i+1].date.getTime();
+   fracIdx=i+(t1>t0?(m.date-t0)/(t1-t0):0);
+  }
+  return{value:fracIdx,label:m.label};
+ }):[];
+ const th=chartTheme();
+
+ customCoalitionChart=new Chart(ctx,{
+  type:"line",
+  data:{labels,datasets},
+  options:{
+   responsive:true,
+   maintainAspectRatio:false,
+   layout:{padding:{right:20}},
+   interaction:{mode:"nearest",axis:"xy",intersect:false},
+   plugins:{
+    legend:{display:false},
+    tooltip:{enabled:false,external:retroTooltip},
+    eventMarkers:{markers,lineColour:th.markerLine,textColour:th.markerText},
+    endLineLabels:{allowedParties:[]}
+   },
+   scales:{
+    x:{
+     ticks:{
+      color:th.text,
+      font:{family:'"VCR OSD Mono", monospace', size:14},
+      autoSkip:false,maxRotation:0,minRotation:0,
+      callback:function(val,index){
+       const row=latestRows[index];
+       if(!row)return "";
+       const prevRow=latestRows[index-1];
+       if(prevRow&&row.date.getUTCMonth()===prevRow.date.getUTCMonth()&&row.date.getUTCFullYear()===prevRow.date.getUTCFullYear())return "";
+       return quarterTick(row.date.getUTCMonth(),row.date.getUTCFullYear());
+      }
+     },
+     grid:{display:false}
+    },
+    y:{
+     beginAtZero:comparisonMode === 'separate',
+     suggestedMax:comparisonMode==="separate"?60:undefined,
+     ticks:{callback:v=>`${locNum(v)}%`,color:th.text},
+     grid:{color:th.grid}
+    }
+   }
+  }
+ });
+}
+
+/* =====================================================================
+   WIRING
+   ===================================================================== */
+$("reloadBtn").onclick=()=>{loadGoogleSheet()};
+$("themeBtn").textContent=document.body.classList.contains("dark")?"Light mode":"Dark mode";
+$("themeBtn").onclick=()=>{
+ document.body.classList.toggle("dark");
+ const isDarkNow=document.body.classList.contains("dark");
+ $("themeBtn").textContent=isDarkNow?"Light mode":"Dark mode";
+ try{localStorage.setItem("eestimateTheme",isDarkNow?"dark":"light")}catch(e){}
+ if(latestRows.length){
+  renderPollsterChart("spinterChart","spinter");
+  renderPollsterChart("baltijosChart","baltijos");
+  renderLatestPolling();
+  renderCustomCoalitionChart();
+ }
+};
+
+loadGoogleSheet();
+</script>
+</body>
+</html>
