@@ -10,13 +10,13 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://bananasareviolet.github.io/eestimate/">
   <meta property="og:title" content="Eestimate, a Riigikogu polling tracker">
-  <meta property="og:description" content="Eestimate is an Estonian party preference polling tracker and aggregator. Isamaa is leading Centre by 4.4 points. There are 144 days or fewer until the next Riigikogu election.">
+  <meta property="og:description" content="Eestimate is an Estonian party preference polling tracker and aggregator. Isamaa is leading Centre by 4.4 points. There are 147 days or fewer until the next Riigikogu election.">
   <meta property="og:image" content="https://bananasareviolet.github.io/eestimate/eestimate-embed.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Eestimate, a Riigikogu polling tracker">
-  <meta name="twitter:description" content="Eestimate is an Estonian party preference polling tracker and aggregator. Isamaa is leading Centre by 4.4 points. There are 144 days or fewer until the next Riigikogu election.">
+  <meta name="twitter:description" content="Eestimate is an Estonian party preference polling tracker and aggregator. Isamaa is leading Centre by 4.4 points. There are 147 days or fewer until the next Riigikogu election.">
   <meta name="twitter:image" content="https://bananasareviolet.github.io/eestimate/eestimate-embed.png">
   <!-- EESTIMATE_OG_END -->
 
@@ -1428,7 +1428,7 @@ function renderGovtLineChart(){
  if(!canvas) return;
  const ctx=canvas.getContext("2d");if(govtLineChart)govtLineChart.destroy();
  const labels=govtRows.map(r=>dtext(r.date));
- const datasets=govtLatestPoll.map(p=>{const has=govtRows.some(r=>r[p.key]!==null&&r[p.key]!==undefined);if(!has)return null;const series=smoothedDatasetData(govtRows,p.key);return{label:govtLabel(p.name),data:series.smoothed,_rawData:series.raw,borderColor:p.colour,backgroundColor:p.colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,spanGaps:true}}).filter(Boolean);
+ const datasets=govtLatestPoll.map(p=>{const has=govtRows.some(r=>r[p.key]!==null&&r[p.key]!==undefined);if(!has)return null;const series=smoothedDatasetData(govtRows,p.key);return{label:govtLabel(p.name),data:series.smoothed,_rawData:series.raw,borderColor:p.colour,backgroundColor:p.colour,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:0,spanGaps:true,_legendGroup:govtLabel(p.name).replace(/\s*\(.*$/,"")}}).filter(Boolean);
  const markers=govtRows.length?EVENT_MARKERS.map(m=>{let idx=0,diff=Infinity;govtRows.forEach((r,i)=>{const d=Math.abs(r.date.getTime()-m.date);if(d<diff){diff=d;idx=i}});return{idx,label:eventLabel(m.label)}}):[];
  const th=chartTheme();
  govtLineChart=new Chart(ctx,{
@@ -1440,7 +1440,22 @@ function renderGovtLineChart(){
    layout:{padding:{right:20}},
    interaction:{mode:"nearest",axis:"xy",intersect:false},
    plugins:{
-    legend:{position:"bottom",labels:{usePointStyle:true,pointStyle:"line",boxWidth:26,padding:14,color:th.text,font:{family:'"VCR OSD Mono", monospace', size:12}}},
+    legend:{
+     position:"bottom",
+     onClick:(e,item,legend)=>{const c=legend.chart,idxs=item.groupIdxs||[item.datasetIndex],hide=idxs.some(i=>c.isDatasetVisible(i));idxs.forEach(i=>c.setDatasetVisibility(i,!hide));c.update()},
+     labels:{
+      usePointStyle:true,pointStyle:"line",boxWidth:26,padding:14,color:th.text,font:{family:'"VCR OSD Mono", monospace', size:12},
+      generateLabels:chart=>{
+       const groups=[];
+       chart.data.datasets.forEach((ds,i)=>{
+        let g=groups.find(x=>x.name===ds._legendGroup);
+        if(!g){g={name:ds._legendGroup,idxs:[],ds};groups.push(g)}
+        g.idxs.push(i);
+       });
+       return groups.map(g=>({text:g.name,fillStyle:g.ds.borderColor,strokeStyle:g.ds.borderColor,lineWidth:g.ds.borderWidth,pointStyle:"line",fontColor:th.text,hidden:g.idxs.every(i=>!chart.isDatasetVisible(i)),datasetIndex:g.idxs[0],groupIdxs:g.idxs}));
+      }
+     }
+    },
     tooltip:{enabled:false,external:retroTooltip},
     eventMarkers:{markers,lineColour:th.markerLine,textColour:th.markerText},
     endLineLabels:{enabled:false}
