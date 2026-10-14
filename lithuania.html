@@ -135,6 +135,12 @@ body.dark a { color: #00f7f7; text-decoration: none; }
 
 <section class="window"><div class="titlebar"><span>POLLING AVERAGE - BALTIJOS</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="baltijosChart"></canvas></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div></div></section>
 
+<section class="window"><div class="titlebar"><span>DATA SOURCE (LATEST NUMBERS, SUPPORT CHANGES, COALITIONS)</span></div><div class="window-body"><div class="mode-toggle-bar" style="margin-bottom:0">
+ <button class="action mode-btn active" id="sourceAggBtn">Aggregate</button>
+ <button class="action mode-btn" id="sourceSpinterBtn">Spinter</button>
+ <button class="action mode-btn" id="sourceBaltijosBtn">Baltijos</button>
+</div></div></section>
+
 <section class="window"><div class="titlebar"><span>LATEST NUMBERS</span></div><div class="window-body"><p class="header-note" id="latestNote">If this text lasts for a readable length and several seconds beyond that, there may possibly be a data error involved</p><div style="position:relative;"><div class="latest-scroll"><div class="latest-chart" id="latestChart"></div></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div></div></section>
 
 <div class="projection-row">
@@ -430,12 +436,40 @@ function normalizePartyName(name){
  return clean;
 }
 
-function buildSmoothedRows(keys){
- smoothedRows=latestRows.map(r=>({date:r.date}));
+let sourceMode="agg",srcRows=[],aggPoll=[];
+const SOURCE_LABELS={agg:"Combined Spinter and Baltijos average",spinter:"Spinter only",baltijos:"Baltijos only"};
+
+function smoothRows(rows,keys){
+ const sm=rows.map(r=>({date:r.date}));
  for(const key of keys){
-  const smooth=loessSmooth(latestRows.map(r=>r[key]));
-  smooth.forEach((value,i)=>{smoothedRows[i][key]=value});
+  const smooth=loessSmooth(rows.map(r=>r[key]));
+  smooth.forEach((value,i)=>{sm[i][key]=value});
  }
+ return sm;
+}
+function pollFrom(sm){
+ return partyKeys.map(name=>{
+  let v=null;
+  for(let i=sm.length-1;i>=0;i--){if(Number.isFinite(sm[i][name])){v=sm[i][name];break}}
+  return{key:name,name,colour:PARTY_COLOURS[name]||"#777",support:v};
+ }).filter(p=>p.support!==null);
+}
+function applySource(){
+ srcRows=sourceMode==="agg"?latestRows:latestRows.filter(r=>pollsterOf(r)===sourceMode);
+ smoothedRows=smoothRows(srcRows,partyKeys);
+ latestPoll=pollFrom(smoothedRows);
+}
+function updateSourceButtons(){
+ [["agg","sourceAggBtn"],["spinter","sourceSpinterBtn"],["baltijos","sourceBaltijosBtn"]].forEach(([m,id])=>{
+  const b=$(id);if(b)b.classList.toggle("active",sourceMode===m);
+ });
+}
+function setSource(m){
+ sourceMode=m;
+ applySource();
+ updateSourceButtons();
+ renderLatestPolling();
+ renderCustomCoalitionTool();
 }
 
 function smoothedAt(key,ts){
@@ -492,8 +526,9 @@ async function loadGoogleSheet(){
   }
   latestRows.sort((a,b)=>a.date-b.date);
   if(!latestRows.length)throw Error("Error with database missing dates, it seems.");
-  buildSmoothedRows(partyKeys);
-  latestPoll=partyKeys.map(name=>({key:name,name,colour:PARTY_COLOURS[name]||"#777",support:lastSmoothed(name)})).filter(p=>p.support!==null);
+  aggPoll=pollFrom(smoothRows(latestRows,partyKeys));
+  applySource();
+  updateSourceButtons();
   renderPollsterChart("spinterChart","spinter");
   renderPollsterChart("baltijosChart","baltijos");
   renderLatestPolling();renderLeadSummary();renderCustomCoalitionTool();
@@ -597,8 +632,8 @@ function renderPollsterChart(canvasId,pollsterKey){
    ===================================================================== */
 function renderLeadSummary(){
  const el=$("leadSummary");if(!el)return;
- if(!latestPoll.length){el.textContent="";return}
- const sorted=[...latestPoll].sort((a,b)=>b.support-a.support);
+ if(aggPoll.length<2){el.textContent="";return}
+ const sorted=[...aggPoll].sort((a,b)=>b.support-a.support);
  const [first,second]=sorted;
  const tag=p=>`<b style="color:${esc(p.colour)}">${esc(p.name)}</b>`;
  const r1=Math.round(first.support*10)/10,r2=Math.round(second.support*10)/10;
@@ -609,11 +644,15 @@ function renderLeadSummary(){
 
 function renderLatestPolling(){
  const c=$("latestChart"),note=$("latestNote");c.innerHTML="";
- if(!latestPoll.length){note.textContent="No current party observations.";return}
+ if(!latestPoll.length||!srcRows.length){
+  note.textContent=`No current party observations for this source (${SOURCE_LABELS[sourceMode]}).`;
+  ["gainersCol","losersCol","gainersColYear","losersColYear"].forEach(id=>{const e=$(id);if(e)e.innerHTML=""});
+  return;
+ }
  const sorted=[...latestPoll].sort((a,b)=>b.support-a.support);
  const oldOf=p=>ELECTION_RESULTS[p.key]!==undefined?ELECTION_RESULTS[p.key]:null;
  const max=Math.max(...sorted.map(p=>p.support),...sorted.map(oldOf).filter(v=>v!==null),1);
- note.textContent=`Latest update: ${dtext(latestRows.at(-1).date)}. Combined Spinter and Baltijos average. Support differences shaded vs previous election: stripy bars indicate lost support while lighter (light mode)/darker (dark mode) bars indicate gains.`;
+ note.textContent=`Latest update: ${dtext(srcRows.at(-1).date)}. ${SOURCE_LABELS[sourceMode]}. Support differences shaded vs previous election: stripy bars indicate lost support while lighter (light mode)/darker (dark mode) bars indicate gains.`;
  const isDark=document.body.classList.contains("dark");
  for(const p of sorted){
   const old=oldOf(p);
@@ -635,7 +674,7 @@ function renderLatestPolling(){
   const box=document.createElement("div");box.className="party-box";box.style.background=p.colour;box.textContent=p.name;col.append(a,box);c.appendChild(col)
  }
  renderChangeCols("gainersCol","losersCol",p=>ELECTION_RESULTS[p.key]!==undefined?ELECTION_RESULTS[p.key]:null);
- const lastTs=latestRows.at(-1).date.getTime();
+ const lastTs=srcRows.at(-1).date.getTime();
  renderChangeCols("gainersColYear","losersColYear",p=>smoothedAt(p.key,lastTs-365*86400000));
 }
 
@@ -711,7 +750,7 @@ function renderCustomCoalitionChart(){
  const ctx=canvas.getContext("2d");
  if(customCoalitionChart)customCoalitionChart.destroy();
 
- const labels=latestRows.map(r=>dtext(r.date));
+ const labels=srcRows.map(r=>dtext(r.date));
  const side1Array=Array.from(side1Coalition),side2Array=Array.from(side2Coalition);
  const side1Name=side1Array.length?side1Array.join("+"):"Side 1 (None)";
  const side2Name=side2Array.length?side2Array.join("+"):"Side 2 (None)";
@@ -733,15 +772,15 @@ function renderCustomCoalitionChart(){
   datasets.push(mk(`Net: (${side1Name}) - (${side2Name})`,netData,"#7c3aed"));
  }
 
- const markers=latestRows.length?EVENT_MARKERS.map(m=>{
-  const cnt=latestRows.length;
+ const markers=srcRows.length?EVENT_MARKERS.map(m=>{
+  const cnt=srcRows.length;
   let fracIdx;
-  if(m.date<=latestRows[0].date.getTime())fracIdx=0;
-  else if(m.date>=latestRows[cnt-1].date.getTime())fracIdx=cnt-1;
+  if(m.date<=srcRows[0].date.getTime())fracIdx=0;
+  else if(m.date>=srcRows[cnt-1].date.getTime())fracIdx=cnt-1;
   else{
    let i=0;
-   while(i<cnt-1&&latestRows[i+1].date.getTime()<m.date)i++;
-   const t0=latestRows[i].date.getTime(),t1=latestRows[i+1].date.getTime();
+   while(i<cnt-1&&srcRows[i+1].date.getTime()<m.date)i++;
+   const t0=srcRows[i].date.getTime(),t1=srcRows[i+1].date.getTime();
    fracIdx=i+(t1>t0?(m.date-t0)/(t1-t0):0);
   }
   return{value:fracIdx,label:m.label};
@@ -769,9 +808,9 @@ function renderCustomCoalitionChart(){
       font:{family:'"VCR OSD Mono", monospace', size:14},
       autoSkip:false,maxRotation:0,minRotation:0,
       callback:function(val,index){
-       const row=latestRows[index];
+       const row=srcRows[index];
        if(!row)return "";
-       const prevRow=latestRows[index-1];
+       const prevRow=srcRows[index-1];
        if(prevRow&&row.date.getUTCMonth()===prevRow.date.getUTCMonth()&&row.date.getUTCFullYear()===prevRow.date.getUTCFullYear())return "";
        return quarterTick(row.date.getUTCMonth(),row.date.getUTCFullYear());
       }
@@ -793,6 +832,9 @@ function renderCustomCoalitionChart(){
    WIRING
    ===================================================================== */
 $("reloadBtn").onclick=()=>{loadGoogleSheet()};
+$("sourceAggBtn").onclick=()=>{if(latestRows.length)setSource("agg")};
+$("sourceSpinterBtn").onclick=()=>{if(latestRows.length)setSource("spinter")};
+$("sourceBaltijosBtn").onclick=()=>{if(latestRows.length)setSource("baltijos")};
 $("themeBtn").textContent=document.body.classList.contains("dark")?"Light mode":"Dark mode";
 $("themeBtn").onclick=()=>{
  document.body.classList.toggle("dark");
