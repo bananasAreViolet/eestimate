@@ -70,6 +70,20 @@ body.dark .party-select.selected .party-box{box-shadow:0 0 0 2px #fff inset}
 
 .projection-row{display:flex;flex-wrap:wrap;gap:16px;width:100%}
 .projection-window{flex:1 1 320px}
+
+/* electorate seat inputs */
+.electorate-panel{margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--dark)}
+.electorate-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.electorate-title{font-weight:bold;font-size:13px;text-transform:uppercase;letter-spacing:.5px}
+.electorate-count{font-size:12px;color:var(--muted)}
+.electorate-help{margin:0 0 10px;color:var(--muted);font-size:12px;line-height:1.4}
+.electorate-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px 10px}
+.electorate-cell{display:flex;align-items:center;gap:6px}
+.electorate-cell .party-box{margin:0;width:74px;min-height:30px;font-size:13px;flex:0 0 auto}
+.electorate-input{width:54px;height:30px;padding:0 4px;text-align:center;font:bold 15px Tahoma,sans-serif;color:var(--text);background:var(--surface);border:2px inset var(--inset-border);border-radius:0}
+.electorate-input:focus{outline:1px dotted var(--text);outline-offset:1px}
+.electorate-input::placeholder{color:var(--muted);opacity:.6}
+.house-size{text-align:center;margin-top:10px;font-weight:bold;font-size:13px}
 .support-window{flex:1 1 320px;display:flex;flex-direction:column;}
 .support-body{flex:1;display:flex;align-items:center;justify-content:center;}
 
@@ -174,8 +188,21 @@ body.dark a {
     <div class="titlebar"><span data-i18n="titleSeatProjection">SEAT PROJECTION</span></div>
     <div class="window-body">
       <div class="internal-window">
+        <div class="electorate-panel">
+          <div class="electorate-head">
+            <span class="electorate-title" data-i18n="electorateTitle">Electorate seats won</span>
+            <span class="electorate-count" id="electorateCount"></span>
+          </div>
+          <p class="electorate-help" data-i18n="electorateHelp"></p>
+          <div class="electorate-grid" id="electorateGrid"></div>
+          <div class="toolbar">
+            <button class="action" id="electorateResetBtn" type="button" data-i18n="electorateReset">Reset</button>
+            <button class="action" id="electorateClearBtn" type="button" data-i18n="electorateClear">Clear all</button>
+          </div>
+        </div>
         <div id="parliament" class="parliament"></div>
         <div id="projectionKey" class="projection-key"></div>
+        <div id="houseSize" class="house-size"></div>
         <img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo">
       </div>
     </div>
@@ -308,7 +335,14 @@ const UI_STRINGS = {
   tied:(a,b)=>`${a} and ${b} are tied.`,
   leading:(a,b,diff)=>`${a} is leading ${b} by ${diff} points.`,
   seatSingular:"seat",
-  seatPlural:"seats"
+  seatPlural:"seats",
+  electorateTitle:"Electorate seats won",
+  electorateHelp:"Type how many electorate seats each party wins (numbers only, 71 across all parties at most). A party that wins an electorate shares in the 120 seats even below 5%. Electorate seats adding up to a sum bigger than a party's party-vote seats are overhang, which leads to an expansion of total seats.",
+  electorateReset:"Reset",
+  electorateClear:"Clear all",
+  electorateCount:(used,max)=>`${used} of ${max} electorates assigned`,
+  houseSize:(total,over)=>over>0?`House size: ${locInt(total)} (120 + ${locInt(over)} overhang ${over===1?"seat":"seats"})`:`House size: ${locInt(total)}`,
+  overhangTag:n=>`+${locInt(n)} overhang`
 };
 
 function t(key){
@@ -360,13 +394,13 @@ function applyStaticTranslations(){
  if(headerNote){
   headerNote.innerHTML=`This is an Aotearoa New Zealand party preference polling tracker by bananasAreViolet.
 <br>Charts based on polling, smootherned with LOESS.<br><br>
-Seat projections use New Zealand's modified Sainte-Laguë MMP formula. TPM is floored at ${TPM_GUARANTEED_ELECTORATES} seats for its predicted Māori electorate wins; any shortfall from its party vote becomes an overhang seat, growing the House rather than costing another party a seat.<br><br>
+Seat projections use New Zealand's modified Sainte-Laguë MMP formula. Electorate seats are entered by you in the seat projection box; any party that wins more electorates than its party vote entitles it to keeps them as overhang seats, growing the House rather than costing another party a seat.<br><br>
 Updates will be sporadic but for now, here they are. We shall all pray that I do not suffer from burnout 🙃`;
  }
 }
 
 function coalitionSelectPrompt(){
- return `Select parties using the boxes.<br>National, ACT and NZ First currently govern together. Labour, the Greens and TPM have ruled out working with National.`;
+ return `Select parties using the boxes.<br>National, ACT and NZ First currently govern together. Labour, the Greens, and TPM have ruled out working with National. National has ruled out TOP.`;
 }
 
 const GOOGLE_SHEET_URL="https://docs.google.com/spreadsheets/d/10Uq9yOtAXJyzTFZtpdOJGCIAg217N-727PclTCxSPEg/edit?usp=sharing";
@@ -381,18 +415,23 @@ const PARTY_COLOURS={
 "NZF":"#a2a2a2",
 "TPM":"#b064a7",
 "TOP":"#54c1c9",
-"Freedom":"#926951",
+"Freedom":"#d9c161",
+"TTTP":"#926951",
 "NCP":"#f57d2f"
 };
 
   
-const PREFERRED_ORDER=["TPM","Greens","Labour","TOP","National","ACT","NZF","NCP","Freedom"];
+const PREFERRED_ORDER=["TPM","TTTP","Greens","Labour","TOP","National","ACT","NZF","NCP","Freedom"];
 
 const SUPPORT_VS_ORDER = PREFERRED_ORDER.filter(k => k!=="Freedom" && k!=="NCP");
 
 const BASE_SEATS=120,PARTY_VOTE_THRESHOLD=5;
 
-const TPM_KEY="TPM",TPM_GUARANTEED_ELECTORATES=3;
+
+const ELECTORATE_PARTIES=["National","Labour","Greens","ACT","NZF","TOP","TPM","TTTP"];
+const MAX_ELECTORATES=71;
+const DEFAULT_ELECTORATES={National:37,Labour:26,Greens:4,ACT:1,NZF:0,TPM:3,TOP:0,TTTP:0};
+let electorates={...DEFAULT_ELECTORATES};
 
 const EVENT_MARKERS=[
  {date:Date.UTC(2023,9,14),label:"2023 election"},
@@ -810,19 +849,25 @@ function renderLatestPolling(){
   renderRecentSupportChanges();
 }
 
-// New Zealand's MMP seat calculation:
-//  1. A party shares in the 120 base seats if it clears 5% of the party
-//     vote, OR if it is Te Pāti Māori (which, in the real system, clears
-//     this bar by winning at least one electorate regardless of party vote).
-//  2. Seats are allocated with the modified Sainte-Laguë method — divisors
-//     1.2, 3, 5, 7, … (the 1.2 first divisor, instead of 1, is NZ's actual
-//     rule and makes a party's first seat slightly harder to win).
-//  3. Te Pāti Māori is then floored at TPM_GUARANTEED_ELECTORATES seats,
-//     reflecting predicted Māori electorate wins. If the formula gave it
-//     fewer seats than that floor, the shortfall becomes overhang: the
-//     House grows beyond 120 rather than another party losing a seat.
-function projectSeats(poll){
- const q=poll.filter(p=>p.support>=PARTY_VOTE_THRESHOLD||p.key===TPM_KEY);
+
+function projectSeats(poll,electorateSeats){
+ const wins=electorateSeats||{};
+ const byKey=new Map(poll.map(p=>[p.key,p]));
+ const keys=new Set(poll.map(p=>p.key));
+ ELECTORATE_PARTIES.forEach(k=>{if((wins[k]||0)>0)keys.add(k)});
+
+ const parties=[...keys].map(key=>{
+  const base=byKey.get(key);
+  return{
+   key,
+   name:(base&&base.name)||key,
+   colour:(base&&base.colour)||PARTY_COLOURS[key]||"#777",
+   support:base?base.support:0,
+   electorates:wins[key]||0
+  };
+ });
+
+ const q=parties.filter(p=>p.support>=PARTY_VOTE_THRESHOLD||p.electorates>0);
  if(!q.length) return [];
 
  const seats=Object.fromEntries(q.map(p=>[p.key,0]));
@@ -838,11 +883,10 @@ function projectSeats(poll){
   seats[winner.key]++;
  }
 
- if(seats[TPM_KEY]!==undefined && seats[TPM_KEY]<TPM_GUARANTEED_ELECTORATES){
-  seats[TPM_KEY]=TPM_GUARANTEED_ELECTORATES;
- }
-
- return q.map(p=>({...p,total:seats[p.key]}))
+ return q.map(p=>{
+   const entitled=seats[p.key];
+   return{...p,entitled,total:Math.max(entitled,p.electorates),overhang:Math.max(0,p.electorates-entitled)};
+  })
   .filter(p=>p.total>0)
   .sort((a,b)=>{
    const idxA=PREFERRED_ORDER.indexOf(a.key);
@@ -851,12 +895,7 @@ function projectSeats(poll){
   });
 }
 
-// Computes concentric arc rows (radius + seat count per row) that together
-// sum to exactly `totalSeats`, for drawing a hemicycle-style parliament
-// diagram. Row radii are spaced evenly between rMin and rMax; each row's
-// seat count is proportional to its radius (so dot spacing along each arc
-// stays roughly constant), with largest-remainder rounding to hit the
-// exact total.
+
 function hemicycleRows(totalSeats,rowCount,rMin,rMax){
  const radii=[];
  for(let i=0;i<rowCount;i++) radii.push(rowCount===1?rMin:rMin+(rMax-rMin)*(i/(rowCount-1)));
@@ -869,43 +908,49 @@ function hemicycleRows(totalSeats,rowCount,rMin,rMax){
  return radii.map((r,i)=>({radius:r,count:Math.max(1,counts[i])}));
 }
 
-// Exact seat layout of a 120-seat NZ House, traced from a real reference
-// chart (coordinates recovered from its rendered SVG, not derived from a
-// formula). In fill order: left bench (innermost column outward, top row
-// first), the curved bowl left-to-right, then the right bench (innermost
-// column outward, bottom row first) — a single continuous sweep from one
-// bench's open top, round the bowl, to the other bench's open top. Using
-// the real seat positions instead of a parametric approximation is what
-// actually gets the shape right — two straight facing benches merging
-// into one properly rounded bowl, at the real relative proportions.
+
 const NZ_PARLIAMENT_TEMPLATE = [[79,25],[60,25],[41,25],[79,44],[60,44],[41,44],[79,63],[60,63],[41,63],[79,82],[60,82],[41,82],[79,101],[60,101],[41,101],[79,120],[60,120],[41,120],[79,139],[60,139],[41,139],[79,158],[60,158],[41,158],[79,177],[60,177],[41,177],[79,198],[60,197],[41,196],[83,218],[62,216],[42,215],[68,233],[47,232],[55,248],[95,234],[80,248],[68,261],[48,268],[33,280],[61,280],[48,295],[81,272],[76,292],[68,309],[96,259],[96,281],[93,301],[87,319],[112,246],[113,266],[113,286],[111,306],[109,325],[132,249],[132,268],[132,287],[132,307],[132,327],[166,249],[166,268],[166,287],[166,307],[166,327],[186,246],[185,266],[185,286],[187,306],[189,325],[202,259],[202,281],[205,301],[211,319],[230,309],[222,292],[217,272],[250,295],[237,280],[265,280],[250,268],[230,261],[218,248],[203,234],[243,248],[251,232],[230,233],[256,215],[236,216],[215,218],[257,196],[238,197],[219,198],[257,177],[238,177],[219,177],[257,158],[238,158],[219,158],[257,139],[238,139],[219,139],[257,120],[238,120],[219,120],[257,101],[238,101],[219,101],[257,82],[238,82],[219,82],[257,63],[238,63],[219,63],[257,44],[238,44],[219,44],[257,25],[238,25],[219,25]];
 const NZ_TEMPLATE_SEATS = NZ_PARLIAMENT_TEMPLATE.length; // 120, i.e. BASE_SEATS
 const NZ_ROW_PITCH = 19; // vertical gap between bench rows, read off the template itself
 
+
+function nzSeatPositions(total){
+ const T = NZ_PARLIAMENT_TEMPLATE;
+ if(total <= T.length) return T.slice(0, total); // defensive; total is always >= 120
+ const extra = total - T.length;
+ const extraLeft = Math.ceil(extra/2), extraRight = extra - extraLeft;
+ const leftCols = [79,60,41], rightCols = [257,238,219];
+
+ const left = [];
+ const leftRows = Math.ceil(extraLeft/3);
+ for(let r=leftRows; r>=1; r--){
+  const inRow = (r===leftRows && extraLeft%3) ? extraLeft%3 : 3;
+  for(let c=0; c<inRow; c++) left.push([leftCols[c], 25 - NZ_ROW_PITCH*r]);
+ }
+
+ const right = [];
+ const rightRows = Math.ceil(extraRight/3);
+ for(let r=1; r<=rightRows; r++){
+  const inRow = (r===rightRows && extraRight%3) ? extraRight%3 : 3;
+  for(let c=0; c<inRow; c++) right.push([rightCols[c], 25 - NZ_ROW_PITCH*r]);
+ }
+
+ return [...left, ...T, ...right];
+}
+
 function renderProjection(){
- projection = projectSeats(latestPoll);
+ projection = projectSeats(latestPoll, electorates);
  $("projectionKey").innerHTML = "";
 
  const total = projection.reduce((s,p)=>s+p.total,0) || BASE_SEATS;
+ const overhangTotal = projection.reduce((s,p)=>s+p.overhang,0);
 
  const seatColours = [];
  projection.forEach(p => {
   for(let i = 0; i < p.total; i++) seatColours.push(p);
  });
 
- // The template is exactly BASE_SEATS positions. An overhang seat (or a
- // few — TPM's electorate floor can occasionally produce more than one)
- // needs extra positions beyond that. Rather than reshaping the whole
- // curve, the two benches are open-ended at the top for exactly this
- // reason: extra seats just extend the first bench column a bit further
- // up, one more row per overhang seat, ahead of the template's own first
- // row — so the party that starts the fill order (the one that can
- // actually produce overhang) is the one whose bench visibly grows.
- const extra = Math.max(0, total - NZ_TEMPLATE_SEATS);
- const positions = [];
- for(let k=extra;k>=1;k--) positions.push([79, 25 - NZ_ROW_PITCH*k]);
- for(const pt of NZ_PARLIAMENT_TEMPLATE) positions.push(pt);
- if(total < NZ_TEMPLATE_SEATS) positions.length = total; // defensive fallback, shouldn't occur
+ const positions = nzSeatPositions(total);
 
  const dotR = 7;
  const pad = 12;
@@ -920,11 +965,15 @@ function renderProjection(){
  // midline.
  const flipY = y => minY + maxY - y;
 
- let svg = `<svg viewBox="${minX} ${minY} ${viewW} ${viewH}" width="100%" style="display:block">`;
+ // The max-height keeps a very large House (benches get long with overhang;
+ // 191 seats is about twice as tall as wide) from running off the page —
+ // the drawing just scales down and stays centred.
+ let svg = `<svg viewBox="${minX} ${minY} ${viewW} ${viewH}" style="display:block;width:100%;max-height:900px">`;
  positions.forEach((pt, idx) => {
   const p = seatColours[idx];
   if(!p) return;
-  svg += `<circle cx="${pt[0]}" cy="${flipY(pt[1])}" r="${dotR}" fill="${esc(p.colour)}"><title>${esc(partyLabel(p.name))}: ${esc(locInt(p.total))}</title></circle>`;
+  const tip = `${partyLabel(p.name)}: ${locInt(p.total)}` + (p.overhang>0 ? ` (${t("overhangTag")(p.overhang)})` : "");
+  svg += `<circle cx="${pt[0]}" cy="${flipY(pt[1])}" r="${dotR}" fill="${esc(p.colour)}"><title>${esc(tip)}</title></circle>`;
  });
  svg += `</svg>`;
  $("parliament").innerHTML = svg;
@@ -935,11 +984,83 @@ function renderProjection(){
   const s = document.createElement("span");
   s.className = "key-swatch";
   s.style.background = p.colour;
-  i.append(s, document.createTextNode(`${partyLabel(p.name)} ${locInt(p.total)}`));
+  const overhangText = p.overhang>0 ? ` (${t("overhangTag")(p.overhang)})` : "";
+  i.append(s, document.createTextNode(`${partyLabel(p.name)} ${locInt(p.total)}${overhangText}`));
   $("projectionKey").appendChild(i);
  }
 
+ const hs = $("houseSize");
+ if(hs) hs.textContent = projection.length ? t("houseSize")(total, overhangTotal) : "";
+
  renderTopArchChart();
+}
+
+// ---- Electorate seat inputs -------------------------------------------
+function electorateTotal(exceptKey){
+ return ELECTORATE_PARTIES.reduce((s,k)=>k===exceptKey?s:s+(electorates[k]||0),0);
+}
+function updateElectorateCount(){
+ const el = $("electorateCount");
+ if(el) el.textContent = t("electorateCount")(electorateTotal(null), MAX_ELECTORATES);
+}
+function syncElectorateInputs(){
+ ELECTORATE_PARTIES.forEach(k=>{
+  const inp = $("electorate-"+k);
+  if(inp) inp.value = electorates[k]>0 ? String(electorates[k]) : "";
+ });
+ updateElectorateCount();
+}
+function onElectorateChange(){
+ updateElectorateCount();
+ if(latestPoll.length){ renderProjection(); renderCoalitionBuilder(); }
+}
+function buildElectorateInputs(){
+ const grid = $("electorateGrid");
+ if(!grid) return;
+ grid.innerHTML = "";
+ ELECTORATE_PARTIES.forEach(key=>{
+  const colour = PARTY_COLOURS[key] || "#777";
+  const cell = document.createElement("label");
+  cell.className = "electorate-cell";
+
+  const box = document.createElement("span");
+  box.className = "party-box";
+  box.style.background = colour;
+  box.style.color = partyTextColor(colour);
+  box.textContent = partyLabel(key);
+
+  const inp = document.createElement("input");
+  inp.type = "text";
+  inp.inputMode = "numeric";
+  inp.pattern = "[0-9]*";
+  inp.maxLength = 2;
+  inp.autocomplete = "off";
+  inp.spellcheck = false;
+  inp.id = "electorate-"+key;
+  inp.className = "electorate-input";
+  inp.placeholder = "0";
+  inp.setAttribute("aria-label", `${key} electorate seats`);
+
+  inp.addEventListener("input", ()=>{
+   // Digits only; no more than the electorates still unassigned.
+   const digits = inp.value.replace(/\D/g,"").slice(0,2);
+   let v = digits==="" ? 0 : parseInt(digits,10);
+   const room = Math.max(0, MAX_ELECTORATES - electorateTotal(key));
+   if(v > room) v = room;
+   electorates[key] = v;
+   const shown = digits==="" ? "" : String(v);
+   if(inp.value !== shown) inp.value = shown;
+   onElectorateChange();
+  });
+  inp.addEventListener("focus", ()=>inp.select());
+
+  cell.append(box, inp);
+  grid.appendChild(cell);
+ });
+
+ $("electorateResetBtn").onclick = ()=>{ electorates = {...DEFAULT_ELECTORATES}; syncElectorateInputs(); onElectorateChange(); };
+ $("electorateClearBtn").onclick = ()=>{ electorates = {}; syncElectorateInputs(); onElectorateChange(); };
+ syncElectorateInputs();
 }
 
 function renderSupportChanges() {
@@ -1128,15 +1249,15 @@ function renderTopArchChart() {
     }
   });
 
-  const rows = hemicycleRows(total, 6, 20, 44);
 
-  // Match the working pattern from the Latvia build: centre off the
-  // canvas's own width/height rather than hand-picked pixel constants,
-  // so this always sits right regardless of exactly how the canvas ends
-  // up sized on the page.
+  const rowCount = total <= 125 ? 6 : (total <= 155 ? 7 : 8);
+  const rows = hemicycleRows(total, rowCount, 20, 44);
+  const radialSpacing = (44 - 20) / (rowCount - 1);
+  const arcSpacing = Math.PI * rows.reduce((s,r)=>s+r.radius,0) / total;
+
   const centerX = canvas.width / 2;
   const centerY = canvas.height - 12;
-  const dotRadius = 2.8;
+  const dotRadius = Math.min(2.8, arcSpacing * 0.56, radialSpacing * 0.6);
 
   const points = [];
   rows.forEach(row => {
@@ -1173,16 +1294,10 @@ function renderTopArchChart() {
   ctx.font = "bold 12px Tahoma, Arial, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "bottom";
-  // Sits centred in the empty hole under the dome (that's what rMin above
-  // is leaving room for) rather than the old right-aligned/mid-height
-  // position, which was left over from before this became a flat
-  // semicircle and had drifted onto the bottom row of seats.
+
   ctx.fillText(String(total), centerX, centerY - 1);
 }
 
-// Recomputes the 1/3+1 blocking, majority, and 2/3 supermajority lines for
-// whatever the current total seat count is (which shifts whenever Te Pāti
-// Māori's overhang changes it), and repositions/relabels them in the DOM.
 function updateCoalitionThresholds(total){
  const blocking = Math.floor(total/3)+1;
  const majority = Math.floor(total/2)+1;
@@ -1446,6 +1561,7 @@ function renderCustomCoalitionChart(){
  });
 }
 
+buildElectorateInputs();
 applyStaticTranslations();
 if(document.body.classList.contains("dark")){$("themeBtn").textContent=t("lightMode")}
 
