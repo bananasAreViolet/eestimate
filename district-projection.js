@@ -161,10 +161,12 @@
       others: "All others",
       hint: "Hover over (or tap) a district to see its projection.",
       legend: "Colour = party with the most votes in the district",
+      overall: "Overall",
+      legendParty: function (name) { return name + " vote share"; },
       below: "– = below the 5% national threshold, no seats",
       inset: "Tallinn (No. 1–3)",
       note: function () {
-        return "Latest numbers projected onto the 2023 district results. Each party's 2023 district figures are scaled so that the seat-weighted national total matches the current polling average, and every district is then re-normalised to 100%. Seats: district mandates by simple quota, the rest by national modified d'Hondt, with compensation seats going to the districts with the largest remainders. The 2023 EÜVP result is attributed to Koos; other parties without a 2023 pattern (VL, Free, ERK) are assumed to be flat across districts. Districts are weighted by their number of mandates rather than actual turnout, so this is an approximation and may differ by a seat or two from the national Seat Projection above. The first seat figure is the district's projected seats including compensation seats; the number in brackets is its nominal size. The eight parties with the highest projected vote share are listed for each district.";
+        return "Latest numbers projected onto the 2023 district results. Each party's 2023 district figures are scaled so that the seat-weighted national total matches the current polling average, and every district is then re-normalised to 100%. Seats: district mandates by simple quota, the rest by national modified d'Hondt, with compensation seats going to the districts with the largest remainders. The 2023 EÜVP result is attributed to Koos; other parties without a 2023 pattern (VL, Free, ERK) are assumed to be flat across districts. Districts are weighted by their number of mandates rather than actual turnout, so this is an approximation and may differ by a seat or two from the national Seat Projection above. The first seat figure is the district's projected seats including compensation seats; the number in brackets is its nominal size. The eight parties with the highest projected vote share are listed for each district. Use the buttons above the map to switch between the overall view and each party's projected vote share by district.";
       },
       totals: "Model totals:"
     },
@@ -175,10 +177,12 @@
       others: "Kõik teised",
       hint: "Liigu kursoriga ringkonna kohale (või puuduta seda), et näha prognoosi.",
       legend: "Värv = ringkonnas enim hääli saav erakond",
+      overall: "Üldine",
+      legendParty: function (name) { return name + " häältedeosa"; },
       below: "– = alla 5% üleriigilise künnise, kohti pole",
       inset: "Tallinn (nr 1–3)",
       note: function () {
-        return "Viimased numbrid projitseeritud 2023. aasta ringkonnatulemustele. Iga erakonna 2023. aasta ringkonnanäitajad skaleeritakse nii, et kohtadega kaalutud üleriigiline summa vastaks praegusele küsitluste keskmisele, seejärel normaliseeritakse iga ringkond 100%-le. Kohad: ringkonnamandaadid lihtkvoodi alusel, ülejäänud üleriigilise modifitseeritud d'Hondti meetodiga, kompensatsioonimandaadid suurimate jääkidega ringkondadesse. 2023. aasta EÜVP tulemus on omistatud Koos'ile; teiste erakondade (Vasak, Vaba, ERK) puhul, kel 2023. aastal oma ringkonnamustrit pole, eeldatakse ühtlast toetust kõigis ringkondades. Ringkondi kaalutakse mandaatide arvu, mitte tegeliku osalusmäära järgi, seega on tegu lähendusega ning tulemus võib ülalolevast kohtade prognoosist erineda ühe-kahe koha võrra. Esimene kohtade arv on ringkonna prognoositud kohad koos kompensatsioonimandaatidega, sulgudes on ringkonna nimisuurus. Iga ringkonna juures on toodud kaheksa suurima prognoositud häältedeosaga erakonda.";
+        return "Viimased numbrid projitseeritud 2023. aasta ringkonnatulemustele. Iga erakonna 2023. aasta ringkonnanäitajad skaleeritakse nii, et kohtadega kaalutud üleriigiline summa vastaks praegusele küsitluste keskmisele, seejärel normaliseeritakse iga ringkond 100%-le. Kohad: ringkonnamandaadid lihtkvoodi alusel, ülejäänud üleriigilise modifitseeritud d'Hondti meetodiga, kompensatsioonimandaadid suurimate jääkidega ringkondadesse. 2023. aasta EÜVP tulemus on omistatud Koos'ile; teiste erakondade (Vasak, Vaba, ERK) puhul, kel 2023. aastal oma ringkonnamustrit pole, eeldatakse ühtlast toetust kõigis ringkondades. Ringkondi kaalutakse mandaatide arvu, mitte tegeliku osalusmäära järgi, seega on tegu lähendusega ning tulemus võib ülalolevast kohtade prognoosist erineda ühe-kahe koha võrra. Esimene kohtade arv on ringkonna prognoositud kohad koos kompensatsioonimandaatidega, sulgudes on ringkonna nimisuurus. Iga ringkonna juures on toodud kaheksa suurima prognoositud häältedeosaga erakonda. Kaardi kohal olevate nuppudega saab vahetada üldvaate ja iga erakonna prognoositud häältedeosa vahel ringkondade kaupa.";
       },
       totals: "Mudeli kogusumma:"
     }
@@ -195,10 +199,27 @@
   function colour(p) { try { return PARTY_COLOURS[p] || "#777"; } catch (e) { return "#777"; } }
   function order(p) { try { var i = PREFERRED_ORDER.indexOf(p); return i < 0 ? 999 : i; } catch (e) { return 999; } }
 
-  var selected = null, last = null;
+  var selected = null, last = null, mode = "overall"; // mode: "overall" or a party key
+
+  // Blend a party colour with light grey: t = 0 → grey, t = 1 → full colour.
+  function tint(hex, t) {
+    var h = String(hex).replace("#", "");
+    if (h.length !== 6) return hex;
+    var out = "#";
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(h.substr(i * 2, 2), 16);
+      var v = Math.round(236 * (1 - t) + c * t);
+      out += (v < 16 ? "0" : "") + v.toString(16);
+    }
+    return out;
+  }
 
   var css = document.createElement("style");
   css.textContent =
+    ".dp-modes{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;padding:4px 4px 10px}" +
+    ".dp-modes .mode-btn{margin-right:6px}" +
+    ".dp-grad{display:inline-block;width:140px;height:12px;border:1px solid #000;vertical-align:middle;margin:0 6px}" +
+    ".dp-row-hl{background:rgba(128,128,128,.18)}" +
     ".dp-wrap{display:flex;flex-wrap:wrap;gap:16px 20px;align-items:flex-start;padding:4px}" +
     ".dp-mapcol{flex:1 1 440px;min-width:0}" +
     ".dp-side{flex:0 1 310px;min-width:260px;margin:0 auto}" +
@@ -231,7 +252,7 @@
   section.className = "window";
   section.innerHTML =
     '<div class="titlebar"><span id="dpTitle">DISTRICT PROJECTION</span></div>' +
-    '<div class="window-body"><div class="chart-surface" style="padding-bottom:32px"><div class="dp-wrap">' +
+    '<div class="window-body"><div class="chart-surface" style="padding-bottom:32px"><div class="dp-modes" id="dpModes"></div><div class="dp-wrap">' +
     '<div class="dp-mapcol"><svg id="dpMap" class="dp-svg" role="img"></svg><div class="dp-legend" id="dpLegend"></div></div>' +
     '<div class="dp-side"><div class="dp-inset"><div class="dp-inset-title" id="dpInsetTitle"></div><svg id="dpInset" class="dp-svg" role="img"></svg></div><div class="dp-detail" id="dpDetail"></div></div>' +
     '</div><div class="dp-totals" id="dpTotals"></div>' +
@@ -248,7 +269,7 @@
     return best;
   }
 
-  function mapHtml(blk, fills, labelIds, labelSize, tartuMarker) {
+  function mapHtml(blk, fills, labelIds, labelSize, tartuMarker, text) {
     var h = "", d, i;
     for (d in blk.paths) {
       h += '<path class="dp-shape" data-d="' + d + '" d="' + blk.paths[d] + '" fill="' + esc2(fills[d]) + '" fill-rule="evenodd"/>';
@@ -258,7 +279,7 @@
     }
     for (i = 0; i < labelIds.length; i++) {
       d = labelIds[i];
-      h += '<text class="dp-lab" font-size="' + labelSize + '" x="' + blk.labels[d][0] + '" y="' + blk.labels[d][1] + '">' + d + '</text>';
+      h += '<text class="dp-lab" font-size="' + labelSize + '" x="' + blk.labels[d][0] + '" y="' + blk.labels[d][1] + '">' + (text ? text(d) : d) + '</text>';
     }
     h += '<g class="dp-selg"></g>';
     return h;
@@ -289,12 +310,13 @@
     });
     var top = Object.keys(sh).filter(function (p) { return p !== "Other"; })
       .sort(function (a, b) { return sh[b] - sh[a]; }).slice(0, TOP_N);
+    if (mode !== "overall" && sh[mode] !== undefined && top.indexOf(mode) < 0) top.push(mode); // keep the viewed party visible
     var shown = 0, anyBelow = false;
     var rows = top.map(function (p) {
       shown += sh[p];
       var seat = elig[p] ? st[p] : "–";
       if (!elig[p]) anyBelow = true;
-      return '<div class="dp-row"><span class="party-box" style="background:' + esc2(colour(p)) + '">' + esc2(label(p)) + '</span>' +
+      return '<div class="dp-row' + (p === mode ? ' dp-row-hl' : '') + '"><span class="party-box" style="background:' + esc2(colour(p)) + '">' + esc2(label(p)) + '</span>' +
         '<div class="dp-bar"><span style="width:' + Math.min(100, sh[p] / 50 * 100).toFixed(1) + '%;background:' + esc2(colour(p)) + '"></span></div>' +
         '<span class="dp-pct">' + num1(sh[p]) + '%</span><span class="dp-seat">' + seat + '</span></div>';
     }).join("");
@@ -317,18 +339,41 @@
     var r = projectDistricts(national);
     last = r;
 
-    var fills = {}, used = {}, d;
-    for (d = 1; d <= SEATS.length; d++) { var lp = leader(r.shares[d - 1]); fills[d] = colour(lp); used[lp] = true; }
+    // party buttons: "Overall" + every party in the poll
+    var partyKeys = Object.keys(r.shares[0]).filter(function (p) { return p !== "Other"; })
+      .sort(function (a, b) { return order(a) - order(b); });
+    if (mode !== "overall" && partyKeys.indexOf(mode) < 0) mode = "overall";
+    var btns = '<button type="button" class="action mode-btn' + (mode === "overall" ? " active" : "") + '" data-mode="overall">' + esc2(S.overall) + '</button>';
+    partyKeys.forEach(function (p) {
+      btns += '<button type="button" class="party-select' + (mode === p ? " selected" : "") + '" data-mode="' + esc2(p) + '">' +
+        '<span class="party-box" style="background:' + esc2(colour(p)) + '">' + esc2(label(p)) + '</span></button>';
+    });
+    document.getElementById("dpModes").innerHTML = btns;
+
+    var fills = {}, used = {}, d, text = null, legendHtml = "";
+    if (mode === "overall") {
+      for (d = 1; d <= SEATS.length; d++) { var lp = leader(r.shares[d - 1]); fills[d] = colour(lp); used[lp] = true; }
+      legendHtml = '<span>' + esc2(S.legend) + ':</span>' +
+        Object.keys(used).sort(function (a, b) { return order(a) - order(b); }).map(function (p) {
+          return '<span><span class="key-swatch" style="background:' + esc2(colour(p)) + '"></span>' + esc2(label(p)) + '</span>';
+        }).join("");
+    } else {
+      var vals = {}, max = 0;
+      for (d = 1; d <= SEATS.length; d++) { vals[d] = r.shares[d - 1][mode]; if (vals[d] > max) max = vals[d]; }
+      var c = colour(mode);
+      for (d = 1; d <= SEATS.length; d++) fills[d] = tint(c, max > 0 ? 0.12 + 0.88 * vals[d] / max : 0.12);
+      text = function (k) { return num1(vals[k]) + "%"; };
+      legendHtml = '<span>' + esc2(S.legendParty(label(mode))) + ':</span><span>0%</span>' +
+        '<span class="dp-grad" style="background:linear-gradient(to right,' + tint(c, 0.12) + ',' + tint(c, 1) + ')"></span>' +
+        '<span>' + num1(max) + '%</span>';
+    }
 
     mapEl.setAttribute("viewBox", "0 0 " + MAP.main.w + " " + MAP.main.h);
-    mapEl.innerHTML = mapHtml(MAP.main, fills, [4, 5, 6, 7, 8, 9, 11, 12], 15, true);
+    mapEl.innerHTML = mapHtml(MAP.main, fills, [4, 5, 6, 7, 8, 9, 11, 12], mode === "overall" ? 15 : 13, true, text);
     insEl.setAttribute("viewBox", "0 0 " + MAP.inset.w + " " + MAP.inset.h);
-    insEl.innerHTML = mapHtml(MAP.inset, fills, [1, 2, 3], 20, false);
+    insEl.innerHTML = mapHtml(MAP.inset, fills, [1, 2, 3], mode === "overall" ? 20 : 17, false, text);
 
-    document.getElementById("dpLegend").innerHTML = '<span>' + esc2(S.legend) + ':</span>' +
-      Object.keys(used).sort(function (a, b) { return order(a) - order(b); }).map(function (p) {
-        return '<span><span class="key-swatch" style="background:' + esc2(colour(p)) + '"></span>' + esc2(label(p)) + '</span>';
-      }).join("");
+    document.getElementById("dpLegend").innerHTML = legendHtml;
 
     var tot = r.eligible.slice().sort(function (a, b) { return order(a) - order(b); }).map(function (p) {
       return '<span><b style="color:' + esc2(colour(p)) + '">' + esc2(label(p)) + "</b> " + r.totals[p] + "</span>";
@@ -345,7 +390,11 @@
     if (d !== selected) setSelected(d);
   }
   section.addEventListener("mouseover", pick);
-  section.addEventListener("click", pick);
+  section.addEventListener("click", function (e) {
+    var b = e.target && e.target.closest ? e.target.closest("[data-mode]") : null;
+    if (b) { mode = b.getAttribute("data-mode"); render(); return; }
+    pick(e);
+  });
 
   // Re-render whenever the page re-renders its main seat projection.
   if (typeof renderProjection === "function") {
