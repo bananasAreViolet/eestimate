@@ -37,13 +37,15 @@
     E200:   [15.7, 10.9, 14.2, 13.7, 17.1, 8.7, 8.3, 10.7, 14.6, 18.4, 11.5, 12.8],
     Greens: [1.1, 1.0, 1.1, 0.7, 0.9, 0.5, 0.5, 0.8, 1.0, 1.7, 1.3, 0.8],   // 2023 "EER"
     PP:     [2.3, 1.6, 2.1, 3.4, 2.1, 3.0, 1.0, 2.1, 2.6, 2.0, 2.3, 2.2],   // 2023 "Parempoolsed"
-    "EÜRP": [3.3, 4.9, 1.9, 1.3, 0.0, 1.5, 14.9, 0.0, 1.5, 1.6, 0.0, 0.7],  // 2023 "EÜVP"
+    // 2023 "EÜVP" column. Most of that support came from Koos candidates, so it is
+    // attributed to Koos here (not to VL, which EÜVP later became).
+    Koos:   [3.3, 4.9, 1.9, 1.3, 0.0, 1.5, 14.9, 0.0, 1.5, 1.6, 0.0, 0.7],
     "Ind.": [0.1, 0.1, 0.0, 0.8, 0.0, 0.2, 15.5, 0.3, 0.0, 0.0, 0.2, 0.0]
   };
 
-  // Parties that did not run in 2023 (VL, Koos, Free, ERK) have no district pattern.
-  // By default they are assumed flat (same % everywhere). To borrow another party's
-  // 2023 pattern instead, e.g. { VL: "SDE" }, fill this in.
+  // Parties with no 2023 district pattern of their own (VL, Free, ERK) are assumed flat
+  // (same % everywhere). To borrow another party's 2023 pattern instead,
+  // e.g. { VL: "SDE" }, fill this in.
   var PROXY = {};
 
   function div(n) { return n <= 1 ? 1 : Math.pow(n, EXPONENT); }
@@ -153,7 +155,7 @@
       seats: function (n) { return n + (n === 1 ? " seat" : " seats"); },
       others: "Others / below threshold",
       note: function (asAt) {
-        return "Latest numbers projected onto the 2023 district results. Each party's 2023 district figures are scaled so that the seat-weighted national total matches the current polling average, and every district is then re-normalised to 100%. Seats: district mandates by simple quota, the rest by national modified d'Hondt, with compensation seats going to the districts with the largest remainders. Parties that did not run in 2023 are assumed to be flat across districts. Districts are weighted by their number of mandates rather than actual turnout, so this is an approximation and may differ by a seat or two from the national Seat Projection above. Final seats per district can differ from the nominal district size because of compensation seats.";
+        return "Latest numbers projected onto the 2023 district results. Each party's 2023 district figures are scaled so that the seat-weighted national total matches the current polling average, and every district is then re-normalised to 100%. Seats: district mandates by simple quota, the rest by national modified d'Hondt, with compensation seats going to the districts with the largest remainders. The 2023 EÜVP result is attributed to Koos; other parties without a 2023 pattern (VL, Free, ERK) are assumed to be flat across districts. Districts are weighted by their number of mandates rather than actual turnout, so this is an approximation and may differ by a seat or two from the national Seat Projection above. Final seats per district can differ from the nominal district size because of compensation seats.";
       },
       totals: "Model totals:"
     },
@@ -163,7 +165,7 @@
       seats: function (n) { return n + (n === 1 ? " koht" : " kohta"); },
       others: "Muud / alla valimiskünnise",
       note: function (asAt) {
-        return "Viimased numbrid projitseeritud 2023. aasta ringkonnatulemustele. Iga erakonna 2023. aasta ringkonnanäitajad skaleeritakse nii, et kohtadega kaalutud üleriigiline summa vastaks praegusele küsitluste keskmisele, seejärel normaliseeritakse iga ringkond 100%-le. Kohad: ringkonnamandaadid lihtkvoodi alusel, ülejäänud üleriigilise modifitseeritud d'Hondti meetodiga, kompensatsioonimandaadid suurimate jääkidega ringkondadesse. Erakondade puhul, kes 2023. aastal ei kandideerinud, eeldatakse ühtlast toetust kõigis ringkondades. Ringkondi kaalutakse mandaatide arvu, mitte tegeliku osalusmäära järgi, seega on tegu lähendusega ning tulemus võib ülalolevast kohtade prognoosist erineda ühe-kahe koha võrra. Ringkonna lõplik kohtade arv võib kompensatsioonimandaatide tõttu nimiväärtusest erineda.";
+        return "Viimased numbrid projitseeritud 2023. aasta ringkonnatulemustele. Iga erakonna 2023. aasta ringkonnanäitajad skaleeritakse nii, et kohtadega kaalutud üleriigiline summa vastaks praegusele küsitluste keskmisele, seejärel normaliseeritakse iga ringkond 100%-le. Kohad: ringkonnamandaadid lihtkvoodi alusel, ülejäänud üleriigilise modifitseeritud d'Hondti meetodiga, kompensatsioonimandaadid suurimate jääkidega ringkondadesse. 2023. aasta EÜVP tulemus on omistatud Koos'ile; teiste erakondade (Vasak, Vaba, ERK) puhul, kel 2023. aastal oma ringkonnamustrit pole, eeldatakse ühtlast toetust kõigis ringkondades. Ringkondi kaalutakse mandaatide arvu, mitte tegeliku osalusmäära järgi, seega on tegu lähendusega ning tulemus võib ülalolevast kohtade prognoosist erineda ühe-kahe koha võrra. Ringkonna lõplik kohtade arv võib kompensatsioonimandaatide tõttu nimiväärtusest erineda.";
       },
       totals: "Mudeli kogusumma:"
     }
