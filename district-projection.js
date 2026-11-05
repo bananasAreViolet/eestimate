@@ -48,12 +48,30 @@
   // e.g. { VL: "SDE" }, fill this in.
   var PROXY = {};
 
+  // Re-attributions applied to the 2023 table before projecting (raw table above stays as published).
+  // The 2023 independent in Ida-Viru (No. 7, 15.5%) was an ex-Centre member, so that
+  // support is counted as Centre. Other districts' small "Ind." values are left alone.
+  var REATTRIBUTE = [{ from: "Ind.", to: "Centre", districts: [7] }];
+  function adjustBase(raw) {
+    var out = {};
+    Object.keys(raw).forEach(function (k) { out[k] = raw[k].slice(); });
+    REATTRIBUTE.forEach(function (r) {
+      r.districts.forEach(function (n) {
+        var i = n - 1;
+        out[r.to][i] = Math.round((out[r.to][i] + out[r.from][i]) * 10) / 10;
+        out[r.from][i] = 0;
+      });
+    });
+    return out;
+  }
+  var BASE_ADJUSTED = adjustBase(BASE_2023);
+
   function div(n) { return n <= 1 ? 1 : Math.pow(n, EXPONENT); }
 
   /* ---------- step 1–2: district vote shares ---------- */
   function estimateDistrictShares(national, opts) {
     opts = opts || {};
-    var base = opts.base || BASE_2023, seats = opts.seats || SEATS, nd = seats.length;
+    var base = opts.base || BASE_ADJUSTED, seats = opts.seats || SEATS, nd = seats.length;
     var parties = Object.keys(national).filter(function (p) { return Number.isFinite(national[p]); });
     var sum = parties.reduce(function (a, p) { return a + national[p]; }, 0);
     var target = {}, other;
@@ -143,7 +161,7 @@
     return { shares: est.shares, target: est.target, eligible: alloc.eligible, seats: alloc.districtSeats, totals: alloc.totals };
   }
 
-  var api = { estimateDistrictShares: estimateDistrictShares, allocateSeats: allocateSeats, projectDistricts: projectDistricts, BASE_2023: BASE_2023, SEATS: SEATS };
+  var api = { estimateDistrictShares: estimateDistrictShares, allocateSeats: allocateSeats, projectDistricts: projectDistricts, BASE_2023: BASE_2023, BASE_ADJUSTED: BASE_ADJUSTED, SEATS: SEATS };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (typeof document === "undefined") return;
 
@@ -166,7 +184,7 @@
       below: "– = below the 5% national threshold, no seats",
       inset: "Tallinn (No. 1–3)",
       note: function () {
-        return "Latest numbers projected onto the 2023 district results. Each party's 2023 district figures are scaled so that the seat-weighted national total matches the current polling average, and every district is then re-normalised to 100%. Seats: district mandates by simple quota, the rest by national modified d'Hondt, with compensation seats going to the districts with the largest remainders. The 2023 EÜVP result is attributed to Koos; other parties without a 2023 pattern (VL, Free, ERK) are assumed to be flat across districts. Districts are weighted by their number of mandates rather than actual turnout, so this is an approximation and may differ by a seat or two from the national Seat Projection above. The first seat figure is the district's projected seats including compensation seats; the number in brackets is its nominal size. The eight parties with the highest projected vote share are listed for each district. Use the buttons above the map to switch between the overall view and each party's projected vote share by district.";
+        return "Latest numbers projected onto the 2023 district results. Each party's 2023 district figures are scaled so that the seat-weighted national total matches the current polling average, and every district is then re-normalised to 100%. Seats: district mandates by simple quota, the rest by national modified d'Hondt, with compensation seats going to the districts with the largest remainders. The 2023 EÜVP result is attributed to Koos, and the 2023 independent in Ida-Viru (an ex-Centre member) is attributed to Centre; other parties without a 2023 pattern (VL, Free, ERK) are assumed to be flat across districts. Districts are weighted by their number of mandates rather than actual turnout, so this is an approximation and may differ by a seat or two from the national Seat Projection above. The first seat figure is the district's projected seats including compensation seats; the number in brackets is its nominal size. The eight parties with the highest projected vote share are listed for each district. Use the buttons above the map to switch between the overall view and each party's projected vote share by district.";
       },
       totals: "Model totals:"
     },
@@ -182,7 +200,7 @@
       below: "– = alla 5% üleriigilise künnise, kohti pole",
       inset: "Tallinn (nr 1–3)",
       note: function () {
-        return "Viimased numbrid projitseeritud 2023. aasta ringkonnatulemustele. Iga erakonna 2023. aasta ringkonnanäitajad skaleeritakse nii, et kohtadega kaalutud üleriigiline summa vastaks praegusele küsitluste keskmisele, seejärel normaliseeritakse iga ringkond 100%-le. Kohad: ringkonnamandaadid lihtkvoodi alusel, ülejäänud üleriigilise modifitseeritud d'Hondti meetodiga, kompensatsioonimandaadid suurimate jääkidega ringkondadesse. 2023. aasta EÜVP tulemus on omistatud Koos'ile; teiste erakondade (Vasak, Vaba, ERK) puhul, kel 2023. aastal oma ringkonnamustrit pole, eeldatakse ühtlast toetust kõigis ringkondades. Ringkondi kaalutakse mandaatide arvu, mitte tegeliku osalusmäära järgi, seega on tegu lähendusega ning tulemus võib ülalolevast kohtade prognoosist erineda ühe-kahe koha võrra. Esimene kohtade arv on ringkonna prognoositud kohad koos kompensatsioonimandaatidega, sulgudes on ringkonna nimisuurus. Iga ringkonna juures on toodud kaheksa suurima prognoositud häältedeosaga erakonda. Kaardi kohal olevate nuppudega saab vahetada üldvaate ja iga erakonna prognoositud häältedeosa vahel ringkondade kaupa.";
+        return "Viimased numbrid projitseeritud 2023. aasta ringkonnatulemustele. Iga erakonna 2023. aasta ringkonnanäitajad skaleeritakse nii, et kohtadega kaalutud üleriigiline summa vastaks praegusele küsitluste keskmisele, seejärel normaliseeritakse iga ringkond 100%-le. Kohad: ringkonnamandaadid lihtkvoodi alusel, ülejäänud üleriigilise modifitseeritud d'Hondti meetodiga, kompensatsioonimandaadid suurimate jääkidega ringkondadesse. 2023. aasta EÜVP tulemus on omistatud Koos'ile ning Ida-Virumaa 2023. aasta üksikkandidaadi (endine Keskerakonna liige) tulemus Keskerakonnale; teiste erakondade (Vasak, Vaba, ERK) puhul, kel 2023. aastal oma ringkonnamustrit pole, eeldatakse ühtlast toetust kõigis ringkondades. Ringkondi kaalutakse mandaatide arvu, mitte tegeliku osalusmäära järgi, seega on tegu lähendusega ning tulemus võib ülalolevast kohtade prognoosist erineda ühe-kahe koha võrra. Esimene kohtade arv on ringkonna prognoositud kohad koos kompensatsioonimandaatidega, sulgudes on ringkonna nimisuurus. Iga ringkonna juures on toodud kaheksa suurima prognoositud häältedeosaga erakonda. Kaardi kohal olevate nuppudega saab vahetada üldvaate ja iga erakonna prognoositud häältedeosa vahel ringkondade kaupa.";
       },
       totals: "Mudeli kogusumma:"
     }
