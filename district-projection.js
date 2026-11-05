@@ -21,7 +21,10 @@
   "use strict";
 
   // Must match the page's DISTRICTS / threshold / exponent.
-  var SEATS = [10, 13, 8, 16, 6, 5, 6, 7, 7, 8, 8, 7];
+  // Mandates per district for the 2027 election (distribution based on the 1 November 2026 population
+  // register): No. 8 Järva & Viljandi 7 → 6, No. 9 Jõgeva & Tartu County 7 → 8 versus 2023.
+  var SEATS = [10, 13, 8, 16, 6, 5, 6, 6, 8, 8, 8, 7];
+  var SEATS_2023 = [10, 13, 8, 16, 6, 5, 6, 7, 7, 8, 8, 7]; // only used to sanity-check against the 2023 result
   var THRESHOLD = 5;
   var EXPONENT = 0.9;
   var TOTAL_SEATS = 101;
@@ -161,7 +164,7 @@
     return { shares: est.shares, target: est.target, eligible: alloc.eligible, seats: alloc.districtSeats, totals: alloc.totals };
   }
 
-  var api = { estimateDistrictShares: estimateDistrictShares, allocateSeats: allocateSeats, projectDistricts: projectDistricts, BASE_2023: BASE_2023, BASE_ADJUSTED: BASE_ADJUSTED, SEATS: SEATS };
+  var api = { estimateDistrictShares: estimateDistrictShares, allocateSeats: allocateSeats, projectDistricts: projectDistricts, BASE_2023: BASE_2023, BASE_ADJUSTED: BASE_ADJUSTED, SEATS: SEATS, SEATS_2023: SEATS_2023 };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (typeof document === "undefined") return;
 
