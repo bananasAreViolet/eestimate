@@ -8,7 +8,7 @@ import { Resvg } from "@resvg/resvg-js";
 
 // ---- Config: mirrors the constants in index24.html --------------------
 const GOOGLE_SHEET_ID = "1gGBmEUW5bwp23602WfQF4eciRrZT4M-VrAz1r5M2JHU";
-const SHEET_NAME = "EEavg2";
+const SHEET_NAME = "HEavg";
 const SHEET_RANGE = "A:M";
 const SITE_URL = "https://bananasareviolet.github.io/eestimate/";
 const OUT_IMAGE_NAME = "eestimate-embed.png";
