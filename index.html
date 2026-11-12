@@ -294,7 +294,7 @@ body.dark a {
 <section class="window"><div class="titlebar"><span data-i18n="titlePollTable">POLL TABLE</span></div><div class="window-body">
 <div class="poll-table-wrap"><table class="poll-table" id="pollTable"></table></div>
 <div class="poll-pager"><button class="action" id="pollPrev">◀</button><span class="status" id="pollRange"></span><button class="action" id="pollNext">▶</button></div>
-<p class="header-note" data-i18n="pollTableNote">Weight is calculated by pollster score and passage of time.</p>
+<p class="header-note" data-i18n="pollTableNote">Weight is calculated by pollster score and passage of time. These polls are adjusted for biases (see below) before being added to the average above.</p>
 </div></section>
 
 <section class="window"><div class="titlebar"><span data-i18n="titleGovtVsOpposition">GOVERNMENT VS OPPOSITION POLLING AVERAGE</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="govtLineChart"></canvas></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div><p class="header-note"></p></div></section>
@@ -407,7 +407,7 @@ const UI_STRINGS = {
   pollColEnd:"FW end",
   pollColPollster:"Pollster",
   pollColWeight:"Weight",
-  pollTableNote:"Weight is calculated by pollster score and passage of time.",
+  pollTableNote:"Weight is calculated by pollster score and passage of time. These polls are adjusted for biases (see below) before being added to the average above.",
   pollNewer:"Newer polls",
   pollOlder:"Older polls",
   titleHouseEffects:"POLLSTER HOUSE EFFECTS",
@@ -489,13 +489,13 @@ const UI_STRINGS = {
   tied:(a,b)=>`${a} ja ${b} on viigis.`,
   leading:(a,b,diff)=>`${a} juhib ${b} ees ${diff} punktiga.`,
   longTermBtn:"Ajaloolised andmed ja graafikud",
-  forecastBtn:"Prognoosimudel (väga katseline!)",
+  forecastBtn:"Prognoosimudel (katsefaasis!), hetkel ainult inglise keeles",
   titlePollTable:"KÜSITLUSTE TABEL",
   pollColStart:"Küsitluse algus",
   pollColEnd:"Küsitluse lõpp",
   pollColPollster:"Küsitlusfirma",
   pollColWeight:"Kaal",
-  pollTableNote:"Kaal arvutatakse küsitlusfirma skoori ja aja möödumise põhjal.",
+  pollTableNote:"Kaal arvutatakse küsitlusfirma skoori ja aja möödumise põhjal. Neid küsitlusi on enne ülaltoodud keskmisesse lisamist korrigeeritud küsitlejate kallutatuse suhtes (vt allpool).",
   pollNewer:"Uuemad küsitlused",
   pollOlder:"Vanemad küsitlused",
   titleHouseEffects:"KÜSITLUSFIRMADE MAJAEFEKT",
