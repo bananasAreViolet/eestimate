@@ -1,0 +1,93 @@
+{
+ "sheet": {
+  "url": "https://docs.google.com/spreadsheets/d/1gGBmEUW5bwp23602WfQF4eciRrZT4M-VrAz1r5M2JHU/edit?usp=sharing",
+  "pollsTab": "pollst",
+  "range": "A:Z"
+ },
+ "parties": [
+  "Reform",
+  "EKRE",
+  "Centre",
+  "E200",
+  "SDE",
+  "Isamaa",
+  "VL",
+  "Koos",
+  "PP",
+  "Greens",
+  "ERK",
+  "Free"
+ ],
+ "strength": {
+  "Emor": 1,
+  "Norstat": 0.2,
+  "Turu-uuringute AS": 0.7
+ },
+ "aliases": {
+  "Kantar Emor": "Emor"
+ },
+ "governments": [
+  {
+   "cabinet": "Kallas III",
+   "from": "2023-04-17",
+   "government": [
+    "Reform",
+    "E200",
+    "SDE"
+   ],
+   "opposition": [
+    "EKRE",
+    "Centre",
+    "Isamaa"
+   ],
+   "marker": {
+    "date": "2023-04-17",
+    "en": "Kallas' third cabinet",
+    "et": "Kallase III valitsus"
+   }
+  },
+  {
+   "cabinet": "Michal I w/ SDE",
+   "cabinetEt": "Michal I koos SDE-ga",
+   "from": "2024-07-22",
+   "government": [
+    "Reform",
+    "E200",
+    "SDE"
+   ],
+   "opposition": [
+    "EKRE",
+    "Centre",
+    "Isamaa"
+   ],
+   "marker": {
+    "date": "2024-07-23",
+    "en": "Michal's cabinet",
+    "et": "Michali valitsus"
+   }
+  },
+  {
+   "cabinet": "Michal I",
+   "from": "2025-03-10",
+   "government": [
+    "Reform",
+    "E200"
+   ],
+   "opposition": [
+    "EKRE",
+    "Centre",
+    "SDE",
+    "Isamaa"
+   ],
+   "marker": {
+    "date": "2025-03-10",
+    "en": "SDE expelled from cabinet",
+    "et": "SDE eemaldati valitsusest"
+   }
+  }
+ ],
+ "partyStart": {
+  "Free": "2024-08-24"
+ },
+ "cellRule": "strict"
+}
