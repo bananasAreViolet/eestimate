@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=720">
-<title>Eestimate — Election model</title>
+<title>Eestimate - Election model</title>
 <link rel="icon" type="image/x-icon" href="/eestimate.png">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
@@ -65,14 +65,14 @@ body.dark .latest-bar-gain{background:rgba(255,255,255,.45);border-bottom:1px da
  <div class="titlebar"><span>FORECAST SETTINGS</span><span>INTERACTIVE PARAMETERS</span></div>
  <div class="window-body">
   <div class="range-wrap">
-   <div class="control-row"><label for="sensitivity"><b>Macro sensitivity</b> — percentage-point shift per one index unit</label><span class="control-number" id="sensitivityValue">0.6 pp</span></div>
+   <div class="control-row"><label for="sensitivity"><b>Macro sensitivity</b> - percentage-point shift per one index unit</label><span class="control-number" id="sensitivityValue">0.6 pp</span></div>
    <input id="sensitivity" type="range" min="0" max="2" step="0.1" value="0.6" style="width:100%">
-   <div class="range-caption"><span>0.0 · Polling only</span><span>2.0 · Strong effect</span></div>
+   <div class="range-caption"><span>0.0 - Polling only</span><span>2.0 - Strong effect</span></div>
   </div>
   <div class="range-wrap">
-   <div class="control-row"><label for="pollCorrection"><b>Historical polling correction</b> — strength of the party-specific poll-to-result adjustment</label><span class="control-number" id="pollCorrectionValue">100%</span></div>
+   <div class="control-row"><label for="pollCorrection"><b>Historical polling correction</b> - strength of the party-specific poll-to-result adjustment</label><span class="control-number" id="pollCorrectionValue">100%</span></div>
    <input id="pollCorrection" type="range" min="0" max="100" step="5" value="100" style="width:100%">
-   <div class="range-caption"><span>0% · Ignore historical misses</span><span>100% · Apply full weighted correction</span></div>
+   <div class="range-caption"><span>0% - Ignore historical misses</span><span>100% - Apply full weighted correction</span></div>
   </div>
   <div id="modelWarning" class="small"></div>
  </div>
@@ -164,10 +164,10 @@ function parseJsonStat(json){const ids=json.id||Object.keys(json.dimension||{}),
 async function fetchEurostat(config){let lastError;for(const params of [config.params,...(config.fallbackParams||[])]){try{const url=new URL(EUROSTAT_API+config.dataset);Object.entries({...params,lang:"en"}).forEach(([k,v])=>url.searchParams.set(k,v));const response=await fetch(url.toString(),{cache:"no-store"});if(!response.ok)throw Error(`${config.dataset}: HTTP ${response.status}`);const points=parseJsonStat(await response.json());if(!points.length)throw Error(`${config.dataset}: no observations for Estonia.`);return points;}catch(error){lastError=error;}}throw lastError||Error(`${config.dataset}: no usable data.`);}
 async function loadAverageRows(){const r=await fetch(DATA_URL,{cache:"no-store"});if(!r.ok)throw Error(`Polling data: HTTP ${r.status}`);const d=await r.json();if(!d||!Array.isArray(d.dates)||!Array.isArray(d.average)||!Array.isArray(d.parties))throw Error("Polling data is in an unexpected format.");return d.dates.map((iso,i)=>{const [y,m,day]=iso.split("-").map(Number),rec={date:new Date(Date.UTC(y,m-1,day))};d.parties.forEach((p,j)=>{const v=d.average[i][j];rec[p]=Number.isFinite(v)?Math.round(v*1e8)/1e6:null;});return rec;});}
 function loess(values,span=LOESS_SPAN,floor=0){const pts=[];values.forEach((y,x)=>{if(Number.isFinite(y))pts.push({x,y});});if(pts.length<4)return values.map(v=>Number.isFinite(v)?(floor===null?v:Math.max(floor,v)):null);const k=Math.max(4,Math.min(pts.length,Math.ceil(pts.length*span))),out=values.slice();for(let i=0;i<values.length;i++){if(!Number.isFinite(values[i])){out[i]=null;continue;}const near=pts.map(p=>({p,dist:Math.abs(p.x-i)})).sort((a,b)=>a.dist-b.dist).slice(0,k),max=near.at(-1).dist||1;let sw=0,sx=0,sy=0,sxx=0,sxy=0;for(const {p,dist} of near){const u=Math.min(1,dist/max),w=Math.pow(1-Math.pow(u,3),3);sw+=w;sx+=w*p.x;sy+=w*p.y;sxx+=w*p.x*p.x;sxy+=w*p.x*p.y;}const den=sw*sxx-sx*sx;let value;if(Math.abs(den)<1e-12)value=sw?sy/sw:values[i];else{const b=(sw*sxy-sx*sy)/den,a=(sy-b*sx)/sw;value=a+b*i;}out[i]=floor===null?value:Math.max(floor,value);}return out;}
-function fmt(v,d=1,s=""){if(!Number.isFinite(v))return"—";return `${v.toLocaleString("en-GB",{minimumFractionDigits:d,maximumFractionDigits:d})}${s}`;}
+function fmt(v,d=1,s=""){if(!Number.isFinite(v))return"-";return `${v.toLocaleString("en-GB",{minimumFractionDigits:d,maximumFractionDigits:d})}${s}`;}
 function mean(a){const v=a.filter(Number.isFinite);return v.length?v.reduce((s,x)=>s+x,0)/v.length:null;}
 function sd(a){const v=a.filter(Number.isFinite);if(v.length<2)return null;const m=mean(v);return Math.sqrt(v.reduce((s,x)=>s+(x-m)**2,0)/(v.length-1));}
-function fmtDate(d){return d?d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric",timeZone:"UTC"}):"—";}
+function fmtDate(d){return d?d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric",timeZone:"UTC"}):"-";}
 function chartTheme(){const dark=document.body.classList.contains("dark");return{text:dark?"#e8e8e8":"#000",grid:dark?"rgba(255,255,255,.14)":"#ededed",markerLine:dark?"rgba(255,255,255,.5)":"rgba(0,0,0,.55)",markerText:dark?"rgba(255,255,255,.85)":"rgba(0,0,0,.8)"};}
 const eventMarkerPlugin={id:"eventMarkers",afterDraw(chart,args,opts){const markers=opts&&opts.markers;if(!markers||!markers.length)return;const lineColour=opts.lineColour||"rgba(0,0,0,.55)",textColour=opts.textColour||"rgba(0,0,0,.8)";const{ctx,chartArea:{top,bottom},scales:{x}}=chart;ctx.save();markers.forEach((m,i)=>{const px=x.getPixelForValue(m.idx);if(px==null||Number.isNaN(px))return;ctx.beginPath();ctx.setLineDash([4,3]);ctx.strokeStyle=lineColour;ctx.lineWidth=1;ctx.moveTo(px,top);ctx.lineTo(px,bottom);ctx.stroke();ctx.setLineDash([]);ctx.font="10px Tahoma,Arial,sans-serif";ctx.fillStyle=textColour;ctx.textBaseline="top";ctx.textAlign="left";ctx.fillText(m.label,px+4,top+3+(i%2)*13);});ctx.restore();}};
 const endLineLabelsPlugin={id:"endLineLabels",afterDatasetsDraw(chart,args,opts){
@@ -197,7 +197,7 @@ function retroTooltip(context){
  if(tooltip.body){
   let html="";
   if(tooltip.title&&tooltip.title.length)html+=`<div class="chartjs-tooltip-date">${esc(tooltip.title[0])}</div>`;
-  (tooltip.dataPoints||[]).forEach(dp=>{const v=dp.parsed.y;html+=`<div class="chartjs-tooltip-row"><span class="party-box" style="background:${esc(dp.dataset.borderColor||"#888")}">${esc(dp.dataset.label||"")}</span><span class="chartjs-tooltip-value">${v===null?"—":fmt(v,1,"%")}</span></div>`;});
+  (tooltip.dataPoints||[]).forEach(dp=>{const v=dp.parsed.y;html+=`<div class="chartjs-tooltip-row"><span class="party-box" style="background:${esc(dp.dataset.borderColor||"#888")}">${esc(dp.dataset.label||"")}</span><span class="chartjs-tooltip-value">${v===null?"-":fmt(v,1,"%")}</span></div>`;});
   el.innerHTML=html;
  }
  const rect=chart.canvas.getBoundingClientRect();
@@ -327,7 +327,7 @@ function renderModel(){
  $("pollCorrectionValue").textContent=`${Math.round(built.correctionStrength*100)}%`;
  const last=pollingRows.at(-1);
  const macroAsOf=Object.values(score?.details||{}).map(d=>d.currentDate).sort((a,b)=>b-a)[0];
- $("forecastDate").textContent=`POLLING ${fmtDate(last?.date)} · MACRO ${fmtDate(macroAsOf)}`;
+ $("forecastDate").textContent=`POLLING ${fmtDate(last?.date)} -|- MACRO ${fmtDate(macroAsOf)}`;
  const correctionN=Object.values(POLL_BIAS).reduce((n,x)=>n+x.n,0);
  const warning=[];
  if(!Number.isFinite(score?.score))warning.push("The macro index could not be calculated; the output currently uses the poll-corrected baseline only.");
@@ -340,7 +340,7 @@ function renderModel(){
 }
 function renderForecastTable(){
  const seats=Object.fromEntries(seatProjection.map(p=>[p.key,p.totalSeats]));
- $("forecastTable").innerHTML=modelRows.map(p=>`<tr><td><span class="party-cell"><i class="swatch" style="background:${p.colour}"></i><b>${esc(p.key)}</b></span></td><td>${fmt(p.support,1,"%")}</td><td class="${p.pollAdjustment>0?"positive":p.pollAdjustment<0?"negative":""}">${p.pollAdjustment>0?"+":""}${fmt(p.pollAdjustment,2," pp")}</td><td class="${p.adjustment>0?"positive":p.adjustment<0?"negative":""}">${p.adjustment>0?"+":""}${fmt(p.adjustment,2," pp")}</td><td><b>${fmt(p.model,1,"%")}</b></td><td>${seats[p.key]??"—"}</td></tr>`).join("");
+ $("forecastTable").innerHTML=modelRows.map(p=>`<tr><td><span class="party-cell"><i class="swatch" style="background:${p.colour}"></i><b>${esc(p.key)}</b></span></td><td>${fmt(p.support,1,"%")}</td><td class="${p.pollAdjustment>0?"positive":p.pollAdjustment<0?"negative":""}">${p.pollAdjustment>0?"+":""}${fmt(p.pollAdjustment,2," pp")}</td><td class="${p.adjustment>0?"positive":p.adjustment<0?"negative":""}">${p.adjustment>0?"+":""}${fmt(p.adjustment,2," pp")}</td><td><b>${fmt(p.model,1,"%")}</b></td><td>${seats[p.key]??"-"}</td></tr>`).join("");
 }
 const shade=(hex,amt)=>{const c=hex.replace("#","");const num=parseInt(c,16);let r=(num>>16)+amt,g=((num>>8)&255)+amt,b=(num&255)+amt;r=Math.min(255,Math.max(0,r));g=Math.min(255,Math.max(0,g));b=Math.min(255,Math.max(0,b));return`#${((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1)}`};
 function renderForecastChart(){
@@ -438,7 +438,7 @@ async function loadAll(){
  else errors.push(results[0].reason?.message||"Polling data unavailable");
  macro={};scoreCache.clear();
  keys.forEach((key,i)=>{const r=results[i+1];if(r.status==="fulfilled")macro[key]=r.value.data;else errors.push(`${SERIES[key].label}: ${r.reason?.message||"unavailable"}`);});
- $("dataError").textContent=errors.join(" · ");
+ $("dataError").textContent=errors.join(" -|- ");
  prepareMacroSeries();renderModel();
  $("status").textContent=errors.length?"Some data could not be loaded":"Up to date";
 }
