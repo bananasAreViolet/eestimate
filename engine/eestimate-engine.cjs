@@ -386,7 +386,8 @@ const EestimateEngine = (function () {
         if (Object.keys(o).length) houseStats[p.key][name] = o;
       }
     }
-    return { cfg, parties, pollsters, periods: periods.map(p => ({ key: p.key, start: toISO(p.start), end: toISO(p.endExclusive - DAY) })),
+    const partyStartISO = Object.fromEntries(parties.map((p, j) => [p, startMs[j] === Infinity ? null : toISO(startMs[j])]));
+    return { cfg, parties, pollsters, partyStartISO, periods: periods.map(p => ({ key: p.key, start: toISO(p.start), end: toISO(p.endExclusive - DAY) })),
              days: days.map(toISO), polls, plain, finalAvg, leaveOneOut, govtLines, cabinets, markers, biasRecords, houseStats,
              table, rawCells, effects, unknownPollsters };
   }
@@ -452,7 +453,12 @@ const EestimateEngine = (function () {
         fields: ['pollster', 'party', 'period', 'date', 'poll', 'average'],
         rows: res.biasRecords.map(r => [r[0], r[1], r[2], r[3], roundTo(r[4], 6), roundTo(r[5], 6)])
       },
-      houseEffects: res.houseStats
+      houseEffects: res.houseStats,
+      calc: {
+        election: cfg.election,
+        partyStart: res.partyStartISO,
+        effects: Object.fromEntries(Object.entries(res.effects).map(([k, byPollster]) => [k, Object.fromEntries(Object.entries(byPollster).map(([n, arr]) => [n, Object.fromEntries(res.parties.map((q, j) => [q, arr[j] === null ? null : roundTo(arr[j], 6)]))]))]))
+      }
     };
   }
 
