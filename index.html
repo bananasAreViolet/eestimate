@@ -161,6 +161,15 @@ body.dark a {
 .poll-table td.dim{color:var(--muted)}
 .poll-table td.infl{text-align:right;padding-right:12px}
 .poll-table td.lead{font-weight:700}
+.mix-bar{margin-bottom:8px}
+.mix-bar .header-note{margin-top:6px}
+.mix-btn.on{border:2px solid var(--dark);border-right-color:var(--light);border-bottom-color:var(--light);background:#bdb9b0;font-weight:700}
+body.dark .mix-btn.on{background:#9a9a9a}
+.mix-adv{margin-top:8px}
+.mix-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0}
+.mix-row label{flex:0 0 280px;font-weight:700}
+.mix-row input[type=range]{flex:1;min-width:150px}
+.mix-value{font-family:"VCR OSD Mono",monospace;font-size:15px;min-width:70px;text-align:right}
 .poll-pager{display:flex;gap:10px;align-items:center;justify-content:center;margin:8px 0}
 .poll-pager .action:disabled{opacity:.45;cursor:default}
 .mm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px 18px;padding:4px 4px 0}
@@ -211,7 +220,24 @@ body.dark a {
 </div>
 </section>
 
-<section class="window"><div class="titlebar"><span data-i18n="titlePollingAverage">POLLING AVERAGE</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="lineChart"></canvas></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div><p class="header-note"></p></div></section>
+<section class="window"><div class="titlebar"><span data-i18n="titlePollingAverage">POLLING AVERAGE</span></div><div class="window-body">
+<div class="mix-bar" id="modeBar" style="display:none">
+  <div class="toolbar">
+    <button class="action mix-btn" data-mode="pure" data-i18n="modePure">Pure</button>
+    <button class="action mix-btn" data-mode="traditional" data-i18n="modeTraditional">Traditional</button>
+    <button class="action mix-btn" data-mode="experimental" data-i18n="modeExperimental">Experimental</button>
+    <button class="action" id="mixAdvBtn" data-i18n="modeAdvanced">Advanced</button>
+  </div>
+  <p class="header-note" id="modeDesc"></p>
+  <div class="mix-adv" id="mixAdv" style="display:none">
+    <div class="mix-row"><label for="mixInfluence" data-i18n="mixInfluence">Influence (pollster score and age)</label><input id="mixInfluence" type="range" min="0" max="100" step="5" value="100"><span class="mix-value" id="mixInfluenceValue"></span></div>
+    <div class="mix-row"><label for="mixHe" data-i18n="mixHe">House-effect correction</label><input id="mixHe" type="range" min="0" max="100" step="5" value="100"><span class="mix-value" id="mixHeValue"></span></div>
+    <div class="mix-row"><label for="mixSens" data-i18n="mixSens">Macro sensitivity (pp per index unit)</label><input id="mixSens" type="range" min="0" max="2" step="0.1" value="0"><span class="mix-value" id="mixSensValue"></span></div>
+    <div class="mix-row"><label for="mixCorr" data-i18n="mixCorr">Historical polling correction</label><input id="mixCorr" type="range" min="0" max="100" step="5" value="0"><span class="mix-value" id="mixCorrValue"></span></div>
+    <p class="header-note" id="modeNote"></p>
+  </div>
+</div>
+<div class="chart-surface"><div class="chart-wrap"><canvas id="lineChart"></canvas></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div><p class="header-note"></p></div></section>
 
 <section class="window"><div class="titlebar"><span data-i18n="titleLatestNumbers">LATEST NUMBERS</span></div><div class="window-body"><p class="header-note" id="latestNote" data-i18n="latestNoteInitial">If this text lasts for a readable length and several seconds beyond that, there may possibly be a data error involved</p><div style="position:relative;"><div class="latest-scroll"><div class="latest-chart" id="latestChart"></div></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div></div></section>
 
@@ -410,6 +436,20 @@ const UI_STRINGS = {
   pollColPollster:"Pollster",
   pollColWeight:"Influence",
   pollColLead:"Lead",
+  modePure:"Pure",
+  modeTraditional:"Traditional",
+  modeExperimental:"Experimental",
+  modeCustom:"Custom",
+  modeAdvanced:"Advanced",
+  modeDescPure:"Plain 30-day average of all polls. No pollster weighting, no house-effect correction, no fundamentals.",
+  modeDescTraditional:"30-day average weighted by pollster score and age, corrected for house effects.",
+  modeDescExperimental:"Traditional plus the fundamentals model: historical poll-to-result correction and an economic index shift between government and opposition parties. Highly experimental!",
+  modeDescCustom:"Custom mix of the settings below.",
+  mixInfluence:"Influence (pollster score and age)",
+  mixHe:"House-effect correction",
+  mixSens:"Macro sensitivity (pp per index unit)",
+  mixCorr:"Historical polling correction",
+  modeMacroMissing:"Economic data could not be loaded, so the macro shift is 0.",
   pollTableNote:"Influence is calculated by pollster score and passage of time. These polls are adjusted for biases (see below) before being added to the average above.",
   pollNewer:"Newer polls",
   pollOlder:"Older polls",
@@ -499,7 +539,21 @@ const UI_STRINGS = {
   pollColPollster:"Küsitlusfirma",
   pollColWeight:"Mõju",
   pollColLead:"Edu",
-  pollTableNote:"Mõju arvutatakse küsitlusfirma skoori ja aja möödumise põhjal. Neid küsitlusi on enne ülaltoodud keskmisesse lisamist korrigeeritud küsitlejate süstemaatiliste erinevuste suhtes (vt allpool).",
+  modePure:"Puhas",
+  modeTraditional:"Traditsiooniline",
+  modeExperimental:"Eksperimentaalne",
+  modeCustom:"Kohandatud",
+  modeAdvanced:"Täpsemad seaded",
+  modeDescPure:"Kõigi küsitluste lihtne 30 päeva keskmine. Ilma küsitlusfirmade kaalumiseta, kallutatuse korrigeerimiseta ja fundamentaalnäitajateta.",
+  modeDescTraditional:"Küsitlusfirma skoori ja aja järgi kaalutud 30 päeva keskmine, korrigeeritud küsitlusfirmade kallutatuse suhtes.",
+  modeDescExperimental:"Traditsiooniline pluss fundamentaalmudel: ajaloolise küsitluse ja tulemuse erinevuse korrigeerimine ning majandusindeksi nihe valitsus- ja opositsioonierakondade vahel. Väga katseline!",
+  modeDescCustom:"Allolevate seadete kohandatud segu.",
+  mixInfluence:"Mõju (küsitlusfirma skoor ja aeg)",
+  mixHe:"Kallutatuse korrigeerimine",
+  mixSens:"Makromajanduse tundlikkus (pp indeksiühiku kohta)",
+  mixCorr:"Ajaloolise küsitlusvea korrigeerimine",
+  modeMacroMissing:"Majandusandmeid ei õnnestunud laadida, seega on makromajanduse nihe 0.",
+  pollTableNote:"Mõju arvutatakse küsitlusfirma skoori ja aja möödumise põhjal. Neid küsitlusi on enne ülaltoodud keskmisesse lisamist korrigeeritud küsitlejate kallutatuse suhtes (vt allpool).",
   pollNewer:"Uuemad küsitlused",
   pollOlder:"Vanemad küsitlused",
   titleHouseEffects:"KÜSITLUSFIRMADE MAJAEFEKT",
@@ -872,18 +926,12 @@ async function loadAverages(){
   const d=await r.json();
   if(!d||!Array.isArray(d.dates)||!Array.isArray(d.average)||!Array.isArray(d.parties)||!d.dates.length)throw Error(t("errNoDates"));
   averagesData=d;
-  const keys=d.parties;
-  latestRows=d.dates.map((iso,i)=>{const rec={date:isoToUtc(iso)};keys.forEach((k,j)=>{rec[k]=fracToPct(d.average[i][j])});return rec});
   applyCabinetConfig(d.government);
-  buildSmoothedRows(keys);
-  const last=latestRows.at(-1);
-  const lastSmoothed=smoothedRows.at(-1);
-  latestPoll=keys.map(name=>({key:name,name,colour:PARTY_COLOURS[name]||"#777",support:lastSmoothed[name]})).filter(p=>p.support!==null);
-  renderLineChart();renderLatestPolling();renderLeadSummary();renderProjection();renderCoalitionBuilder();renderMonthlyChange();
-  renderCustomCoalitionTool();
-  buildPollTable();renderPollTable();
-  loadGovtData();
+  $("modeBar").style.display=d.calc?"":"none";
+  applyModel();
+  if(d.calc)loadMacro();
   loadCompositionSheet();
+  const last=latestRows.at(-1);
   $("status").textContent=t("statusUpdateTemplate")(dtext(last.date),locInt(latestRows.length));if($("setupPanel"))$("setupPanel").style.display="none";
  }catch(e){averagesData=null;$("status").textContent="";if($("setupPanel"))$("setupPanel").style.display="block";if($("setupText"))$("setupText").innerHTML=`<strong>${t("connectionErrorPrefix")}</strong> ${esc(e.message)}`}
  finally{document.body.classList.remove("loading")}
@@ -926,22 +974,27 @@ function findDateIndex(year,month,day){
 }
 function loessSmooth(values, span=LOESS_SPAN, floor=0){
  const clamp=v=>Number.isFinite(v)&&floor!==null?Math.max(floor,v):v;
- const points=[];
- values.forEach((value,index)=>{
-  if(Number.isFinite(value)) points.push({x:index,y:value});
- });
- if(points.length<4) return values.map(v=>Number.isFinite(v)?clamp(v):null);
- const k=Math.max(4,Math.min(points.length,Math.ceil(points.length*span)));
+ const px=[],py=[];
+ values.forEach((value,index)=>{if(Number.isFinite(value)){px.push(index);py.push(value)}});
+ const n=px.length;
+ if(n<4) return values.map(v=>Number.isFinite(v)?clamp(v):null);
+ const k=Math.max(4,Math.min(n,Math.ceil(n*span)));
  const out=values.slice();
+ let c=0;
  for(let i=0;i<values.length;i++){
   if(!Number.isFinite(values[i])){out[i]=null;continue;}
-  let nearest=points.map(p=>({p,dist:Math.abs(p.x-i)})).sort((a,b)=>a.dist-b.dist).slice(0,k);
-  const maxDist=nearest.at(-1).dist||1;
+  while(c<n&&px[c]<i)c++;
+  let a=c,b=c+1;
+  while(b-a<k){
+   const hasL=a>0,hasR=b<n;
+   if(hasL&&(!hasR||i-px[a-1]<=px[b]-i))a--;else b++;
+  }
+  const maxDist=Math.max(i-px[a],px[b-1]-i)||1;
   let Sw=0,Sx=0,Sy=0,Sxx=0,Sxy=0;
-  for(const {p,dist} of nearest){
-   const u=Math.min(1,dist/maxDist);
+  for(let q=a;q<b;q++){
+   const u=Math.min(1,Math.abs(px[q]-i)/maxDist);
    const w=Math.pow(1-Math.pow(u,3),3);
-   Sw+=w;Sx+=w*p.x;Sy+=w*p.y;Sxx+=w*p.x*p.x;Sxy+=w*p.x*p.y;
+   Sw+=w;Sx+=w*px[q];Sy+=w*py[q];Sxx+=w*px[q]*px[q];Sxy+=w*px[q]*py[q];
   }
   const denom=Sw*Sxx-Sx*Sx;
   if(Math.abs(denom)<1e-12){out[i]=clamp(Sw?Sy/Sw:values[i]);continue}
@@ -952,9 +1005,274 @@ function loessSmooth(values, span=LOESS_SPAN, floor=0){
  return out;
 }
 
+const DAY_MS=86400000;
+const MODE_PRESETS={pure:{influence:0,he:0,sens:0,corr:0},traditional:{influence:100,he:100,sens:0,corr:0},experimental:{influence:100,he:100,sens:0.6,corr:100}};
+const modeState={...MODE_PRESETS.traditional};
+let presmoothed=false,modeFull=[],applyTimer=null;
+const smoothSeries=(values,span,floor)=>presmoothed?values.slice():loessSmooth(values,span,floor);
+const fxActive=()=>modeState.sens>0||modeState.corr>0;
+function modeName(){
+ for(const [k,v] of Object.entries(MODE_PRESETS))if(v.influence===modeState.influence&&v.he===modeState.he&&v.sens===modeState.sens&&v.corr===modeState.corr)return k;
+ return "custom";
+}
+
+function computeAverage(infl,he){
+ const d=averagesData,c=d.calc,W=(d.meta&&d.meta.windowDays)||30,strength=(d.meta&&d.meta.strength)||{},parties=d.parties,J=parties.length;
+ const days=d.dates.map(x=>isoToUtc(x).getTime()),T=days.length,t0=days[0];
+ const periods=d.periods.map(p=>({key:p.key,s:isoToUtc(p.start).getTime(),e:isoToUtc(p.end).getTime()}));
+ const periodKey=ms=>{for(const p of periods)if(ms>=p.s&&ms<=p.e)return p.key;return null};
+ const mk=()=>Array.from({length:T},()=>new Float64Array(J+1));
+ const flatNum=mk(),inflNum=mk(),flatDen=new Float64Array(T),inflDen=new Float64Array(T);
+ const add=(day,s,vals)=>{
+  if(day<0||day>=T)return;
+  let sum=0;for(let j=0;j<J;j++)sum+=vals[j];
+  const others=Math.max(0,100-sum),tot=sum+others;
+  for(let t=day;t<Math.min(T,day+W);t++){
+   const w=s*(W-(t-day)),fr=flatNum[t],ir=inflNum[t];
+   for(let j=0;j<J;j++){fr[j]+=vals[j];ir[j]+=w*vals[j]}
+   fr[J]+=others;ir[J]+=w*others;
+   flatDen[t]+=tot;inflDen[t]+=w*tot;
+  }
+ };
+ add(0,1,parties.map(p=>c.election[p]||0));
+ for(const p of d.polls){
+  const s=strength[p.pollster]||0;if(!s)continue;
+  const ms=isoToUtc(p.date).getTime(),pk=periodKey(ms),eff=pk&&c.effects[pk]?c.effects[pk][p.pollster]:null;
+  const vals=parties.map(q=>{const v=p.values[q];if(!Number.isFinite(v))return 0;const e=eff&&Number.isFinite(eff[q])?eff[q]:0;return Math.max(0,v-he*e)});
+  add(Math.round((ms-t0)/DAY_MS),s,vals);
+ }
+ const full=days.map((_,t)=>parties.map((_,j)=>{
+  const f=flatDen[t]>0?flatNum[t][j]/flatDen[t]:0,n=inflDen[t]>0?inflNum[t][j]/inflDen[t]:0;
+  return (1-infl)*f+infl*n;
+ }));
+ const avg=full.map((row,t)=>row.map((v,j)=>{
+  const ps=c.partyStart[parties[j]];
+  return ps===null||(ps&&d.dates[t]<ps)?null:Math.round(Number((v*1e4).toPrecision(15)))/1e4;
+ }));
+ return {avg,full};
+}
+
+const FX_POLL_RESULTS=[
+ {year:2003,poll:{Reform:22.94,EKRE:9.32,Centre:32.91,SDE:5.03,Isamaa:8.96},result:{Reform:17.6911,EKRE:13.0258,Centre:25.4015,SDE:7.0394,Isamaa:7.3085}},
+ {year:2007,poll:{Reform:28.08,EKRE:8.01,Centre:27.32,SDE:8.86,Isamaa:14.95,Greens:5.70},result:{Reform:27.8154,EKRE:7.1272,Centre:26.0841,SDE:10.6073,Isamaa:17.8744,Greens:7.1389}},
+ {year:2011,poll:{Reform:29.87,EKRE:2.91,Centre:21.12,SDE:14.07,Isamaa:16.63,Greens:3.19},result:{Reform:28.5595,EKRE:2.1185,Centre:23.3205,SDE:17.0929,Isamaa:20.5210,Greens:3.7946}},
+ {year:2015,poll:{Reform:24.73,EKRE:5.69,Centre:23.85,SDE:18.64,Isamaa:15.13,Greens:1.43,Free:6.21},result:{Reform:27.6879,EKRE:8.1463,Centre:24.8122,SDE:15.1858,Isamaa:13.7066,Greens:0.9045,Free:8.6881}},
+ {year:2019,poll:{Reform:24.93,EKRE:18.87,Centre:26.54,E200:5.69,SDE:10.11,Isamaa:8.16,Greens:2.76,Free:1.21},result:{Reform:28.9344,EKRE:17.7622,Centre:23.0990,E200:4.3568,SDE:9.8326,Isamaa:11.4444,Greens:1.8225,Free:1.1514}},
+ {year:2023,poll:{Reform:30.00,EKRE:19.62,Centre:16.44,E200:12.37,SDE:8.38,Isamaa:7.51,PP:1.65,Greens:2.42,Free:0.00},result:{Reform:31.2358,EKRE:16.0521,Centre:15.2801,E200:13.3261,SDE:9.2715,Isamaa:8.2120,VL:2.3931,PP:2.3000,Greens:0.9644,Free:0.00}}
+];
+const FX_EUROSTAT="https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/";
+const FX_SERIES={
+ unemployment:{dataset:"une_rt_m",params:{freq:"M",unit:"PC_ACT",sex:"T",age:"TOTAL",s_adj:"SA",geo:"EE",sinceTimePeriod:"2000-01"},polarity:-1},
+ confidence:{dataset:"ei_bsco_m",params:{freq:"M",indic:"BS-CSMCI",s_adj:"SA",unit:"BAL",geo:"EE",sinceTimePeriod:"2000-01"},fallbackParams:[{freq:"M",indic:"BS-CSMCI",s_adj:"NSA",unit:"BAL",geo:"EE",sinceTimePeriod:"2000-01"}],polarity:1}
+};
+const FX_MACRO_SPAN=0.1,FX_MIN_INDICATORS=2;
+let fxMacro={},fxMacroSmooth=[],fxMacroFailed=false;
+const fxScoreCache=new Map();
+const fxMean=a=>{const v=a.filter(Number.isFinite);return v.length?v.reduce((s,x)=>s+x,0)/v.length:null};
+const fxSd=a=>{const v=a.filter(Number.isFinite);if(v.length<2)return null;const m=fxMean(v);return Math.sqrt(v.reduce((s,x)=>s+(x-m)**2,0)/(v.length-1))};
+const fxClamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+
+function fxParsePeriod(period){
+ let m=String(period).match(/^(\d{4})-Q([1-4])$/);
+ if(m){const y=+m[1],mo=(+m[2]-1)*3;return{period:`${y} Q${m[2]}`,date:new Date(Date.UTC(y,mo,1)),endDate:new Date(Date.UTC(y,mo+3,0)),year:y}}
+ m=String(period).match(/^(\d{4})-(\d{2})$/);
+ if(m){const y=+m[1],mo=+m[2];return{period:`${y}-${String(mo).padStart(2,"0")}`,date:new Date(Date.UTC(y,mo-1,1)),endDate:new Date(Date.UTC(y,mo,0)),year:y}}
+ m=String(period).match(/^(\d{4})$/);
+ if(m){const y=+m[1];return{period:String(y),date:new Date(Date.UTC(y,0,1)),endDate:new Date(Date.UTC(y,11,31)),year:y}}
+ return null;
+}
+function fxParseJsonStat(json){
+ const ids=json.id||Object.keys(json.dimension||{}),sizes=json.size||[],ti=ids.indexOf("time");
+ if(ti<0)throw Error("no time dimension");
+ const td=json.dimension&&(json.dimension.time||json.dimension[ids[ti]]),index=td&&td.category&&td.category.index;
+ let times=[];
+ if(Array.isArray(index))times=index.slice();
+ else if(index&&typeof index==="object")times=Object.keys(index).sort((a,b)=>index[a]-index[b]);
+ else if(td&&td.category&&td.category.label)times=Object.keys(td.category.label);
+ if(!times.length)throw Error("no time labels");
+ if(sizes.some((size,i)=>i!==ti&&size!==1))throw Error("multiple series");
+ const vals=json.value,entries=Array.isArray(vals)?vals.map((v,i)=>[i,v]):Object.entries(vals||{}),out=[];
+ for(const [flat,v] of entries){
+  if(v===null||v===undefined)continue;
+  let n=Number(flat);const coords=new Array(sizes.length).fill(0);
+  for(let i=sizes.length-1;i>=0;i--){coords[i]=n%sizes[i];n=Math.floor(n/sizes[i])}
+  if(coords.some((c,i)=>i!==ti&&c!==0))continue;
+  const parsed=fxParsePeriod(times[coords[ti]]),value=Number(v);
+  if(parsed&&Number.isFinite(value))out.push({...parsed,value});
+ }
+ return out.sort((a,b)=>a.date-b.date);
+}
+async function fxFetch(cfg){
+ let lastError;
+ for(const params of [cfg.params,...(cfg.fallbackParams||[])]){
+  try{
+   const url=new URL(FX_EUROSTAT+cfg.dataset);
+   Object.entries({...params,lang:"en"}).forEach(([k,v])=>url.searchParams.set(k,v));
+   const r=await fetchWithTimeout(url.toString(),{cache:"no-store"},20000);
+   if(!r.ok)throw Error(`${cfg.dataset}: HTTP ${r.status}`);
+   const points=fxParseJsonStat(await r.json());
+   if(!points.length)throw Error("no observations");
+   return points;
+  }catch(e){lastError=e}
+ }
+ throw lastError||Error("no usable data");
+}
+const fxFourYearsEarlier=(point,points)=>{
+ const target=Date.UTC(point.date.getUTCFullYear()-4,point.date.getUTCMonth(),1);
+ return points.find(p=>p.date.getTime()===target)||null;
+};
+function fxScoreAt(cutoff){
+ const z=[];
+ for(const [key,cfg] of Object.entries(FX_SERIES)){
+  const all=fxMacro[key]||[],points=all.filter(p=>p.endDate<cutoff);
+  if(!points.length)continue;
+  const current=points.at(-1),previous=fxFourYearsEarlier(current,all);
+  if(!previous)continue;
+  const changes=[];
+  for(const p of points){
+   if(p.year<2000)continue;
+   const old=fxFourYearsEarlier(p,all);
+   if(old)changes.push(p.value-old.value);
+  }
+  const centre=fxMean(changes),vol=fxSd(changes);
+  if(!Number.isFinite(centre)||!Number.isFinite(vol)||vol===0)continue;
+  z.push(cfg.polarity*((current.value-previous.value)-centre)/vol);
+ }
+ return z.length>=FX_MIN_INDICATORS?fxMean(z):null;
+}
+function fxScoreForDate(date){
+ const key=Object.keys(FX_SERIES).map(k=>(fxMacro[k]||[]).filter(p=>p.endDate<date).length).join("|");
+ if(!fxScoreCache.has(key))fxScoreCache.set(key,fxScoreAt(date));
+ return fxScoreCache.get(key);
+}
+function fxPrepareMacro(){
+ fxScoreCache.clear();
+ const raw=averagesData.dates.map(iso=>{const v=fxScoreForDate(isoToUtc(iso));return Number.isFinite(v)?v:null});
+ fxMacroSmooth=loessSmooth(raw,FX_MACRO_SPAN,null);
+}
+const FX_BIAS=(()=>{
+ const stats={},parties=new Set();
+ for(const e of FX_POLL_RESULTS)for(const k of Object.keys(e.poll))if(Number.isFinite(e.result[k]))parties.add(k);
+ for(const k of parties){
+  const obs=FX_POLL_RESULTS.map((e,i)=>({weight:i+1,error:e.result[k]-e.poll[k]})).filter(x=>Number.isFinite(x.error));
+  const sw=obs.reduce((s,x)=>s+x.weight,0);
+  stats[k]=sw>0?obs.reduce((s,x)=>s+x.weight*x.error,0)/sw:0;
+ }
+ return stats;
+})();
+function fxCabinets(){
+ const by={};
+ ((averagesData.government&&averagesData.government.lines)||[]).forEach(l=>{
+  const c=by[l.cabinet]=by[l.cabinet]||{from:l.from};
+  if(l.role==="government")c.gov=l.parties||[];
+ });
+ return Object.values(by).filter(c=>c.gov).sort((a,b)=>a.from<b.from?-1:1);
+}
+function fxGovAt(ms,cabs){
+ let g=cabs[0];
+ for(const c of cabs)if(isoToUtc(c.from).getTime()<=ms)g=c;
+ return g?g.gov:[];
+}
+function fxBuild(supports,score,gov,strength,sens){
+ const total=supports.reduce((s,p)=>s+p.support,0);
+ const pre=supports.map(p=>({key:p.key,corrected:Math.max(0,p.support+(FX_BIAS[p.key]||0)*strength)}));
+ const sum=pre.reduce((a,p)=>a+p.corrected,0),factor=sum>0?total/sum:1;
+ pre.forEach(p=>{p.corrected*=factor;p.model=p.corrected});
+ const g=pre.filter(p=>gov.has(p.key)),o=pre.filter(p=>!gov.has(p.key));
+ const gs=g.reduce((s,p)=>s+p.corrected,0),os=o.reduce((s,p)=>s+p.corrected,0);
+ let shift=fxClamp(Number.isFinite(score)?score*sens:0,-2.5,2.5);
+ if(!gs||!os)shift=0;
+ shift=fxClamp(shift,-os,gs);
+ g.forEach(p=>{p.model=p.corrected+shift*p.corrected/gs});
+ o.forEach(p=>{p.model=p.corrected-shift*p.corrected/os});
+ return pre;
+}
+function fxAdjust(base){
+ const keys=averagesData.parties,strength=modeState.corr/100,cabs=fxCabinets();
+ return base.map((row,i)=>{
+  const out={date:row.date};keys.forEach(k=>{out[k]=null});
+  const supports=keys.filter(k=>Number.isFinite(row[k])&&row[k]>=0).map(k=>({key:k,support:row[k]}));
+  if(!supports.length)return out;
+  const score=Number.isFinite(fxMacroSmooth[i])?fxMacroSmooth[i]:null;
+  fxBuild(supports,score,new Set(fxGovAt(row.date.getTime(),cabs)),strength,modeState.sens).forEach(p=>{out[p.key]=p.model});
+  return out;
+ });
+}
+async function loadMacro(){
+ const keys=Object.keys(FX_SERIES);
+ const results=await Promise.allSettled(keys.map(k=>fxFetch(FX_SERIES[k])));
+ fxMacro={};fxMacroFailed=false;
+ results.forEach((r,i)=>{if(r.status==="fulfilled")fxMacro[keys[i]]=r.value;else fxMacroFailed=true});
+ fxPrepareMacro();
+ syncModeUi();
+ if(fxActive())scheduleApply(0);
+}
+
+function modeGovLines(){
+ const g=averagesData.government,lines=g.lines;
+ if(!averagesData.calc||(!presmoothed&&!modeFull))return lines;
+ const keys=averagesData.parties,idx=Object.fromEntries(keys.map((k,j)=>[k,j])),dates=averagesData.dates,cab={};
+ lines.forEach(l=>{const c=cab[l.cabinet]=cab[l.cabinet]||{};if(l.role==="government")c.gov=l.parties;if(l.role==="opposition")c.opp=l.parties});
+ const src=presmoothed?latestRows.map(r=>keys.map(k=>Number.isFinite(r[k])?r[k]/100:0)):modeFull;
+ return lines.map(l=>{
+  const c=cab[l.cabinet];
+  const values=dates.map((iso,t)=>{
+   if(iso<l.from||(l.to&&iso>l.to))return null;
+   const sum=a=>a.reduce((s,p)=>s+src[t][idx[p]],0),gv=sum(c.gov),op=sum(c.opp);
+   return Math.round(Number(((l.role==="government"?gv:l.role==="opposition"?op:1-gv-op)*1e4).toPrecision(15)))/1e4;
+  });
+  return {...l,values};
+ });
+}
+
+function applyModel(){
+ const d=averagesData,keys=d.parties;
+ let avg=d.average;
+ const stock=modeState.influence===100&&modeState.he===100;
+ if(d.calc&&!stock){const c=computeAverage(modeState.influence/100,modeState.he/100);avg=c.avg;modeFull=c.full}
+ else modeFull=null;
+ latestRows=d.dates.map((iso,i)=>{const rec={date:isoToUtc(iso)};keys.forEach((k,j)=>{rec[k]=fracToPct(avg[i][j])});return rec});
+ buildSmoothedRows(keys);
+ presmoothed=false;
+ if(d.calc&&fxActive()){
+  smoothedRows=fxAdjust(smoothedRows);
+  latestRows=smoothedRows.map(r=>({...r}));
+  presmoothed=true;
+ }
+ const lastSmoothed=smoothedRows.at(-1);
+ latestPoll=keys.map(name=>({key:name,name,colour:PARTY_COLOURS[name]||"#777",support:lastSmoothed[name]})).filter(p=>p.support!==null);
+ renderLineChart();renderLatestPolling();renderLeadSummary();renderProjection();renderCoalitionBuilder();renderMonthlyChange();
+ renderCustomCoalitionTool();
+ buildPollTable();renderPollTable();
+ loadGovtData();
+ syncModeUi();
+}
+function scheduleApply(ms){
+ clearTimeout(applyTimer);
+ applyTimer=setTimeout(()=>{if(averagesData)applyModel()},ms);
+}
+function syncModeUi(){
+ const name=modeName();
+ document.querySelectorAll(".mix-btn[data-mode]").forEach(b=>b.classList.toggle("on",b.dataset.mode===name));
+ const set=(id,v,txt)=>{const el=$(id);if(el&&el!==document.activeElement)el.value=v;const o=$(id+"Value");if(o)o.textContent=txt};
+ set("mixInfluence",modeState.influence,modeState.influence+"%");
+ set("mixHe",modeState.he,modeState.he+"%");
+ set("mixSens",modeState.sens,locNum(modeState.sens.toFixed(1))+" pp");
+ set("mixCorr",modeState.corr,modeState.corr+"%");
+ const desc=$("modeDesc");
+ if(desc)desc.textContent=t("modeDesc"+name.charAt(0).toUpperCase()+name.slice(1));
+ const note=$("modeNote");
+ if(note)note.textContent=fxMacroFailed&&fxActive()?t("modeMacroMissing"):"";
+}
+function setMode(name){
+ Object.assign(modeState,MODE_PRESETS[name]);
+ syncModeUi();
+ scheduleApply(0);
+}
+
 function smoothedDatasetData(rows,key){
  const raw=rows.map(r=>r[key]);
- return {raw,smoothed:loessSmooth(raw)};
+ return {raw,smoothed:smoothSeries(raw)};
 }
 
 
@@ -1415,6 +1733,7 @@ $("langBtn").onclick=()=>{
  currentLang=currentLang==="et"?"en":"et";
  try{localStorage.setItem("eestimateLang",currentLang)}catch(e){}
  applyStaticTranslations();
+ syncModeUi();
  if(latestRows.length){
    renderLineChart();
    renderLatestPolling();
@@ -1439,16 +1758,17 @@ function loadGovtData(){
  if(!g||!g.lines||!g.lines.length)return;
  const dates=averagesData.dates.map(isoToUtc);
  let first=dates.length;
- g.lines.forEach(l=>{const i=l.values.findIndex(v=>v!==null&&v!==undefined);if(i>=0&&i<first)first=i});
+ const lines=modeGovLines();
+ lines.forEach(l=>{const i=l.values.findIndex(v=>v!==null&&v!==undefined);if(i>=0&&i<first)first=i});
  govtRows=[];
  for(let i=first;i<dates.length;i++){
   const rec={date:dates[i]};
-  g.lines.forEach(l=>{rec[l.labelEn]=fracToPct(l.values[i])});
+  lines.forEach(l=>{rec[l.labelEn]=fracToPct(l.values[i])});
   govtRows.push(rec);
  }
  if(!govtRows.length)return;
  const last=govtRows.at(-1);
- govtLatestPoll=g.lines.map(l=>({key:l.labelEn,name:l.labelEn,colour:GOVT_COLOURS[l.labelEn]||"#777",support:last[l.labelEn]}));
+ govtLatestPoll=lines.map(l=>({key:l.labelEn,name:l.labelEn,colour:GOVT_COLOURS[l.labelEn]||"#777",support:last[l.labelEn]}));
  renderGovtLineChart();
 }
 function renderGovtLineChart(){
@@ -1803,8 +2123,9 @@ function buildPollTable(){
   return {start,end,pollster:p.pollster,raw:age>=0&&age<W?(strength[p.pollster]||0)*(W-age):0,values:p.values,weight:0,lead:null};
  });
  const total=rows.reduce((a,r)=>a+r.raw,0);
+ const inWin=rows.filter(r=>r.raw>0).length,mix=modeState.influence/100;
  rows.forEach(r=>{
-  r.weight=total>0?r.raw/total*100:0;
+  r.weight=((total>0?r.raw/total:0)*mix+(r.raw>0&&inWin?1/inWin:0)*(1-mix))*100;
   const vs=Object.entries(r.values).filter(([n,v])=>n!=="Others"&&Number.isFinite(v)).sort((a,b)=>b[1]-a[1]);
   if(vs.length>1)r.lead={party:vs[0][0],margin:vs[0][1]-vs[1][1]};
  });
@@ -1873,6 +2194,11 @@ function sortPollTable(key){
 }
 $("pollTable").addEventListener("click",e=>{const th=e.target.closest("th[data-sort]");if(th)sortPollTable(th.getAttribute("data-sort"))});
 $("pollTable").addEventListener("keydown",e=>{if(e.key!=="Enter"&&e.key!==" ")return;const th=e.target.closest("th[data-sort]");if(th){e.preventDefault();sortPollTable(th.getAttribute("data-sort"))}});
+document.querySelectorAll(".mix-btn[data-mode]").forEach(b=>{b.onclick=()=>setMode(b.dataset.mode)});
+$("mixAdvBtn").onclick=()=>{const el=$("mixAdv");el.style.display=el.style.display==="none"?"":"none"};
+[["mixInfluence","influence"],["mixHe","he"],["mixSens","sens"],["mixCorr","corr"]].forEach(([id,key])=>{
+ $(id).addEventListener("input",()=>{modeState[key]=Number($(id).value);syncModeUi();scheduleApply(150)});
+});
 $("pollPrev").onclick=()=>{pollTable.page--;renderPollTable()};
 $("pollNext").onclick=()=>{pollTable.page++;renderPollTable()};
 
@@ -2041,8 +2367,8 @@ function renderCustomCoalitionChart(){
 
  const side1Data=getCoalitionData(side1Coalition);
  const side2Data=getCoalitionData(side2Coalition);
- const side1Smoothed=loessSmooth(side1Data);
- const side2Smoothed=loessSmooth(side2Data);
+ const side1Smoothed=smoothSeries(side1Data);
+ const side2Smoothed=smoothSeries(side2Data);
 
  let datasets=[];
 
@@ -2082,7 +2408,7 @@ function renderCustomCoalitionChart(){
    const v2=side2Data[i]||0;
    return v1 - v2;
   });
-  const netSmoothed=loessSmooth(netData,LOESS_SPAN,null);
+  const netSmoothed=smoothSeries(netData,LOESS_SPAN,null);
 
   const netColor="#7c3aed";
   datasets.push({
