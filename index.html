@@ -159,6 +159,8 @@ body.dark a {
 .poll-table th.left,.poll-table td.left{text-align:left}
 .poll-table td.over{font-weight:700}
 .poll-table td.dim{color:var(--muted)}
+.poll-table td.infl{text-align:right;padding-right:12px}
+.poll-table td.lead{font-weight:700}
 .poll-pager{display:flex;gap:10px;align-items:center;justify-content:center;margin:8px 0}
 .poll-pager .action:disabled{opacity:.45;cursor:default}
 .mm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px 18px;padding:4px 4px 0}
@@ -294,7 +296,7 @@ body.dark a {
 <section class="window"><div class="titlebar"><span data-i18n="titlePollTable">POLL TABLE</span></div><div class="window-body">
 <div class="poll-table-wrap"><table class="poll-table" id="pollTable"></table></div>
 <div class="poll-pager"><button class="action" id="pollPrev">◀</button><span class="status" id="pollRange"></span><button class="action" id="pollNext">▶</button></div>
-<p class="header-note" data-i18n="pollTableNote">Weight is calculated by pollster score and passage of time. These polls are adjusted for biases (see below) before being added to the average above.</p>
+<p class="header-note" data-i18n="pollTableNote">Influence is calculated by pollster score and passage of time. These polls are adjusted for biases (see below) before being added to the average above.</p>
 </div></section>
 
 <section class="window"><div class="titlebar"><span data-i18n="titleGovtVsOpposition">GOVERNMENT VS OPPOSITION POLLING AVERAGE</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="govtLineChart"></canvas></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div><p class="header-note"></p></div></section>
@@ -406,8 +408,9 @@ const UI_STRINGS = {
   pollColStart:"FW start",
   pollColEnd:"FW end",
   pollColPollster:"Pollster",
-  pollColWeight:"Weight",
-  pollTableNote:"Weight is calculated by pollster score and passage of time. These polls are adjusted for biases (see below) before being added to the average above.",
+  pollColWeight:"Influence",
+  pollColLead:"Lead",
+  pollTableNote:"Influence is calculated by pollster score and passage of time. These polls are adjusted for biases (see below) before being added to the average above.",
   pollNewer:"Newer polls",
   pollOlder:"Older polls",
   titleHouseEffects:"POLLSTER HOUSE EFFECTS",
@@ -494,8 +497,9 @@ const UI_STRINGS = {
   pollColStart:"Küsitluse algus",
   pollColEnd:"Küsitluse lõpp",
   pollColPollster:"Küsitlusfirma",
-  pollColWeight:"Kaal",
-  pollTableNote:"Kaal arvutatakse küsitlusfirma skoori ja aja möödumise põhjal. Neid küsitlusi on enne ülaltoodud keskmisesse lisamist korrigeeritud küsitlejate kallutatuse suhtes (vt allpool).",
+  pollColWeight:"Mõju",
+  pollColLead:"Edu",
+  pollTableNote:"Mõju arvutatakse küsitlusfirma skoori ja aja möödumise põhjal. Neid küsitlusi on enne ülaltoodud keskmisesse lisamist korrigeeritud küsitlejate kallutatuse suhtes (vt allpool).",
   pollNewer:"Uuemad küsitlused",
   pollOlder:"Vanemad küsitlused",
   titleHouseEffects:"KÜSITLUSFIRMADE MAJAEFEKT",
@@ -1785,7 +1789,7 @@ function renderAdjustedPolls(){
 const POLL_PAGE_SIZE=10;
 const POLL_MONTHS={en:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],et:["Jan","Vee","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Det"]};
 let pollTable={rows:[],parties:[],page:0,sortKey:"end",sortDir:-1};
-const pollDate=d=>d?`${d.getUTCDate()} ${POLL_MONTHS[currentLang==="et"?"et":"en"][d.getUTCMonth()]} ${d.getUTCFullYear()}`:"—";
+const pollDate=d=>d?`${d.getUTCDate()} ${POLL_MONTHS[currentLang==="et"?"et":"en"][d.getUTCMonth()]} ${d.getUTCFullYear()}`:"-";
 const hexRgb=hex=>{const c=String(hex).replace("#","");return [parseInt(c.slice(0,2),16),parseInt(c.slice(2,4),16),parseInt(c.slice(4,6),16)].join(",")};
 
 function buildPollTable(){
@@ -1796,10 +1800,14 @@ function buildPollTable(){
  const rows=d.polls.map(p=>{
   const end=isoToUtc(p.date),start=p.fwStart?isoToUtc(p.fwStart):null;
   const age=Math.round((asOf-end.getTime())/86400000);
-  return {start,end,pollster:p.pollster,raw:age>=0&&age<W?(strength[p.pollster]||0)*(W-age):0,values:p.values,weight:0};
+  return {start,end,pollster:p.pollster,raw:age>=0&&age<W?(strength[p.pollster]||0)*(W-age):0,values:p.values,weight:0,lead:null};
  });
  const total=rows.reduce((a,r)=>a+r.raw,0);
- rows.forEach(r=>{r.weight=total>0?r.raw/total*100:0});
+ rows.forEach(r=>{
+  r.weight=total>0?r.raw/total*100:0;
+  const vs=Object.entries(r.values).filter(([n,v])=>n!=="Others"&&Number.isFinite(v)).sort((a,b)=>b[1]-a[1]);
+  if(vs.length>1)r.lead={party:vs[0][0],margin:vs[0][1]-vs[1][1]};
+ });
  pollTable.rows=rows;
  pollTable.parties=latestPoll.slice().sort((a,b)=>b.support-a.support).map(p=>p.name).filter(n=>rows.some(r=>Number.isFinite(r.values[n])));
  pollTable.page=0;
@@ -1809,6 +1817,7 @@ function pollSortValue(r,key){
  if(key==="start")return r.start?r.start.getTime():null;
  if(key==="end")return r.end.getTime();
  if(key==="weight")return r.weight;
+ if(key==="lead")return r.lead?r.lead.margin:null;
  if(key==="pollster")return r.pollster;
  const v=r.values[key];
  return Number.isFinite(v)?v:null;
@@ -1831,12 +1840,15 @@ function renderPollTable(){
  const rows=sortedPollRows(),total=rows.length,pages=Math.max(1,Math.ceil(total/POLL_PAGE_SIZE));
  pollTable.page=Math.min(Math.max(0,pollTable.page),pages-1);
  const from=pollTable.page*POLL_PAGE_SIZE,slice=rows.slice(from,from+POLL_PAGE_SIZE);
- const cols=[{key:"start",label:t("pollColStart"),left:true},{key:"end",label:t("pollColEnd"),left:true},{key:"pollster",label:t("pollColPollster"),left:true},{key:"weight",label:t("pollColWeight")}]
+ const cols=[{key:"start",label:t("pollColStart"),left:true},{key:"end",label:t("pollColEnd"),left:true},{key:"pollster",label:t("pollColPollster"),left:true},{key:"weight",label:t("pollColWeight")},{key:"lead",label:t("pollColLead")}]
   .concat(pollTable.parties.map(p=>({key:p,label:partyLabel(p)})));
+ const maxW=Math.max(...pollTable.rows.map(x=>x.weight),0);
  const mark=k=>k===pollTable.sortKey?(pollTable.sortDir<0?" ▼":" ▲"):"";
  let html="<thead><tr>"+cols.map(c=>`<th class="${c.left?"left":""}" data-sort="${esc(c.key)}" tabindex="0">${esc(c.label)}${mark(c.key)}</th>`).join("")+"</tr></thead><tbody>";
  for(const r of slice){
-  html+=`<tr><td class="left${r.start?"":" dim"}">${esc(pollDate(r.start))}</td><td class="left">${esc(pollDate(r.end))}</td><td class="left">${esc(r.pollster)}</td><td>${locNum((r.weight/100).toFixed(2))}</td>`;
+  html+=`<tr><td class="left${r.start?"":" dim"}">${esc(pollDate(r.start))}</td><td class="left">${esc(pollDate(r.end))}</td><td class="left">${esc(r.pollster)}</td><td class="infl" style="${r.weight>0&&maxW>0?`background:linear-gradient(to right,rgba(128,128,128,.35) ${(r.weight/maxW*100).toFixed(1)}%,transparent ${(r.weight/maxW*100).toFixed(1)}%)`:""}">${locNum((r.weight/100).toFixed(2))}</td>`;
+  if(r.lead)html+=`<td class="lead" style="color:${PARTY_COLOURS[r.lead.party]||"#777777"}">${esc(partyLabel(r.lead.party))} +${locNum(r.lead.margin.toFixed(1))}</td>`;
+  else html+='<td class="dim">-</td>';
   for(const p of pollTable.parties){
    const v=r.values[p];
    if(!Number.isFinite(v)){html+='<td class="dim">–</td>';continue}
@@ -1846,7 +1858,7 @@ function renderPollTable(){
   html+="</tr>";
  }
  table.innerHTML=html+"</tbody>";
- $("pollRange").textContent=`${from+1}–${Math.min(from+POLL_PAGE_SIZE,total)} / ${total}`;
+ $("pollRange").textContent=`${from+1}-${Math.min(from+POLL_PAGE_SIZE,total)} / ${total}`;
  $("pollPrev").disabled=pollTable.page===0;
  $("pollNext").disabled=pollTable.page>=pages-1;
  $("pollPrev").setAttribute("aria-label",t("pollNewer"));
