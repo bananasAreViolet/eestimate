@@ -10,13 +10,13 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://bananasareviolet.github.io/eestimate/">
   <meta property="og:title" content="Eestimate, a Riigikogu polling tracker">
-  <meta property="og:description" content="Eestimate is an Estonian party preference polling tracker and aggregator. Centre is leading Isamaa by 4.6 points. There are 115 days or fewer until the next Riigikogu election.">
+  <meta property="og:description" content="Eestimate is an Estonian party preference polling tracker and aggregator. Centre is leading Isamaa by 4.6 points. There are 116 days or fewer until the next Riigikogu election.">
   <meta property="og:image" content="https://bananasareviolet.github.io/eestimate/eestimate-embed.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Eestimate, a Riigikogu polling tracker">
-  <meta name="twitter:description" content="Eestimate is an Estonian party preference polling tracker and aggregator. Centre is leading Isamaa by 4.6 points. There are 115 days or fewer until the next Riigikogu election.">
+  <meta name="twitter:description" content="Eestimate is an Estonian party preference polling tracker and aggregator. Centre is leading Isamaa by 4.6 points. There are 116 days or fewer until the next Riigikogu election.">
   <meta name="twitter:image" content="https://bananasareviolet.github.io/eestimate/eestimate-embed.png">
   <!-- EESTIMATE_OG_END -->
 
@@ -152,6 +152,15 @@ body.dark a {
 .he-ylabel{fill:var(--muted);font-size:11px;font-family:Tahoma,sans-serif}
 .he-plabel{font-weight:400;font-family:"Archivo Black",Tahoma,sans-serif}
 .he-bar:hover{filter:brightness(1.12)}
+.poll-table-wrap{overflow-x:auto;background:var(--surface);border:2px inset var(--inset-border)}
+.poll-table{width:100%;border-collapse:collapse;font-size:13px;color:var(--text)}
+.poll-table th,.poll-table td{padding:6px 8px;text-align:center;border:0;border-bottom:1px solid rgba(128,128,128,.5);white-space:nowrap}
+.poll-table th{cursor:pointer;user-select:none;font-weight:700}
+.poll-table th.left,.poll-table td.left{text-align:left}
+.poll-table td.over{font-weight:700}
+.poll-table td.dim{color:var(--muted)}
+.poll-pager{display:flex;gap:10px;align-items:center;justify-content:center;margin:8px 0}
+.poll-pager .action:disabled{opacity:.45;cursor:default}
 .mm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px 18px;padding:4px 4px 0}
 .mm-panel{width:100%;max-width:360px;margin:0 auto}
 .mm-panel-title{font-family:"VCR OSD Mono",monospace;font-weight:400;font-size:16px;text-align:center;margin:0 0 4px}
@@ -185,9 +194,12 @@ body.dark a {
       <button class="action" id="reloadBtn">Refresh page</button>
       <button class="action" id="themeBtn">Dark mode</button>
       <button class="action" id="langBtn">Eesti keeles</button>
+      <span class="status" id="status">Data needs a moment to load in, thanks for the patience…</span>
+    </div>
+    <div class="toolbar">
       <button class="action" id="longTermBtn" data-i18n="longTermBtn" onclick="window.location.href='long-term.html'">Historical data and charts</button>
       <button class="action" onclick="window.open('https://bananasareviolet.github.io/epgroupbuilder/')">EP Group Builder</button>
-      <span class="status" id="status">Data needs a moment to load in, thanks for the patience…</span>
+      <button class="action" id="forecastBtn" data-i18n="forecastBtn" onclick="window.location.href='fundamentals.html'">Forecast model (highly experimental!)</button>
     </div>
   </div>
   
@@ -277,6 +289,12 @@ body.dark a {
 </div>
 <div class="party-selector" id="partySelector" style="margin-top:44px"></div><div class="coalition-summary" id="coalitionSummary">Select parties using the boxes.<br>Reform currently rules out Centre and EKRE. SDE rules out EKRE.</div>
 <img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo">
+</div></section>
+
+<section class="window"><div class="titlebar"><span data-i18n="titlePollTable">POLL TABLE</span></div><div class="window-body">
+<div class="poll-table-wrap"><table class="poll-table" id="pollTable"></table></div>
+<div class="poll-pager"><button class="action" id="pollPrev">◀</button><span class="status" id="pollRange"></span><button class="action" id="pollNext">▶</button></div>
+<p class="header-note" data-i18n="pollTableNote">Weight is calculated by pollster score and passage of time.</p>
 </div></section>
 
 <section class="window"><div class="titlebar"><span data-i18n="titleGovtVsOpposition">GOVERNMENT VS OPPOSITION POLLING AVERAGE</span></div><div class="window-body"><div class="chart-surface"><div class="chart-wrap"><canvas id="govtLineChart"></canvas></div><img class="corner-logo" src="https://bananasareviolet.github.io/eestimate/eestimate.png" alt="Eestimate logo"></div><p class="header-note"></p></div></section>
@@ -383,6 +401,15 @@ const UI_STRINGS = {
   tied:(a,b)=>`${a} and ${b} are tied.`,
   leading:(a,b,diff)=>`${a} is leading ${b} by ${diff} points.`,
   longTermBtn:"Historical data and charts",
+  forecastBtn:"Forecast model (highly experimental!)",
+  titlePollTable:"POLL TABLE",
+  pollColStart:"FW start",
+  pollColEnd:"FW end",
+  pollColPollster:"Pollster",
+  pollColWeight:"Weight",
+  pollTableNote:"Weight is calculated by pollster score and passage of time.",
+  pollNewer:"Newer polls",
+  pollOlder:"Older polls",
   titleHouseEffects:"POLLSTER HOUSE EFFECTS",
   titleAdjPolls:"LATEST POLLS, HOUSE EFFECT-ADJUSTED",
   adjLoading:"Loading latest polls…",
@@ -462,6 +489,15 @@ const UI_STRINGS = {
   tied:(a,b)=>`${a} ja ${b} on viigis.`,
   leading:(a,b,diff)=>`${a} juhib ${b} ees ${diff} punktiga.`,
   longTermBtn:"Ajaloolised andmed ja graafikud",
+  forecastBtn:"Prognoosimudel (väga katseline!)",
+  titlePollTable:"KÜSITLUSTE TABEL",
+  pollColStart:"Küsitluse algus",
+  pollColEnd:"Küsitluse lõpp",
+  pollColPollster:"Küsitlusfirma",
+  pollColWeight:"Kaal",
+  pollTableNote:"Kaal arvutatakse küsitlusfirma skoori ja aja möödumise põhjal.",
+  pollNewer:"Uuemad küsitlused",
+  pollOlder:"Vanemad küsitlused",
   titleHouseEffects:"KÜSITLUSFIRMADE MAJAEFEKT",
   titleAdjPolls:"VIIMASED KÜSITLUSED, MAJAEFEKTIGA KORRIGEERITUD",
   adjLoading:"Viimaste küsitluste laadimine…",
@@ -516,14 +552,14 @@ function partyLabel(name){
  return name;
 }
 
-const GOVT_LABEL_ET={}; // English label -> Estonian label, filled from data/averages.json
+const GOVT_LABEL_ET={};
 function govtLabel(name){
  if(currentLang==="et"&&Object.prototype.hasOwnProperty.call(GOVT_LABEL_ET,name)) return GOVT_LABEL_ET[name];
  return name;
 }
 
 // Event/election marker labels drawn on the timeline charts.
-const EVENT_LABEL_ET={}; // English marker label -> Estonian, filled from data/averages.json
+const EVENT_LABEL_ET={};
 function eventLabel(label){
  if(currentLang==="et"&&Object.prototype.hasOwnProperty.call(EVENT_LABEL_ET,label)) return EVENT_LABEL_ET[label];
  return label;
@@ -609,7 +645,6 @@ function coalitionSelectPrompt(){
 
 
 const GOOGLE_SHEET_URL="https://docs.google.com/spreadsheets/d/1gGBmEUW5bwp23602WfQF4eciRrZT4M-VrAz1r5M2JHU/edit?usp=sharing";
-// The polling average, cabinet lines, house effects and polls all come from one file written by engine/update-averages.cjs
 const DATA_URL="data/averages.json";
 
   
@@ -632,7 +667,7 @@ Coalition:"#044999",
 "Ind.":"#8a8d91"};
 const PREFERRED_ORDER=["VL","SDE","Greens","E200","Reform","PP","Free","Isamaa","Centre","ERK","EKRE","Koos"];
 const DISTRICTS=[10,13,8,16,6,5,6,7,7,8,8,7],RIIGIKOGU_SEATS=101,NATIONAL_THRESHOLD=5,MODIFIED_DHONDT_EXPONENT=.9;
-const EVENT_MARKERS=[]; // {date,label}, filled from data/averages.json (cabinet markers in engine/eestimate.config.json)
+const EVENT_MARKERS=[];
 
 
 const eventMarkerPlugin={
@@ -743,7 +778,7 @@ const shade=(hex,amt)=>{const c=hex.replace("#","");const num=parseInt(c,16);let
 let lineChart=null,latestRows=[],latestPoll=[],projection=[],selectedCoalition=new Set();
 
 const GOVT_ROLE_COLOURS={government:"#2e7d32",opposition:"#d32f2f",extra:"#f59e0b"};
-const GOVT_COLOURS={}; // line label -> colour, filled from data/averages.json
+const GOVT_COLOURS={};
 let govtLineChart=null,govtRows=[],govtLatestPoll=[];
 
 const COMPOSITION_SHEET_NAME="RKavg",COMPOSITION_SHEET_RANGE="A:Z";
@@ -809,7 +844,6 @@ const isoToUtc=iso=>{const m=String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);retur
 const fracToPct=v=>(v===null||v===undefined||!Number.isFinite(v))?null:Math.round(v*1e8)/1e6;
 let averagesData=null;
 
-// Government/opposition lines and cabinet markers are defined in engine/eestimate.config.json; the JSON carries their labels and dates.
 function applyCabinetConfig(gov){
  Object.keys(GOVT_COLOURS).forEach(k=>delete GOVT_COLOURS[k]);
  Object.keys(GOVT_LABEL_ET).forEach(k=>delete GOVT_LABEL_ET[k]);
@@ -843,6 +877,7 @@ async function loadAverages(){
   latestPoll=keys.map(name=>({key:name,name,colour:PARTY_COLOURS[name]||"#777",support:lastSmoothed[name]})).filter(p=>p.support!==null);
   renderLineChart();renderLatestPolling();renderLeadSummary();renderProjection();renderCoalitionBuilder();renderMonthlyChange();
   renderCustomCoalitionTool();
+  buildPollTable();renderPollTable();
   loadGovtData();
   loadCompositionSheet();
   $("status").textContent=t("statusUpdateTemplate")(dtext(last.date),locInt(latestRows.length));if($("setupPanel"))$("setupPanel").style.display="none";
@@ -1389,6 +1424,7 @@ $("langBtn").onclick=()=>{
  }
  if(govtRows.length){renderGovtLineChart();}
  if(compositionRows.length){renderCompositionChart();}
+ renderPollTable();
  renderHouseEffects();
  renderAdjustedPolls();
  renderMonthlyChange();
@@ -1564,7 +1600,7 @@ function renderCompositionChart(){
 }
 
 
-let HE_MIN_POLLS=3;              // overwritten by meta.minPollsForBias from data/averages.json
+let HE_MIN_POLLS=3;
 const HE_POLLSTER_ORDER=["Norstat","Emor","Turu-uuringute AS"];
 const HE_SCALE=5;
 let heState=null;
@@ -1578,8 +1614,6 @@ const heDate=d=>{
 };
 const heSigned=v=>{const r=Math.round(v*10)/10;return (r>0?"+":"")+(r===0?0:r).toFixed(1)};
 
-// House effects for the polling year in progress. The engine (engine/update-averages.cjs) has already done the
-// leave-one-out averages and LOESS; this only reads the per-pollster, per-party means from data/averages.json.
 function loadHouseEffects(){
  const note=$("heNote"),grid=$("heGrid");
  if(note)note.textContent=t("heLoading");
@@ -1747,6 +1781,88 @@ function renderAdjustedPolls(){
  note.textContent=t("adjNoteTemplate")(heDate(asAt));
  if(foot)foot.innerHTML=lowNotes.join("<br>");
 }
+
+const POLL_PAGE_SIZE=10;
+const POLL_MONTHS={en:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],et:["Jan","Vee","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Det"]};
+let pollTable={rows:[],parties:[],page:0,sortKey:"end",sortDir:-1};
+const pollDate=d=>d?`${d.getUTCDate()} ${POLL_MONTHS[currentLang==="et"?"et":"en"][d.getUTCMonth()]} ${d.getUTCFullYear()}`:"—";
+const hexRgb=hex=>{const c=String(hex).replace("#","");return [parseInt(c.slice(0,2),16),parseInt(c.slice(2,4),16),parseInt(c.slice(4,6),16)].join(",")};
+
+function buildPollTable(){
+ const d=averagesData;
+ if(!d||!Array.isArray(d.polls))return;
+ const W=(d.meta&&d.meta.windowDays)||30,strength=(d.meta&&d.meta.strength)||{};
+ const asOf=isoToUtc(d.dates.at(-1)).getTime();
+ const rows=d.polls.map(p=>{
+  const end=isoToUtc(p.date),start=p.fwStart?isoToUtc(p.fwStart):null;
+  const age=Math.round((asOf-end.getTime())/86400000);
+  return {start,end,pollster:p.pollster,raw:age>=0&&age<W?(strength[p.pollster]||0)*(W-age):0,values:p.values,weight:0};
+ });
+ const total=rows.reduce((a,r)=>a+r.raw,0);
+ rows.forEach(r=>{r.weight=total>0?r.raw/total*100:0});
+ pollTable.rows=rows;
+ pollTable.parties=latestPoll.slice().sort((a,b)=>b.support-a.support).map(p=>p.name).filter(n=>rows.some(r=>Number.isFinite(r.values[n])));
+ pollTable.page=0;
+}
+
+function pollSortValue(r,key){
+ if(key==="start")return r.start?r.start.getTime():null;
+ if(key==="end")return r.end.getTime();
+ if(key==="weight")return r.weight;
+ if(key==="pollster")return r.pollster;
+ const v=r.values[key];
+ return Number.isFinite(v)?v:null;
+}
+
+function sortedPollRows(){
+ const {rows,sortKey,sortDir}=pollTable;
+ return rows.slice().sort((a,b)=>{
+  const x=pollSortValue(a,sortKey),y=pollSortValue(b,sortKey);
+  if(x===null&&y!==null)return 1;
+  if(y===null&&x!==null)return -1;
+  const c=x===null?0:typeof x==="string"?x.localeCompare(y):x-y;
+  return c?c*sortDir:(b.end-a.end)||a.pollster.localeCompare(b.pollster);
+ });
+}
+
+function renderPollTable(){
+ const table=$("pollTable");
+ if(!table||!pollTable.rows.length)return;
+ const rows=sortedPollRows(),total=rows.length,pages=Math.max(1,Math.ceil(total/POLL_PAGE_SIZE));
+ pollTable.page=Math.min(Math.max(0,pollTable.page),pages-1);
+ const from=pollTable.page*POLL_PAGE_SIZE,slice=rows.slice(from,from+POLL_PAGE_SIZE);
+ const cols=[{key:"start",label:t("pollColStart"),left:true},{key:"end",label:t("pollColEnd"),left:true},{key:"pollster",label:t("pollColPollster"),left:true},{key:"weight",label:t("pollColWeight")}]
+  .concat(pollTable.parties.map(p=>({key:p,label:partyLabel(p)})));
+ const mark=k=>k===pollTable.sortKey?(pollTable.sortDir<0?" ▼":" ▲"):"";
+ let html="<thead><tr>"+cols.map(c=>`<th class="${c.left?"left":""}" data-sort="${esc(c.key)}" tabindex="0">${esc(c.label)}${mark(c.key)}</th>`).join("")+"</tr></thead><tbody>";
+ for(const r of slice){
+  html+=`<tr><td class="left${r.start?"":" dim"}">${esc(pollDate(r.start))}</td><td class="left">${esc(pollDate(r.end))}</td><td class="left">${esc(r.pollster)}</td><td>${locNum((r.weight/100).toFixed(2))}</td>`;
+  for(const p of pollTable.parties){
+   const v=r.values[p];
+   if(!Number.isFinite(v)){html+='<td class="dim">–</td>';continue}
+   const a=Math.min(1,Math.max(0,v/100));
+   html+=`<td class="${v>=NATIONAL_THRESHOLD?"over":""}" style="background:rgba(${hexRgb(PARTY_COLOURS[p]||"#777777")},${a})">${locNum(v.toFixed(1))}</td>`;
+  }
+  html+="</tr>";
+ }
+ table.innerHTML=html+"</tbody>";
+ $("pollRange").textContent=`${from+1}–${Math.min(from+POLL_PAGE_SIZE,total)} / ${total}`;
+ $("pollPrev").disabled=pollTable.page===0;
+ $("pollNext").disabled=pollTable.page>=pages-1;
+ $("pollPrev").setAttribute("aria-label",t("pollNewer"));
+ $("pollNext").setAttribute("aria-label",t("pollOlder"));
+}
+
+function sortPollTable(key){
+ if(pollTable.sortKey===key)pollTable.sortDir*=-1;
+ else{pollTable.sortKey=key;pollTable.sortDir=key==="pollster"?1:-1}
+ pollTable.page=0;
+ renderPollTable();
+}
+$("pollTable").addEventListener("click",e=>{const th=e.target.closest("th[data-sort]");if(th)sortPollTable(th.getAttribute("data-sort"))});
+$("pollTable").addEventListener("keydown",e=>{if(e.key!=="Enter"&&e.key!==" ")return;const th=e.target.closest("th[data-sort]");if(th){e.preventDefault();sortPollTable(th.getAttribute("data-sort"))}});
+$("pollPrev").onclick=()=>{pollTable.page--;renderPollTable()};
+$("pollNext").onclick=()=>{pollTable.page++;renderPollTable()};
 
 const MM_MONTHS=12;
 const MM_MIN_SCALE=1.5,MM_MAX_SCALE=10; // axis starts at ±1.5 and widens only if a bar would not fit
