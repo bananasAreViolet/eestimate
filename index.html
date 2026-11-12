@@ -162,7 +162,8 @@ body.dark a {
 .poll-table td.infl{text-align:right;padding-right:12px}
 .poll-table td.lead{font-weight:700}
 .mix-bar{margin-bottom:8px}
-.mix-bar .header-note{margin-top:6px}
+.mix-bar .header-note{margin-top:6px;text-align:center}
+.mix-bar .toolbar{justify-content:center}
 .mix-btn.on{border:2px solid var(--dark);border-right-color:var(--light);border-bottom-color:var(--light);background:#bdb9b0;font-weight:700}
 body.dark .mix-btn.on{background:#9a9a9a}
 .mix-adv{margin-top:8px}
@@ -210,7 +211,6 @@ body.dark .mix-btn.on{background:#9a9a9a}
     <div class="toolbar">
       <button class="action" id="longTermBtn" data-i18n="longTermBtn" onclick="window.location.href='long-term.html'">Historical data and charts</button>
       <button class="action" onclick="window.open('https://bananasareviolet.github.io/epgroupbuilder/')">EP Group Builder</button>
-      <button class="action" id="forecastBtn" data-i18n="forecastBtn" onclick="window.location.href='fundamentals.html'">Forecast model (highly experimental!)</button>
     </div>
   </div>
   
@@ -232,7 +232,7 @@ body.dark .mix-btn.on{background:#9a9a9a}
   <div class="mix-adv" id="mixAdv" style="display:none">
     <div class="mix-row"><label for="mixInfluence" data-i18n="mixInfluence">Influence (pollster score and age)</label><input id="mixInfluence" type="range" min="0" max="100" step="5" value="100"><span class="mix-value" id="mixInfluenceValue"></span></div>
     <div class="mix-row"><label for="mixHe" data-i18n="mixHe">House-effect correction</label><input id="mixHe" type="range" min="0" max="100" step="5" value="100"><span class="mix-value" id="mixHeValue"></span></div>
-    <div class="mix-row"><label for="mixSens" data-i18n="mixSens">Macro sensitivity (pp per index unit)</label><input id="mixSens" type="range" min="0" max="2" step="0.1" value="0"><span class="mix-value" id="mixSensValue"></span></div>
+    <div class="mix-row"><label for="mixSens" data-i18n="mixSens">Macroeconomic factors (strength of effect)</label><input id="mixSens" type="range" min="0" max="2" step="0.1" value="0"><span class="mix-value" id="mixSensValue"></span></div>
     <div class="mix-row"><label for="mixCorr" data-i18n="mixCorr">Historical polling correction</label><input id="mixCorr" type="range" min="0" max="100" step="5" value="0"><span class="mix-value" id="mixCorrValue"></span></div>
     <p class="header-note" id="modeNote"></p>
   </div>
@@ -429,7 +429,6 @@ const UI_STRINGS = {
   tied:(a,b)=>`${a} and ${b} are tied.`,
   leading:(a,b,diff)=>`${a} is leading ${b} by ${diff} points.`,
   longTermBtn:"Historical data and charts",
-  forecastBtn:"Forecast model (highly experimental!)",
   titlePollTable:"POLL TABLE",
   pollColStart:"FW start",
   pollColEnd:"FW end",
@@ -441,15 +440,15 @@ const UI_STRINGS = {
   modeExperimental:"Experimental",
   modeCustom:"Custom",
   modeAdvanced:"Advanced",
-  modeDescPure:"Plain 30-day average of all polls. No pollster weighting, no house-effect correction, no fundamentals.",
-  modeDescTraditional:"30-day average weighted by pollster score and age, corrected for house effects.",
-  modeDescExperimental:"Traditional plus the fundamentals model: historical poll-to-result correction and an economic index shift between government and opposition parties. Highly experimental!",
+  modeDescPure:"Plain 30-day average of all polls without pollster weighting, house effect correction or fundamental factors.",
+  modeDescTraditional:"30-day average weighted by pollster score and age, corrected for house effects. What Eestimate has previously used, what you're used to.",
+  modeDescExperimental:"Traditional plus the fundamentals, those being historical polling vs result dynamic per party, and macroeconomic factors. Highly experimental! :P",
   modeDescCustom:"Custom mix of the settings below.",
   mixInfluence:"Influence (pollster score and age)",
   mixHe:"House-effect correction",
-  mixSens:"Macro sensitivity (pp per index unit)",
+  mixSens:"Macroeconomic factors (strength of effect)",
   mixCorr:"Historical polling correction",
-  modeMacroMissing:"Economic data could not be loaded, so the macro shift is 0.",
+  modeMacroMissing:"Economic data could not be loaded, so the macroeconomic effect is 0.",
   pollTableNote:"Influence is calculated by pollster score and passage of time. These polls are adjusted for biases (see below) before being added to the average above.",
   pollNewer:"Newer polls",
   pollOlder:"Older polls",
@@ -532,7 +531,6 @@ const UI_STRINGS = {
   tied:(a,b)=>`${a} ja ${b} on viigis.`,
   leading:(a,b,diff)=>`${a} juhib ${b} ees ${diff} punktiga.`,
   longTermBtn:"Ajaloolised andmed ja graafikud",
-  forecastBtn:"Prognoosimudel (katsefaasis!), hetkel ainult inglise keeles",
   titlePollTable:"KÜSITLUSTE TABEL",
   pollColStart:"Küsitluse algus",
   pollColEnd:"Küsitluse lõpp",
@@ -544,15 +542,15 @@ const UI_STRINGS = {
   modeExperimental:"Eksperimentaalne",
   modeCustom:"Kohandatud",
   modeAdvanced:"Täpsemad seaded",
-  modeDescPure:"Kõigi küsitluste lihtne 30 päeva keskmine. Ilma küsitlusfirmade kaalumiseta, kallutatuse korrigeerimiseta ja fundamentaalnäitajateta.",
-  modeDescTraditional:"Küsitlusfirma skoori ja aja järgi kaalutud 30 päeva keskmine, korrigeeritud küsitlusfirmade kallutatuse suhtes.",
-  modeDescExperimental:"Traditsiooniline pluss fundamentaalmudel: ajaloolise küsitluse ja tulemuse erinevuse korrigeerimine ning majandusindeksi nihe valitsus- ja opositsioonierakondade vahel. Väga katseline!",
+  modeDescPure:"Kõigi küsitluste lihtne 30 päeva keskmine ilma küsitlusfirmade kaalumiseta, kallutatuse korrigeerimiseta ja fundamentaalteguriteta.",
+  modeDescTraditional:"Küsitlusfirma skoori ja aja järgi kaalutud 30 päeva keskmine, korrigeeritud küsitlusfirmade kallutatuse suhtes. See, mida Eestimate on varem kasutanud ja mida oled harjunud nägema.",
+  modeDescExperimental:"Traditsiooniline pluss fundamentaalnäitajad ehk erakondade ajalooline küsitlusnäitaja ja tegeliku tulemuse erinevus ning makromajanduslikud tegurid. Väga katseline! :P",
   modeDescCustom:"Allolevate seadete kohandatud segu.",
   mixInfluence:"Mõju (küsitlusfirma skoor ja aeg)",
   mixHe:"Kallutatuse korrigeerimine",
-  mixSens:"Makromajanduse tundlikkus (pp indeksiühiku kohta)",
+  mixSens:"Makromajanduslikud tegurid (mõju tugevus)",
   mixCorr:"Ajaloolise küsitlusvea korrigeerimine",
-  modeMacroMissing:"Majandusandmeid ei õnnestunud laadida, seega on makromajanduse nihe 0.",
+  modeMacroMissing:"Majandusandmeid ei õnnestunud laadida, seega on makromajanduslik mõju 0.",
   pollTableNote:"Mõju arvutatakse küsitlusfirma skoori ja aja möödumise põhjal. Neid küsitlusi on enne ülaltoodud keskmisesse lisamist korrigeeritud küsitlejate kallutatuse suhtes (vt allpool).",
   pollNewer:"Uuemad küsitlused",
   pollOlder:"Vanemad küsitlused",
