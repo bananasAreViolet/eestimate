@@ -80,7 +80,8 @@ function pollsFromGviz(g, cfg) {
   const di = headers.findIndex(h => h.toLowerCase() === 'date');
   const pi = headers.findIndex(h => h.toLowerCase() === 'pollster');
   if (di < 0 || pi < 0) throw new Error('The "' + cfg.sheet.pollsTab + '" tab needs a "date" and a "Pollster" column in row 1.');
-  const partyCols = headers.map((h, i) => i).filter(i => i !== di && i !== pi);
+  const fi = headers.findIndex(h => h.replace(/\s+/g, '').toLowerCase() === 'fwstart');
+  const partyCols = headers.map((h, i) => i).filter(i => i !== di && i !== pi && i !== fi);
   const extra = partyCols.map(i => headers[i]).filter(h => cfg.parties.indexOf(h) < 0);
   if (extra.length) console.warn('! Columns in the polls tab that are not in "parties" of the config (ignored): ' + extra.join(', '));
   const polls = [], seen = new Set();
@@ -94,7 +95,13 @@ function pollsFromGviz(g, cfg) {
     const key = d + '|' + pollster;
     if (seen.has(key)) console.warn('! Duplicate row in the polls tab: ' + d + ' ' + pollster + ' (both are used)');
     seen.add(key);
-    polls.push({ date: d, pollster, values });
+    let fwStart = null;
+    if (fi >= 0) {
+      const x = c[fi] || {};
+      fwStart = toISODate(x.v !== undefined ? x.v : x.f);
+      if (fwStart && fwStart > d) { console.warn('! FWstart is after the date for ' + d + ' ' + pollster + ' (ignored)'); fwStart = null; }
+    }
+    polls.push({ date: d, fwStart, pollster, values });
   }
   return polls;
 }

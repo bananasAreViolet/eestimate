@@ -185,7 +185,7 @@ const EestimateEngine = (function () {
       const name = cfg.aliases[r.pollster] || r.pollster;
       const ms = parseISO(r.date);
       const v = cfg.parties.map(p => (isNum(r.values[p]) ? r.values[p] : null));
-      polls.push({ ms, date: toISO(ms), pollster: name, v });
+      polls.push({ ms, date: toISO(ms), pollster: name, v, fw: r.fwStart || null });
     }
     polls.sort((a, b) => a.ms - b.ms);
     return polls;
@@ -430,6 +430,7 @@ const EestimateEngine = (function () {
         lastPollDate: res.days[res.days.length - 1],
         minPollsForBias: cfg.minPollsForBias,
         dateMatchToleranceDays: cfg.dateMatchToleranceDays,
+        windowDays: cfg.windowDays,
         strength: cfg.strength,
         pollsters: res.pollsters
       },
@@ -443,7 +444,7 @@ const EestimateEngine = (function () {
       },
       periods: res.periods,
       polls: res.polls.map(p => ({
-        date: p.date, pollster: p.pollster,
+        date: p.date, fwStart: p.fw, pollster: p.pollster,
         values: Object.fromEntries(res.parties.map((q, j) => [q, p.v[j]]))
       })),
       // per poll and party: the poll, and the pollster's own leave-one-out LOESS average on that date
